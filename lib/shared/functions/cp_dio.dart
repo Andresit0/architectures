@@ -1,6 +1,6 @@
 part of '_function.lib.dart';
 
-enum _HttpMethod { get, post, patch, delete, put, fileList }
+enum _HttpMethod { get, post, patch, delete, put, multipart }
 
 abstract class ICpDio {
   Future<dynamic> post(
@@ -10,7 +10,6 @@ abstract class ICpDio {
     Duration timeout = const Duration(seconds: 10),
     String? type,
     Map<String, String>? pathParams,
-    bool activateLoading = true,
     bool returnDioResponse = false,
   });
 
@@ -20,7 +19,6 @@ abstract class ICpDio {
     Duration timeout = const Duration(seconds: 30),
     String? type,
     Map<String, String>? pathParams,
-    bool activateLoading = true,
     bool returnDioResponse = false,
   });
 
@@ -29,7 +27,7 @@ abstract class ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   });
 
@@ -38,7 +36,7 @@ abstract class ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   });
 
@@ -47,7 +45,7 @@ abstract class ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   });
 
@@ -59,7 +57,7 @@ abstract class ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   });
 }
@@ -71,7 +69,16 @@ class CpDio implements ICpDio {
 
   CpDio(this._internetService, this._tokenService, [Dio? dio])
     : _dio = dio ?? Dio() {
-    _dio.interceptors.add(CustomInterceptors.auth(_tokenService.read));
+    final internalDio = Dio();
+    _dio.interceptors.add(CustomInterceptors.auth(
+      readToken: _tokenService.read,
+      saveToken: _tokenService.save,
+      readCredentials: _tokenService.readCredentials,
+      internalDio: internalDio,
+      loginUri: CustomConfigs.uries.login,
+      refreshUri: CustomConfigs.uries.refreshToken,
+      checkConnectivity: _internetService.isConnected,
+    ));
   }
 
   static Uri _urlParameters(Uri uri, Map<String, String>? pathParams) {
@@ -90,7 +97,6 @@ class CpDio implements ICpDio {
     List<Map<String, String>>? fields,
     List<dynamic>? fileList,
     Object? body,
-    bool activateLoading = true,
     Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   }) async {
@@ -129,7 +135,7 @@ class CpDio implements ICpDio {
           response = await _dio
               .putUri(uri, data: body, options: requestOptions)
               .timeout(timeout);
-        case _HttpMethod.fileList:
+        case _HttpMethod.multipart:
           final formData = FormData();
           if (fields != null && fields.isNotEmpty) {
             if (fileList != null && fields.length == fileList.length) {
@@ -223,10 +229,9 @@ class CpDio implements ICpDio {
     Uri url, {
     Map<String, String>? headers,
     Object? body,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 30),
     String? type,
     Map<String, String>? pathParams,
-    bool activateLoading = true,
     bool returnDioResponse = false,
   }) async {
     url = _urlParameters(url, pathParams);
@@ -235,7 +240,6 @@ class CpDio implements ICpDio {
       uri: url,
       headers: headers,
       body: body,
-      activateLoading: activateLoading,
       timeout: timeout,
       returnDioResponse: returnDioResponse,
     );
@@ -248,7 +252,6 @@ class CpDio implements ICpDio {
     Duration timeout = const Duration(seconds: 30),
     String? type,
     Map<String, String>? pathParams,
-    bool activateLoading = true,
     bool returnDioResponse = false,
   }) async {
     url = _urlParameters(url, pathParams);
@@ -257,7 +260,6 @@ class CpDio implements ICpDio {
       uri: url,
       type: type,
       headers: headers,
-      activateLoading: activateLoading,
       timeout: timeout,
       returnDioResponse: returnDioResponse,
     );
@@ -269,7 +271,7 @@ class CpDio implements ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   }) async {
     uri = _urlParameters(uri, pathParams);
@@ -278,7 +280,7 @@ class CpDio implements ICpDio {
       uri: uri,
       headers: headers,
       body: body,
-      activateLoading: activateLoading,
+      timeout: timeout,
       returnDioResponse: returnDioResponse,
     );
   }
@@ -289,7 +291,7 @@ class CpDio implements ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   }) async {
     uri = _urlParameters(uri, pathParams);
@@ -298,7 +300,7 @@ class CpDio implements ICpDio {
       uri: uri,
       headers: headers,
       body: body,
-      activateLoading: activateLoading,
+      timeout: timeout,
       returnDioResponse: returnDioResponse,
     );
   }
@@ -309,7 +311,7 @@ class CpDio implements ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   }) async {
     uri = _urlParameters(uri, pathParams);
@@ -318,7 +320,7 @@ class CpDio implements ICpDio {
       uri: uri,
       headers: headers,
       body: body,
-      activateLoading: activateLoading,
+      timeout: timeout,
       returnDioResponse: returnDioResponse,
     );
   }
@@ -332,19 +334,19 @@ class CpDio implements ICpDio {
     Map<String, String>? headers,
     Map<String, String>? pathParams,
     Object? body,
-    bool activateLoading = true,
+    Duration timeout = const Duration(seconds: 30),
     bool returnDioResponse = false,
   }) async {
     uri = _urlParameters(uri, pathParams);
     return await _request(
-      method: _HttpMethod.fileList,
+      method: _HttpMethod.multipart,
       type: type,
       uri: uri,
       fileList: fileList,
       headers: headers,
       body: body,
       fields: fields,
-      activateLoading: activateLoading,
+      timeout: timeout,
       returnDioResponse: returnDioResponse,
     );
   }

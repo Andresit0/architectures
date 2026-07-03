@@ -74,47 +74,6 @@ void main() {
       });
     });
 
-    group('saveRefreshToken', () {
-      test('should save refresh token to storage', () async {
-        await tokenService.saveRefreshToken('refresh_token');
-
-        verify(
-          () => mockStorage.write(
-            key: 'tudesarrollador_refresh_token',
-            value: 'refresh_token',
-          ),
-        ).called(1);
-      });
-    });
-
-    group('readRefreshToken', () {
-      test('should return cached refresh token', () async {
-        final tokenService2 = TokenService(storage: mockStorage);
-        when(
-          () => mockStorage.read(key: any(named: 'key')),
-        ).thenAnswer((_) async => 'cached_refresh');
-
-        final result = await tokenService2.readRefreshToken();
-
-        expect(result, 'cached_refresh');
-      });
-    });
-
-    group('deleteRefreshToken', () {
-      test('should delete refresh token and clear cache', () async {
-        when(
-          () => mockStorage.read(key: any(named: 'key')),
-        ).thenAnswer((_) async => 'refresh_token');
-        tokenService = TokenService(storage: mockStorage);
-
-        await tokenService.deleteRefreshToken();
-
-        verify(
-          () => mockStorage.delete(key: 'tudesarrollador_refresh_token'),
-        ).called(1);
-      });
-    });
-
     group('decodeJwtPayload', () {
       test('should return null for invalid token', () {
         final result = tokenService.decodeJwtPayload('invalid_token');

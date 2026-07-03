@@ -4,11 +4,12 @@ abstract class ITokenService {
   Future<void> save(String token);
   Future<String?> read();
   Future<void> delete();
-  Future<void> saveRefreshToken(String token);
-  Future<String?> readRefreshToken();
-  Future<void> deleteRefreshToken();
   Future<bool> isTokenExpired(String token);
   Map<String, dynamic>? decodeJwtPayload(String token);
+  Future<void> saveCredentials({required String email, required String passwordHash});
+  Future<({String email, String passwordHash})?> readCredentials();
+  Future<void> deleteCredentials();
+  Future<void> deleteAll();
 }
 
 class TokenService implements ITokenService {
@@ -17,10 +18,10 @@ class TokenService implements ITokenService {
 
   final ICpFlutterSecureStorage _storage;
   static const String _key = 'tudesarrollador_auth_token';
-  static const String _refreshKey = 'tudesarrollador_refresh_token';
+  static const String _emailKey = 'tudesarrollador_login_email';
+  static const String _passwordHashKey = 'tudesarrollador_login_pwhash';
 
   String? _cachedToken;
-  String? _cachedRefreshToken;
 
   @override
   Future<bool> isTokenExpired(String token) async {
@@ -68,18 +69,31 @@ class TokenService implements ITokenService {
   }
 
   @override
-  Future<void> saveRefreshToken(String token) async {
-    _cachedRefreshToken = token;
-    await _storage.write(key: _refreshKey, value: token);
+  Future<void> saveCredentials({
+    required String email,
+    required String passwordHash,
+  }) async {
+    await _storage.write(key: _emailKey, value: email);
+    await _storage.write(key: _passwordHashKey, value: passwordHash);
   }
 
   @override
-  Future<String?> readRefreshToken() async =>
-      _cachedRefreshToken ??= await _storage.read(key: _refreshKey);
+  Future<({String email, String passwordHash})?> readCredentials() async {
+    final email = await _storage.read(key: _emailKey);
+    final pwhash = await _storage.read(key: _passwordHashKey);
+    if (email == null || pwhash == null) return null;
+    return (email: email, passwordHash: pwhash);
+  }
 
   @override
-  Future<void> deleteRefreshToken() async {
-    _cachedRefreshToken = null;
-    await _storage.delete(key: _refreshKey);
+  Future<void> deleteCredentials() async {
+    await _storage.delete(key: _emailKey);
+    await _storage.delete(key: _passwordHashKey);
+  }
+
+  @override
+  Future<void> deleteAll() async {
+    _cachedToken = null;
+    await _storage.deleteAll();
   }
 }
