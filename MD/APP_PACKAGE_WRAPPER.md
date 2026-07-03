@@ -8,19 +8,20 @@ imports the package directly.
 
 | Wrapper | Interface | Impl class | Alias in `CustomFunction` | Riverpod Bridge (`CustomProviders`) |
 |---|---|---|---|---|
+| `cp_crypto.dart` | `ICpCrypto` | `CpCrypto` | `CustomFunction.crypto` | — (pure utility, SHA-256 hashing) |
 | `cp_dio.dart` | `ICpDio` | `CpDio` | `CustomFunction.dio` | `CustomProviders.dio` (`httpServiceProvider`) |
-| `cp_fl_chart.dart` | `IFlChart` | `CpFlChart` | `CustomFunction.flChart` | — (pure utility, thin UI facade) |
 | `cp_fpdart.dart` | `ICpFpdart` | `CpFpdart` | `CustomFunction.fpdart` | — (pure utility) |
-| `cp_drift.dart` | `ICpDrift` | `CpDrift` | `CustomFunction.drift` | — (internal dependency, wraps `AppDatabase`, encrypts fields with AES-256 key) |
-| `cp_encrypt.dart` | `ICpEncrypt` | `CpEncrypt` | `CustomFunction.encrypt` | — (internal dependency of `CpDrift`, wraps `package:encrypt`, AES-256-CBC) |
+| `cp_sembast.dart` | `ICpSembast` | `CpSembast` | `CustomFunction.sembast` | `CustomProviders.sembast` (`sembastProvider`) |
+| `cp_encrypt.dart` | `ICpEncrypt` | `CpEncrypt` | `CustomFunction.encrypt` | — (internal dependency of `cp_sembast`, wraps `package:encrypt`, AES-256-CBC) |
 | `cp_flutter_secure_storage.dart` | `ICpFlutterSecureStorage` | `CpFlutterSecureStorage` | `CustomFunction.flutterSecureStorage` | — (internal dependency; wraps `flutter_secure_storage`; injected into `TokenService` and `DatabaseKeyService`) |
-| `cp_secure_storage.dart` | `IDatabaseKeyService` | `DatabaseKeyService` | `CustomFunction.databaseKeyService` | — (internal dependency of `CpDrift`) |
 | `cp_logger.dart` | `ICpLogger` | `CpLogger` | `CustomFunction.logger` | — (internal use between wrappers) |
 | `cp_path_provider.dart` | `ICpPathProvider` | `CpPathProvider` | `CustomFunction.pathProvider` | — (pure utility) |
-| `cp_share_plus.dart` | `ICpSharePlus` | `CpSharePlus` | `CustomFunction.sharePlus` | `CustomProviders.sharePlus` (`sharePlusServiceProvider`) |
+| `cp_share_plus.dart` | `ICpSharePlus` | `CpSharePlus` | `CustomFunction.sharePlus` | — (pure utility, share PDF) |
 | `internet_service.dart` | `IInternetService` | `InternetService` | `CustomFunction.internetService` | — (injected into `CpDio`) |
 | `token_service.dart` | `ITokenService` | `TokenService` | `CustomFunction.tokenService` | `CustomProviders.token` (`tokenServiceProvider`) |
-| `failure_propagation.dart` | `IFailurePropagation` | `FailurePropagation` | `CustomFunction.failure` | — (utilidad pura) |
+| `failure_propagation.dart` | `IFailurePropagation` | `FailurePropagation` | `CustomFunction.failure` | — (pure utility) |
+
+`DatabaseKeyService` (`IDatabaseKeyService`) lives in `lib/shared/database/secure_storage_key_service.dart` and is NOT a `cp_*` wrapper — it is part of the `shared/database/` domain.
 
 ---
 
@@ -31,15 +32,15 @@ Mixing categories is an architectural error.
 
 | Category | Wrappers | Correct access from features | Riverpod Bridge |
 |---|---|---|---|
-| **Pure utility** | `cp_fl_chart`, `cp_fpdart`, `failure_propagation`, `cp_logger`, `cp_path_provider` | `CustomFunction.xxx` directly | NO |
-| **Injectable service** | `cp_dio`, `cp_share_plus`, `token_service` | `ref.watch/read(CustomProviders.xxx)` — NEVER `CustomFunction.xxx` directly | YES |
-| **Internal dependency** | `internet_service`, `cp_drift`, `cp_encrypt`, `cp_flutter_secure_storage`, `cp_secure_storage` | Only inside their consuming wrappers. Never from features | NO |
+| **Pure utility** | `cp_crypto`, `cp_fpdart`, `failure_propagation`, `cp_logger`, `cp_path_provider`, `cp_share_plus` | `CustomFunction.xxx` directly | NO |
+| **Injectable service** | `cp_dio`, `token_service`, `cp_sembast` | `ref.watch/read(CustomProviders.xxx)` — NEVER `CustomFunction.xxx` directly | YES |
+| **Internal dependency** | `internet_service`, `cp_encrypt`, `cp_flutter_secure_storage` | Only inside their consuming wrappers. Never from features | NO |
 | **Deferred init** | `cp_go_router` | `CpGoRouter.create(...)` in `main.dart`; `CustomFunction.goRouter.go(...)` from features | NO |
 
 **Why the injectable vs pure distinction matters:**
-- Injectable services (`dio`, `token`, `sharePlus`) must go through `CustomProviders` to
+- Injectable services (`dio`, `token`, `sembast`) must go through `CustomProviders` to
   be overridable with mocks in widget/integration tests via `ProviderScope` overrides.
-- Pure utilities (`fpdart`, `failure`, `logger`) don't need runtime substitution;
+- Pure utilities (`fpdart`, `failure`, `logger`, `sharePlus`) don't need runtime substitution;
   accessing them via `CustomFunction.xxx` directly is correct and expected.
 
 #### Anti-patterns — what is WRONG
@@ -51,17 +52,17 @@ import 'package:fpdart/fpdart.dart';
 
 // WRONG: use an injectable service from a notifier without going through Riverpod
 await CustomFunction.tokenService.save(token);   // not mockable in tests
-await CustomFunction.sharePlus.pdf(id, bytes);   // not mockable in tests
+await CustomFunction.sembast.database;           // not mockable in tests
 await CustomFunction.dio.get(url);               // not mockable in tests
 
 // WRONG: access internetService from a feature (internal dependency of CpDio)
 await CustomFunction.internetService.isConnected(); // CpDio already does this internally
 
-// WRONG: access encrypt directly from a feature (internal dependency of CpDrift)
-CustomFunction.encrypt.encrypt(text, key); // CpDrift already does this internally
+// WRONG: access encrypt directly from a feature (internal dependency of CpSembast)
+CustomFunction.encrypt.encrypt(text, key); // CpSembast already does this internally
 
 // WRONG: access flutterSecureStorage directly from a feature (internal dependency)
-await CustomFunction.flutterSecureStorage.read(key: 'some_key'); // use CustomProviders.token or CustomFunction.drift
+await CustomFunction.flutterSecureStorage.read(key: 'some_key'); // use CustomProviders.token or CustomFunction.sembast
 
 // WRONG: navigate without the wrapper
 import 'package:go_router/go_router.dart';
@@ -74,7 +75,7 @@ context.go('/[feature_name]'); // should be: CustomFunction.goRouter.go('/[featu
 
 Create a `shared/providers/<name>_provider.dart` when the wrapper needs to be injected into
 feature providers via `ref.watch/read`. Not needed for pure functional utilities
-(`dartz`, `logger`, `failure`) or for services that are only internal dependencies of other
+(`fpdart`, `logger`, `failure`, `sharePlus`) or for services that are only internal dependencies of other
 wrappers (`internetService`).
 
 ---
@@ -125,27 +126,9 @@ Strict order:
 7. ONLY THEN write feature tests (D.0.1–D.0.5b)
 ```
 
-**Why:** Presentation and integration test writers need to mock the wrapper interface (`IFlChart`),
-not the raw package (`LineChart`). If the wrapper doesn't exist when tests are written, the tests
+**Why:** Presentation and integration test writers need to mock the wrapper interface,
+not the raw package. If the wrapper doesn't exist when tests are written, the tests
 mock the wrong type and become invalid the moment the wrapper is introduced.
-
-**UI-only packages** (e.g. `fl_chart`, `lottie`) — wrapper pattern:
-```dart
-// cp_fl_chart.dart — thin facade ONLY. No business logic.
-part of '_function.lib.dart';
-
-abstract interface class IFlChart {
-  Widget lineChart(LineChartData data);
-}
-
-class CpFlChart implements IFlChart {
-  @override
-  Widget lineChart(LineChartData data) => LineChart(data);
-}
-```
-
-Feature code uses the wrapper: `CustomFunction.flChart.lineChart(data)` — NEVER `LineChart(data)`.
-Feature tests mock the interface: `class _MockFlChart extends Mock implements IFlChart {}`
 
 **Packages that cannot be wrapped** (framework infrastructure):
 - `flutter_riverpod` / `riverpod_annotation` — UI framework & compile-time annotations; must be imported directly.

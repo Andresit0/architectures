@@ -9,11 +9,13 @@ Every barrelled folder has **two files**:
 
 **Example barrels:**
 - `shared/configs/` → `CustomConfigs.appColors`, `CustomConfigs.uries`, `CustomConfigs.vars`, `CustomConfigs.theme`, `CustomConfigs.routes`
-- `shared/functions/` → `CustomFunction.pathProvider`, `CustomFunction.sharePlus`, `CustomFunction.internetService`, `CustomFunction.tokenService`, `CustomFunction.dio`, `CustomFunction.logger`, `CustomFunction.fpdart`, `CustomFunction.failure`, `CustomFunction.drift`
-- `shared/interceptors/` → `CustomInterceptors.auth(readToken)` (returns `AuthInterceptor`); also exposes `AuthInterceptor` class
+- `shared/models/` → `CustomModels`
+- `shared/functions/` → `CustomFunction.pathProvider`, `CustomFunction.sharePlus`, `CustomFunction.internetService`, `CustomFunction.tokenService`, `CustomFunction.dio`, `CustomFunction.logger`, `CustomFunction.fpdart`, `CustomFunction.failure`, `CustomFunction.sembast`, `CustomFunction.crypto`, `CustomFunction.encrypt`, `CustomFunction.flutterSecureStorage`, `CustomFunction.goRouter`
+- `shared/database/` → `CustomDb.clinicalHistory`, `CustomDb.patientInfo`, `CustomDb.resetDatabase()`
+- `shared/interceptors/` → `CustomInterceptors.auth(readToken, checkConnectivity)` (returns `AuthInterceptor`); also exposes `AuthInterceptor` class
 - `shared/exceptions/` → `CustomExceptions` (typedefs + factory methods); re-exports `Either`, `Left`, `Right` from fpdart
-- `shared/providers/` → `CustomProviders.dio`, `CustomProviders.token`, `CustomProviders.sharePlus`, `CustomProviders.user`, `CustomProviders.goRouter`
-- `shared/jsons/` → `CustomJsons.userJson`
+- `shared/providers/` → `CustomProviders.dio`, `CustomProviders.token`, `CustomProviders.goRouter`, `CustomProviders.sembast`
+- `shared/jsons/` → `CustomJsons.authJson`
 
 **Rules:**
 - `*.g.dart` files are **never** added as `part` — they are owned by their source.

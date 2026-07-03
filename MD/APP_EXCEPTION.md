@@ -13,9 +13,7 @@ The folder `lib/shared/exceptions/` has a barrel (`_exceptions.lib.dart` + `_exc
   throw CustomExceptions.usingApi(statusCode);
   throw CustomExceptions.noConnection();
   throw CustomExceptions.serverUnreachable();
-  throw CustomExceptions.noRequest(method);
   throw CustomExceptions.unexpectedResponse(details);
-  throw CustomExceptions.goRouter(message);
   ```
 - **Catch** in `cp_fpdart.dart` uses raw class names (existing exceptions were created before the typedef convention):
   ```dart
