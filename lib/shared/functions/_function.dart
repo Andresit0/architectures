@@ -11,7 +11,21 @@ class CustomFunction {
   static final ITokenService tokenService = TokenService(
     storage: flutterSecureStorage,
   );
-  static final IInternetService internetService = InternetService();
+  static final IInternetService internetService = InternetService(
+    strategy: kIsWeb
+        ? HttpReachability(
+            dio: Dio(),
+            baseUri: Uri(
+              scheme: 'http',
+              host: CustomConfigs.vars.host,
+              port: CustomConfigs.vars.port,
+            ),
+          )
+        : NativeSocketReachability(
+            host: CustomConfigs.uries.host,
+            port: CustomConfigs.uries.port,
+          ),
+  );
   static final ICpDio dio = CpDio(internetService, tokenService);
   static final ICpSembast sembast = CpSembast();
   static final ICpSharePlus sharePlus = CpSharePlus();

@@ -6,9 +6,12 @@ abstract class IInternetService {
 }
 
 class InternetService implements IInternetService {
+  final IServerReachabilityStrategy _strategy;
   DateTime? _lastReachableCheck;
   bool? _lastReachableResult;
   static const _cacheDuration = Duration(seconds: 10);
+
+  InternetService({required this._strategy});
 
   @override
   Future<bool> isConnected() => InternetConnection().hasInternetAccess;
@@ -22,15 +25,10 @@ class InternetService implements IInternetService {
       return _lastReachableResult!;
     }
     try {
-      final socket = await Socket.connect(
-        CustomConfigs.uries.host,
-        CustomConfigs.uries.port,
-        timeout: const Duration(seconds: 5),
-      );
-      socket.destroy();
+      final result = await _strategy.check();
       _lastReachableCheck = now;
-      _lastReachableResult = true;
-      return true;
+      _lastReachableResult = result;
+      return result;
     } catch (_) {
       _lastReachableCheck = now;
       _lastReachableResult = false;
