@@ -39,26 +39,8 @@ void main() {
         expect(result, isNotEmpty);
       });
 
-      test('should handle NoRequestFailure', () {
-        const failure = NoRequestFailure();
-        final result = failurePropagation.launch<String>(
-          failure,
-          onFailure: (msg) => 'handled: $msg',
-        );
-        expect(result, isNotEmpty);
-      });
-
       test('should handle UnexpectedResponseFailure', () {
         const failure = UnexpectedResponseFailure();
-        final result = failurePropagation.launch<String>(
-          failure,
-          onFailure: (msg) => 'handled: $msg',
-        );
-        expect(result, isNotEmpty);
-      });
-
-      test('should handle GoRouterFailure', () {
-        const failure = GoRouterFailure();
         final result = failurePropagation.launch<String>(
           failure,
           onFailure: (msg) => 'handled: $msg',

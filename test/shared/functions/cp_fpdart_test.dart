@@ -60,21 +60,6 @@ void main() {
       );
 
       test(
-        'should return Left with NoRequestFailure on NoRequestException',
-        () async {
-          final result = await cpFpdart.guard(() async {
-            throw NoRequestException('GET');
-          });
-
-          expect(result.isLeft(), isTrue);
-          result.fold(
-            (fail) => expect(fail, isA<NoRequestFailure>()),
-            (_) => fail('should be Left'),
-          );
-        },
-      );
-
-      test(
         'should return Left with UnexpectedResponseFailure on UnexpectedResponseException',
         () async {
           final result = await cpFpdart.guard(() async {
@@ -84,21 +69,6 @@ void main() {
           expect(result.isLeft(), isTrue);
           result.fold(
             (fail) => expect(fail, isA<UnexpectedResponseFailure>()),
-            (_) => fail('should be Left'),
-          );
-        },
-      );
-
-      test(
-        'should return Left with GoRouterFailure on GoRouterException',
-        () async {
-          final result = await cpFpdart.guard(() async {
-            throw CustomExceptions.goRouter('go_router error');
-          });
-
-          expect(result.isLeft(), isTrue);
-          result.fold(
-            (fail) => expect(fail, isA<GoRouterFailure>()),
             (_) => fail('should be Left'),
           );
         },

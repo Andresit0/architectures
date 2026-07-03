@@ -14,9 +14,7 @@ class FailurePropagation implements IFailurePropagation {
       ApiFailure() => onFailure(failure.message),
       NoConnectionFailure() => onFailure(failure.message),
       ServerUnreachableFailure() => onFailure(failure.message),
-      NoRequestFailure() => onFailure(failure.message),
       UnexpectedResponseFailure() => onFailure(failure.message),
-      GoRouterFailure() => onFailure(failure.message),
       UnexpectedFailure() => onFailure(failure.message),
       _ => onFailure(failure.message),
     };
