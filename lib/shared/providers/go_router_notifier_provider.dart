@@ -16,6 +16,5 @@ class GoRouterListenable extends ChangeNotifier {
 }
 
 final goRouterListenableProvider = Provider<GoRouterListenable>((ref) {
-  final listenable = GoRouterListenable(true);
-  return listenable;
+  return GoRouterListenable(false);
 });
