@@ -1,11 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:clean_architecture_sdd_harness/shared/functions/_function.lib.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockICpFlutterSecureStorage extends Mock
-    implements ICpFlutterSecureStorage {}
+import 'package:clean_architecture_sdd_harness/shared/database/secure_storage_key_service.dart';
+import 'package:clean_architecture_sdd_harness/shared/functions/_function.lib.dart';
+
+class MockICpFlutterSecureStorage extends Mock implements ICpFlutterSecureStorage {}
 
 void main() {
   late DatabaseKeyService keyService;

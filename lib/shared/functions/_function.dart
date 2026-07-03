@@ -8,15 +8,13 @@ class CustomFunction {
   static final ICpFlutterSecureStorage flutterSecureStorage =
       CpFlutterSecureStorage();
   static final ICpEncrypt encrypt = CpEncrypt();
-  static final IDatabaseKeyService databaseKeyService = DatabaseKeyService(
-    storage: flutterSecureStorage,
-  );
   static final ITokenService tokenService = TokenService(
     storage: flutterSecureStorage,
   );
   static final IInternetService internetService = InternetService();
   static final ICpDio dio = CpDio(internetService, tokenService);
-  static final ICpDrift drift = CpDrift(AppDatabase(), databaseKeyService, encrypt);
+  static final ICpSembast sembast = CpSembast();
   static final ICpSharePlus sharePlus = CpSharePlus();
+  static final ICpCrypto crypto = CpCrypto();
   static late ICpGoRouter goRouter;
 }
