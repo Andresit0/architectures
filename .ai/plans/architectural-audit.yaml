@@ -1,0 +1,10 @@
+# Architectural Audit — auth feature
+# Date: 2026-07-02
+# Scope: Cross-layer import check (shared/ → features/)
+
+audit:
+  verdict: CLEAN
+  violations: 0
+  summary: >
+    No cross-layer imports from lib/shared/ into lib/features/.
+    Factory refactoring succeeded; shared layer is properly isolated.
