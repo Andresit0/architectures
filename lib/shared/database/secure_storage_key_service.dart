@@ -1,4 +1,7 @@
-part of '_function.lib.dart';
+import 'dart:convert';
+import 'dart:math';
+
+import '../functions/_function.lib.dart';
 
 abstract class IDatabaseKeyService {
   Future<String?> readKey();

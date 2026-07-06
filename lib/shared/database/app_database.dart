@@ -1,41 +1,73 @@
-import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+part of '_database.lib.dart';
 
-part 'app_database.g.dart';
-
-class Sessions extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get fullname => text()();
-  TextColumn get token => text()();
-  DateTimeColumn get savedAt => dateTime()();
-}
-
-@DriftDatabase(tables: [Sessions])
-class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
-
-  @override
-  int get schemaVersion => 1;
-
-  static QueryExecutor _openConnection() =>
-      driftDatabase(name: 'app_database');
-
-  Future<Session?> readSession() =>
-      (select(sessions)..limit(1)).getSingleOrNull();
-
-  Future<void> saveSession({
-    required String fullname,
-    required String token,
-  }) async {
-    await delete(sessions).go();
-    await into(sessions).insert(
-      SessionsCompanion.insert(
-        fullname: fullname,
-        token: token,
-        savedAt: DateTime.now(),
-      ),
-    );
+class AppDatabase {
+  static final AppDatabase _instance = AppDatabase._internal();
+  static Database? _database;
+  static final IDatabaseKeyService _keyService = DatabaseKeyService();
+  static DatabaseFactory? testFactory;
+  static DatabaseFactory get _factory =>
+      testFactory ?? (kIsWeb ? databaseFactoryWeb : databaseFactoryIo);
+  static Future<String> _resolveKey() async {
+    final existingKey = await _keyService.readKey();
+    if (existingKey != null) return existingKey;
+    final newKey = _keyService.generateKey();
+    await _keyService.saveKey(newKey);
+    return newKey;
   }
 
-  Future<void> clearSession() => delete(sessions).go();
+  factory AppDatabase() => _instance;
+
+  AppDatabase._internal();
+
+  Future<Database> get database async {
+    _database ??= await _openDatabase();
+    return _database!;
+  }
+
+  Future<Database> _openDatabase() async {
+    final factory = _factory;
+    if (testFactory != null) {
+      return await factory.openDatabase('test_db');
+    }
+    final password = await _resolveKey();
+    final codec = getEncryptSembastCodec(password: password);
+    if (kIsWeb) {
+      return await factory.openDatabase(
+        'app_database.db',
+        codec: codec,
+      );
+    }
+    final dir = await getApplicationDocumentsDirectory();
+    try {
+      return await factory.openDatabase(
+        '${dir.path}/app_database.db',
+        codec: codec,
+      );
+    } catch (_) {
+      await factory.deleteDatabase('${dir.path}/app_database.db');
+      return await factory.openDatabase(
+        '${dir.path}/app_database.db',
+        codec: codec,
+      );
+    }
+  }
+
+  Future<void> resetDatabase() async {
+    final db = _database;
+    _database = null;
+    try {
+      await db?.close();
+    } catch (_) {
+      // Database was already closed or never opened
+    }
+    final factory = _factory;
+    if (testFactory != null) {
+      await factory.deleteDatabase('test_db');
+    } else if (kIsWeb) {
+      await factory.deleteDatabase('app_database.db');
+    } else {
+      final dir = await getApplicationDocumentsDirectory();
+      await factory.deleteDatabase('${dir.path}/app_database.db');
+    }
+  }
 }
