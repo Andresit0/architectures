@@ -4,6 +4,7 @@ abstract class ICpFlutterSecureStorage {
   Future<String?> read({required String key});
   Future<void> write({required String key, required String value});
   Future<void> delete({required String key});
+  Future<void> deleteAll();
   Future<bool> containsKey({required String key});
 }
 
@@ -22,6 +23,9 @@ class CpFlutterSecureStorage implements ICpFlutterSecureStorage {
 
   @override
   Future<void> delete({required String key}) => _storage.delete(key: key);
+
+  @override
+  Future<void> deleteAll() => _storage.deleteAll();
 
   @override
   Future<bool> containsKey({required String key}) =>

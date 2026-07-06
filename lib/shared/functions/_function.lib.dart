@@ -37,3 +37,4 @@ part 'cp_share_plus.dart';
 part 'cp_go_router.dart';
 part 'cp_crypto.dart';
 part 'server_reachability_strategy.dart';
+part 'offline_first_repository.dart';
