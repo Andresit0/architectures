@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:logger/logger.dart';
@@ -35,3 +36,4 @@ part 'cp_sembast.dart';
 part 'cp_share_plus.dart';
 part 'cp_go_router.dart';
 part 'cp_crypto.dart';
+part 'server_reachability_strategy.dart';
