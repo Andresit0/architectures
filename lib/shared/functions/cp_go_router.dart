@@ -12,6 +12,8 @@ abstract class ICpGoRouter {
 
 class CpGoRouter implements ICpGoRouter {
   final GoRouter _router;
+  static const String nameLogin = 'login';
+  static const String nameClinicalHistory = 'clinical-history';
 
   CpGoRouter(this._router);
 
@@ -27,7 +29,7 @@ class CpGoRouter implements ICpGoRouter {
             (refreshListenable as GoRouterListenable).isAuthenticated;
         final isLoginRoute = state.matchedLocation == '/';
         if (!authenticated && !isLoginRoute) return '/';
-        if (authenticated && isLoginRoute) return '/dashboard';
+        if (authenticated && isLoginRoute) return '/$nameClinicalHistory';
         return null;
       },
       routes: routes,
@@ -37,72 +39,25 @@ class CpGoRouter implements ICpGoRouter {
   }
 
   @override
-  void go(String location, {Object? extra}) {
-    try {
-      _router.go(location, extra: extra);
-    } catch (e) {
-      throw CustomExceptions.goRouter('go_router.go error: ${e.toString()}');
-    }
-  }
+  void go(String location, {Object? extra}) => _router.go(location, extra: extra);
 
   @override
-  void push(String location, {Object? extra}) {
-    try {
-      _router.push(location, extra: extra);
-    } catch (e) {
-      throw CustomExceptions.goRouter('go_router.push error: ${e.toString()}');
-    }
-  }
+  void push(String location, {Object? extra}) => _router.push(location, extra: extra);
 
   @override
-  void goNamed(String name, {Map<String, String>? params, Object? extra}) {
-    try {
+  void goNamed(String name, {Map<String, String>? params, Object? extra}) =>
       _router.goNamed(name, pathParameters: params ?? {}, extra: extra);
-    } catch (e) {
-      throw CustomExceptions.goRouter(
-        'go_router.goNamed error: ${e.toString()}',
-      );
-    }
-  }
 
   @override
-  void pushNamed(String name, {Map<String, String>? params, Object? extra}) {
-    try {
+  void pushNamed(String name, {Map<String, String>? params, Object? extra}) =>
       _router.pushNamed(name, pathParameters: params ?? {}, extra: extra);
-    } catch (e) {
-      throw CustomExceptions.goRouter(
-        'go_router.pushNamed error: ${e.toString()}',
-      );
-    }
-  }
 
   @override
-  void pop() {
-    try {
-      _router.pop();
-    } catch (e) {
-      throw CustomExceptions.goRouter('go_router.pop error: ${e.toString()}');
-    }
-  }
+  void pop() => _router.pop();
 
   @override
-  bool canPop() {
-    try {
-      return _router.canPop();
-    } catch (e) {
-      CustomFunction.logger.error('go_router.canPop error: ${e.toString()}');
-      return false;
-    }
-  }
+  bool canPop() => _router.canPop();
 
   @override
-  void replace(String location, {Object? extra}) {
-    try {
-      _router.replace(location, extra: extra);
-    } catch (e) {
-      throw CustomExceptions.goRouter(
-        'go_router.replace error: ${e.toString()}',
-      );
-    }
-  }
+  void replace(String location, {Object? extra}) => _router.replace(location, extra: extra);
 }

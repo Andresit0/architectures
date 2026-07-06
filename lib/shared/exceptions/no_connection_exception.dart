@@ -4,5 +4,5 @@ class NoConnectionException implements Exception {
   const NoConnectionException();
 
   @override
-  String toString() => 'NoConnectionException: Sin conexión a internet';
+  String toString() => 'NoConnectionException: No internet connection';
 }

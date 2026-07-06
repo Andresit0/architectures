@@ -24,12 +24,8 @@ class CpFpdart implements ICpFpdart {
       return _leftFrom(e, st, (_) => const NoConnectionFailure());
     } on ServerUnreachableException catch (e, st) {
       return _leftFrom(e, st, (_) => const ServerUnreachableFailure());
-    } on NoRequestException catch (e, st) {
-      return _leftFrom(e, st, (_) => const NoRequestFailure());
     } on UnexpectedResponseException catch (e, st) {
       return _leftFrom(e, st, (_) => const UnexpectedResponseFailure());
-    } on GoRouterException catch (e, st) {
-      return _leftFrom(e, st, (ex) => GoRouterFailure());
     } catch (e, st) {
       return _leftFrom(e, st, (_) => const UnexpectedFailure());
     }

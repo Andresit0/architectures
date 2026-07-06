@@ -14,40 +14,36 @@ void main() {
 
     test('ApiFailure should have default message', () {
       const failure = ApiFailure();
-      expect(failure.message, 'La solicitud tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.');
+      expect(failure.message, 'The server returned an error. Please try again later.');
     });
 
     test('NoConnectionFailure should have correct message', () {
       const failure = NoConnectionFailure();
-      expect(failure.message, 'Sin conexión a internet');
+      expect(failure.message, 'No internet connection');
     });
 
     test('ServerUnreachableFailure should have correct message', () {
       const failure = ServerUnreachableFailure();
-      expect(failure.message, 'Estamos en mantenimiento');
+      expect(failure.message, 'Server under maintenance');
     });
 
     test('UnexpectedFailure should have default message', () {
       const failure = UnexpectedFailure();
-      expect(failure.message, 'Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo más tarde.');
+      expect(failure.message, 'An unexpected error occurred. Please try again later.');
     });
 
     test('UnexpectedResponseFailure should have correct message', () {
       const failure = UnexpectedResponseFailure();
-      expect(failure.message, 'La respuesta del servidor no es la esperada. Por favor, inténtalo de nuevo más tarde.');
+      expect(failure.message, 'Unexpected server response. Please try again later.');
     });
 
-    test('NoRequestFailure should have correct message', () {
-      const failure = NoRequestFailure();
-      expect(failure.message, 'Esta función no se ha implementado aún. Esperamos tenerla disponible pronto.');
-    });
   });
 
   group('Exceptions', () {
     test('ApiException should have correct toString', () {
       const exception = ApiException(404);
       expect(exception.toString(), contains('404'));
-      expect(exception.toString(), contains('La solicitud tardó demasiado'));
+      expect(exception.toString(), contains('The server returned an error'));
     });
 
     test('ApiException should have correct statusCode', () {
@@ -70,9 +66,5 @@ void main() {
       expect(exception.details, 'test details');
     });
 
-    test('NoRequestException should require method parameter', () {
-      const exception = NoRequestException('GET');
-      expect(exception.method, 'GET');
-    });
   });
 }

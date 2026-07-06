@@ -1,7 +1,7 @@
 part of '_configs.lib.dart';
 
 class Vars {
-  final String appName = 'tudesarrollador';
+  final String appName = 'Clinical History';
 
   final String host = const String.fromEnvironment(
     'API_HOST',
@@ -14,6 +14,8 @@ class Vars {
   );
 
   final int port = const int.fromEnvironment('API_PORT', defaultValue: 5111);
+
+  final bool useHttps = const bool.fromEnvironment('USE_HTTPS', defaultValue: false);
 
   final bool useMockRepository = const bool.fromEnvironment(
     'USE_MOCK',

@@ -7,5 +7,5 @@ class ApiException implements Exception {
 
   @override
   String toString() =>
-      'ApiException($statusCode): La solicitud tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.';
+      'ApiException($statusCode): The server returned an error. Please try again later.';
 }
