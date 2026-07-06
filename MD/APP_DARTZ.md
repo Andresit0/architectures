@@ -10,10 +10,10 @@
 ## 1. Core rule per layer
 
 | Layer | Rule |
-|---|---|
+|---|---|---|
 | `cp_dio.dart` | Throws typed exceptions (`ApiException`, `NoConnectionException`, …) |
 | **Datasource impl** | Raw call only — **no try/catch**, lets exceptions propagate up |
-| **Repository impl** | Wraps datasource with `CustomFunction.fpdart.guard(...)` → `Either<Failure, T>` |
+| **Repository impl** | Wraps datasource with `CustomFunction.fpdart.guard(...)` → `Either<Failure, T>`. Use `fetchOrFallback(remote: guard, local: guard)` for offline-first fallback on connection failure |
 | **Repository interface** | Declares `Future<Either<Failure, T>>` return types |
 | **UseCase** | Passes `Either<Failure, T>` through unchanged — no logic |
 | **Notifier** | Calls `.fold(onFailure, onSuccess)` — **no try/catch** |
@@ -39,9 +39,7 @@ Exception → Failure mapping inside `guard`:
 ApiException               → Left(ApiFailure())
 NoConnectionException      → Left(NoConnectionFailure())
 ServerUnreachableException → Left(ServerUnreachableFailure())
-NoRequestException         → Left(NoRequestFailure())
 UnexpectedResponseException→ Left(UnexpectedResponseFailure())
-GoRouterException          → Left(GoRouterFailure())
 catch (e)                  → Left(UnexpectedFailure())   ← safety net
 ```
 
@@ -131,7 +129,36 @@ import '../../../../shared/exceptions/_exceptions.lib.dart';
 
 ---
 
-## 8. Call-chain summary (read top to bottom)
+## 8. `fetchOrFallback()` — offline-first fallback (repository layer)
+
+When a method should fall back to cached data on connection failure, use `fetchOrFallback()` instead of bare `guard()`:
+
+```dart
+// repository impl — offline-first
+@override
+Future<Either<Failure, LoginResponseEntity>> login({...}) async {
+  return fetchOrFallback(
+    remote: () => CustomFunction.fpdart.guard(
+      () => _remoteDatasource.login(email: email, passwordHash: passwordHash),
+    ),
+    local: () => CustomFunction.fpdart.guard(
+      () => _localDatasource.restoreSession(),
+    ),
+  );
+}
+```
+
+Behavior:
+- Remote succeeds → returns `Right(data)`
+- Remote fails with `NoConnectionFailure` / `ServerUnreachableFailure` + local has data → returns `Right(localData)`
+- Remote fails with connection error + local is null → returns `Left(connectionFailure)`
+- Remote fails with non-connection error → returns `Left(originalFailure)`
+
+Available as a top-level function from `_function.lib.dart`. Defined in `lib/shared/functions/offline_first_repository.dart`.
+
+---
+
+## 9. Call-chain summary (read top to bottom)
 
 ```
 Notifier.someMethod()
@@ -143,6 +170,26 @@ Notifier.someMethod()
   │               )
   │                 ├── OK  → Right(data)
   │                 └── err → Left(Failure)
+  │
+  └── state = result.fold(
+        Left(failure)  → FailureState(failure.message),
+        Right(data)    → SuccessState(data),
+      )
+
+**Offline-first variant** (repository uses `fetchOrFallback`):
+```
+Notifier.someMethod()
+  ├── state = Loading
+  ├── result = await useCase.call(...)        // Either<Failure, T>
+  │     └── repository.someMethod(...)
+  │           └── fetchOrFallback(
+  │                 remote: CpFpdart.guard(() => remoteDs.method()),
+  │                 local:  CpFpdart.guard(() => localDs.method()),
+  │               )
+  │                 ├── remote OK             → Right(data)
+  │                 ├── NoConnection + local  → Right(localData)
+  │                 └── NoConnection + null
+  │                       or other failure    → Left(Failure)
   │
   └── state = result.fold(
         Left(failure)  → FailureState(failure.message),

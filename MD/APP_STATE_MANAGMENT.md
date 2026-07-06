@@ -4,14 +4,13 @@ Riverpod v3 (code-gen). Always use `@riverpod` annotation; always re-run `build_
 
 #### Global shared providers
 
-Five `keepAlive` providers live in `lib/shared/providers/` and are exposed via the `CustomProviders` facade:
+Four `keepAlive` providers live in `lib/shared/providers/` and are exposed via the `CustomProviders` facade:
 
 ```dart
 CustomProviders.dio       // Provider<ICpDio>                 — Dio singleton
 CustomProviders.token     // Provider<ITokenService>          — token storage singleton
-CustomProviders.sharePlus // Provider<ICpSharePlus>           — share PDF singleton
-CustomProviders.user      // NotifierProvider<..., UserEntity> — authenticated user state
 CustomProviders.goRouter  // Provider<GoRouterListenable>      — ChangeNotifier for router refresh
+CustomProviders.sembast   // Provider<ICpSembast>             — Sembast database singleton (AES-256-CBC encrypted)
 ```
 
 - Feature code **always** accesses providers via `CustomProviders.xxx`.
