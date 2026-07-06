@@ -1,0 +1,70 @@
+intents:
+  - pr_id: PR001
+    branch: feature/auth-build-models-db
+    title: "Build + Shared Models + Database (drift→sembast migration)"
+    base: develop
+    draft: false
+    labels: [Auth, build, shared]
+    body: |
+      ## PR001 — Build + Shared Models + Database
+
+      **Commits**: build deps (sembast, crypto, pointycastle), shared models, sembast database
+      **Analyze**: 0 issues
+      **Tests**: 53 passed
+      **SHA**: 7ea337f
+
+  - pr_id: PR002
+    branch: feature/auth-shared-foundation
+    title: "Shared Foundation (configs, exceptions, jsons, interceptors, widgets)"
+    base: feature/auth-build-models-db
+    draft: true
+    labels: [Auth, shared:configs, shared]
+    body: |
+      ## PR002 — Shared Foundation
+
+      **Commits**: configs (uries, vars, route_names), exceptions refactor, auth_json, auth_interceptor, shared widgets
+      **Analyze**: 0 issues
+      **Tests**: 36 passed
+      **SHA**: 9b09c9e
+
+  - pr_id: PR003
+    branch: feature/auth-shared-functions-providers
+    title: "Shared Functions + Providers"
+    base: feature/auth-shared-foundation
+    draft: true
+    labels: [Auth, shared:functions, shared:providers]
+    body: |
+      ## PR003 — Shared Functions + Providers
+
+      **Commits**: cp_crypto, cp_sembast, offline_first, reachability, remove drift/cp_drift, sembast_provider
+      **Analyze**: 0 issues
+      **Tests**: 86 passed
+      **SHA**: 038a10e
+
+  - pr_id: PR004
+    branch: feature/auth-domain-infra
+    title: "Auth Feature — Domain + Infrastructure"
+    base: feature/auth-shared-functions-providers
+    draft: true
+    labels: [Auth, domain, infra]
+    body: |
+      ## PR004 — Auth Domain + Infrastructure
+
+      **Commits**: domain entities, datasource interfaces, repository interface, usecases, infrastructure impl
+      **Analyze**: 0 issues
+      **Tests**: 47 passed
+      **SHA**: 076b84f
+
+  - pr_id: PR005
+    branch: feature/auth-presentation
+    title: "Auth Feature — Presentation + main.dart + BDD + Integration"
+    base: feature/auth-domain-infra
+    draft: true
+    labels: [Auth, state, ui]
+    body: |
+      ## PR005 — Auth Presentation
+
+      **Commits**: auth state/notifier/provider, login screen, auth widgets, BDD tests, integration test, main.dart
+      **Analyze**: 0 issues
+      **Tests**: 266 passed
+      **SHA**: 6843002

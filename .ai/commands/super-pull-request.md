@@ -1,12 +1,509 @@
 ---
 description: |
-  Full PR pipeline v2: plan (with inter-PR dep detection) → validate (11 checks with repair routing)
-  → execute (TDD-first, pre-commit import validation) → post-execution validate (auto-repair loop)
-  → publish PRs.
+  Smart PR Split pipeline: analyze all changes vs base branch → classify files by
+  category (feature-agnostic) → plan atomic PRs → execute stacked branches sequentially
+  with per-PR validation+repair → re-validate ALL → publish stacked PRs on GitHub.
 ---
 
-# Super Pull-Request — Full Pipeline (v2)
+# Super Pull-Request — Smart PR Split Pipeline
 
-Load `.ai/orchestrators/Super-Pull-Request-Orchestrator.md` and follow it completely.
+Replaces the legacy orchestrator. This command is the single entry point for turning
+any set of unstaged/staged changes into professional, reviewable, stacked PRs.
 
-Feature: `$ARGUMENTS`
+Whenever this command is loaded, **execute the full pipeline below without asking
+"Yes? → No?" intermediate questions**. The split is the default.
+
+---
+
+## Step 0 — Load skills
+
+Load the following skills for repair during execution:
+
+- `.opencode/skills/app-agent-fix-analyzer-issues/SKILL.md`
+- `.opencode/skills/app-agent-fix-tests/SKILL.md`
+
+---
+
+## Step 1 — Detect base branch
+
+```bash
+git branch -a | grep -i develop
+```
+
+If `develop` exists (local or remote `origin/develop`):
+  Set `$BASE = develop`
+
+If `develop` does NOT exist:
+  **STOP.** Ask the user: "No se encontró la rama develop. ¿Qué rama quieres usar como base?"
+  Wait for their answer and set `$BASE = <user_answer>`
+
+Once confirmed, fetch the latest:
+
+```bash
+git fetch origin $BASE 2>/dev/null || true
+```
+
+---
+
+## Step 2 — Analyze all changes
+
+### 2.1 — Run git commands
+
+```bash
+git status --short
+git diff $BASE..HEAD --stat
+git diff $BASE..HEAD
+git log --oneline -10
+```
+
+### 2.2 — Classify every changed file (dynamic, feature-agnostic)
+
+For each file in the diff, detect the **group name** using these rules:
+
+| Path pattern                                          | Group name              | Test merge policy                     |
+|-------------------------------------------------------|-------------------------|---------------------------------------|
+| `pubspec.yaml` / `pubspec.lock`                       | `deps`                  | —                                     |
+| `linux/**` / `macos/**` / `windows/**` / `ios/**`     | `platform`              | —                                     |
+| `integration_test/**`                                 | `integration-tests`     | —                                     |
+| `test/bdd/**`                                         | `bdd-tests`             | —                                     |
+| `MD/**` / `AGENTS.md`                                 | `docs`                  | —                                     |
+| `lib/shared/database/**`                              | `database`              | `test/shared/database/**` → merge     |
+| `lib/shared/models/**`                                | `models`                | `test/shared/models/**` → merge       |
+| `lib/shared/exceptions/**`                            | `exceptions`            | `test/shared/exceptions/**` → merge   |
+| `lib/shared/configs/**`                               | `configs`               | `test/shared/configs/**` → merge      |
+| `lib/shared/functions/**`                             | `functions:{filename}`  | `test/shared/functions/**` → merge    |
+| `lib/shared/interceptors/**`                          | `interceptors`          | `test/shared/interceptors/**` → merge |
+| `lib/shared/providers/**`                             | `providers`             | `test/shared/providers/**` → merge    |
+| `lib/shared/widgets/**`                               | `shared-widgets`        | `test/shared/widgets/**` → merge      |
+| `lib/features/{f}/spec/**`                            | `{f}-spec`              | —                                     |
+| `lib/features/{f}/domain/**`                          | `{f}-domain`            | `test/features/{f}/domain/**` → merge |
+| `lib/features/{f}/infrastructure/**`                  | `{f}-infra`             | `test/features/{f}/infrastructure/**` → merge |
+| `lib/features/{f}/presentation/**`                    | `{f}-presentation`      | `test/features/{f}/presentation/**` → merge |
+| `**/generated_plugin_registrant.*` / `**/generated_plugins.cmake` | `deps` (forced)     | Forzado a `deps` — NUNCA asignado a otro PR |
+| `**/*.g.dart` / `**/*.freezed.dart`                              | `generated`         | Fusionar con el grupo del archivo .dart fuente |
+
+**Feature detection**: Extract `{f}` from whatever directory name exists under
+`lib/features/`. There may be multiple features; each gets its own `{f}-*` groups.
+
+**Test merge rule**: Tests are ALWAYS merged into the same group as their
+production code. Never create a separate PR for tests.
+
+Output a table:
+
+```
+| File | Group |
+|------|-------|
+| lib/shared/database/app_database.dart | database |
+| lib/features/auth/domain/login_entity.dart | auth-domain |
+| test/features/auth/domain/login_entity_test.dart | auth-domain (merged) |
+```
+
+---
+
+## Step 3 — Smart PR Split
+
+### 3.1 — Detect file groups
+
+After Step 2 classification, each file belongs to a group. These groups are the
+building blocks (not the PRs themselves). Typical groups:
+
+`deps`, `platform`, `models`, `database`, `exceptions`, `configs`, `jsons`,
+`functions:{name}`, `interceptors`, `providers`, `shared-widgets`,
+`{f}-spec`, `{f}-domain`, `{f}-infra`, `{f}-presentation`,
+`bdd-tests`, `integration-tests`, `docs`, `ai`
+
+### 3.2 — Merge file groups into functional capabilities
+
+**Do NOT create one PR per file group.** Instead, merge related groups into
+**functional capabilities** — each capability represents a single architectural
+decision or feature concern that a reviewer can evaluate independently.
+
+Apply these merge rules in order:
+
+| # | Rule | Merge condition | Capability title template |
+|---|------|----------------|---------------------------|
+| R1 | Dependency setup | If `deps` + `platform` both exist | `chore: setup dependencies and platform config` |
+| R2 | Shared models | If `models` exists | `feat: add shared domain models` |
+| R3 | Database migration | If `database` exists + any of `functions:cp_sembast`, `functions:cp_crypto` | `feat: migrate database to <engine>` |
+| R4 | Infrastructure cleanup | If `exceptions` + `configs` + `jsons` all exist and sum < 200 lines | `refactor: consolidate exceptions and configuration` |
+| R5 | Network infrastructure | If `functions:internet_service` + `functions:reachability` both exist | `feat: add server reachability strategies` |
+| R6 | Auth interceptor | If `interceptors` exists + `functions:offline_first` + `functions:cp_dio` | `feat: implement auth interceptor with offline-first` |
+| R7 | Routing + providers | If `providers` exists + `functions:cp_go_router` | `refactor: update routing and provider wiring` |
+| R8 | AI tooling | If `ai` exists | `chore: update AI tooling configuration` |
+| R9a | Feature spec | If `{f}-spec` exists | `docs({f}): add feature specification files` |
+| R9b | Feature domain | If `{f}-domain` exists | `feat({f}): add domain layer` |
+| R10 | Feature infra | If `{f}-infra` exists | `feat({f}): implement infrastructure layer` |
+| R11 | Feature presentation | If `{f}-presentation` + `shared-widgets` both exist | `feat({f}): implement presentation layer` |
+| R12 | Finalization | If `bdd-tests` + `integration-tests` + `docs` all exist | `test: add BDD and integration tests + docs` |
+| R13 | Generated code | If `generated` exists | Merge with the PR that contains the source .dart file |
+
+**Rules for capabilities without a merge rule**:
+- If a file group does not match any R1-R13 condition → create its own capability.
+- E.g., `docs` alone → `docs: update documentation`
+
+**Quality checks for the merge**:
+- One capability = one architectural decision. Do NOT merge unrelated concerns
+  even if they have few lines. E.g., `deps` must never merge with `interceptors`.
+- Feature layers (`{f}-domain`, `{f}-infra`, `{f}-presentation`) are NEVER merged
+  with each other — each is a different reviewer concern.
+- Tests ALWAYS stay in the same capability as their production code (enforced in Step 2).
+- If a capability exceeds 400 lines → suggest sub-split in the plan output.
+
+### 3.3 — Order capabilities topologically
+
+Sort capabilities by dependency order (not by rule number):
+
+```
+ 1. dependency-setup       (R1)   — deps + platform
+ 2. shared-models          (R2)   — models only
+ 3. database-migration     (R3)   — database + cp_*
+ 4. infrastructure-cleanup (R4)   — exceptions + configs + jsons
+ 5. network-infra          (R5)   — internet_service + reachability
+ 6. auth-interceptor       (R6)   — interceptors + offline_first + dio
+ 7. routing-providers      (R7)   — providers + go_router
+ 8. ai-tooling             (R8)   — .ai/ tooling changes
+ 9. {f}-spec               (R9a)  — feature specification docs
+10. {f}-domain             (R9b)  — domain entities + interfaces + usecases
+11. {f}-infra              (R10)  — infrastructure layer
+12. {f}-presentation       (R11)  — presentation + widgets
+13. finalization           (R12)  — bdd + integration + docs
+```
+
+If a capability has no files (no matching file groups), skip it.
+
+### 3.5 — File Overlap Audit + Auto-correction
+
+**Purpose**: Prevent the same file from appearing in multiple PRs (which causes
+silent conflicts like `generated_plugin_registrant.cc` bouncing between PRs).
+
+For each file across ALL planned PRs, check if it belongs to >1 PR:
+
+```
+For each PR, collect its file list into pr_{N}_files.txt
+Concatenate all lists, sort, find duplicates (uniq -d)
+```
+
+If any file appears in multiple PRs:
+
+1. **Identify owner**: the PR with the lowest topological level (the one that
+   needs the file first in the dependency chain).
+2. **Auto-correct**: remove the file from ALL other PRs. Since branches are
+   stacked, downstream PRs inherit the file from their base branch — they
+   don't need to include it in their diff.
+3. **Recalculate** `~{N} lines` for affected PRs.
+4. **Log the correction**:
+
+```
+⚠️ File Overlap Auto-corrected:
+  generated_plugin_registrant.cc
+    PR #1 (deps) ← owner (level 0)
+    PR #4 (exceptions) ← removed (inherited from base)
+
+  generated_plugins.cmake
+    PR #1 (deps) ← owner (level 0)
+    PR #4 (exceptions) ← removed (inherited from base)
+```
+
+If no overlaps:
+
+```
+✅ File Overlap Audit: 0 conflicts detected
+```
+
+### 3.6 — For each PR, generate a structured block
+
+```
+### PR {N} — `<type>(<scope>): <title>`
+**Razón**: <why this PR exists as a separate unit — one architectural decision>
+
+```
+<commit-message-1>
+<commit-message-2>
+<commit-message-3>
+```
+
+~{N} lines, review target: {N} min
+```
+
+Commit messages follow **Conventional Commits** (full table):
+
+| Type      | Cuándo usar                                  | Ejemplo                                          |
+|-----------|----------------------------------------------|--------------------------------------------------|
+| `feat`    | Nueva funcionalidad visible                  | `feat(auth): add biometric login`               |
+| `fix`     | Corrección de bug                            | `fix(auth): prevent token refresh loop`          |
+| `refactor`| Cambia estructura sin cambiar comportamiento | `refactor(storage): extract persistence service` |
+| `perf`    | Optimización de rendimiento                  | `perf(list): reduce rebuild count`               |
+| `test`    | Agregar o modificar tests                    | `test(auth): add login notifier tests`           |
+| `docs`    | Documentación                                | `docs(api): update auth flow`                    |
+| `build`   | Dependencias o compilación                   | `build(deps): update freezed`                    |
+| `ci`      | Pipelines CI/CD                              | `ci(github): add release workflow`               |
+| `chore`   | Mantenimiento sin impacto funcional          | `chore(repo): cleanup scripts`                   |
+| `style`   | Formato solamente                            | `style(ui): apply formatter`                     |
+| `revert`  | Revertir commit                              | `revert: feat(auth): add remember me`            |
+| `release` | Publicación de versión                       | `release: v1.4.0`                                |
+
+### 3.7 — Output the full plan
+
+```
+## Estrategia de PRs ({N} PRs, ordenados por dependencias)
+
+### PR 1 — `chore: setup dependencies and platform config`
+**Razón**: Un solo cambio atómico de configuración del proyecto.
+```
+chore(deps): replace drift with sembast (+ encrypt, crypto, pointycastle)
+chore(platform): remove sqlite3_flutter_libs from linux/macos/windows
+```
+~{N} lines, review target: {N} min
+
+### PR 2 — `feat: add shared domain models`
+**Razón**: Modelos compartidos necesarios para database y features.
+```
+feat(models): add PatientEntity (@freezed, @JsonSerializable)
+feat(models): add ClinicalHistoryEntity + 6 sub-entities
+test(models): add serialization tests
+```
+~{N} lines, review target: {N} min
+...
+```
+
+Also include a visual dependency graph:
+
+```
+develop ──── PR1 ── PR2 ── PR3 ── ... ── PR{N}
+             (tag)  (tag)  (tag)        (tag)
+```
+
+---
+
+## Step 4 — Execute PRs sequentially
+
+For each PR **in dependency order** (level ascending):
+
+### 4.1 — Determine base branch
+- PR 1 base = `$BASE`
+- PR {N} base = branch of PR {N-1}
+
+### 4.2 — Create branch
+
+```bash
+git checkout $BASE_BRANCH
+git checkout -b pr/{NN}-<short-kebab-name>
+```
+
+Branch naming: `pr/01-database-migration`, `pr/02-shared-models`, etc.
+
+### 4.3 — Clean build artifacts
+
+Before applying any commits, remove generated/build artifacts that should not
+be part of the PR diff:
+
+```bash
+flutter clean
+```
+
+This removes `build/`, `.dart_tool/`, and other artifacts that may have been
+generated by previous work or by `flutter pub get` during development.
+The next step will re-run `flutter pub get` during validation — no need to
+worry about missing dependencies.
+
+### 4.4 — Apply commits atomically (one per planned commit)
+
+**DO NOT** stage all files at once. Apply the commits **one by one** matching
+the commit list generated in Step 3.6.
+
+For EACH commit listed in the PR's plan:
+
+1. Identify which files from the PR belong to this specific commit
+2. Stage ONLY those files — never use `git add .` or `git add -A`:
+   ```bash
+   git add <file1> <file2> ...
+   ```
+3. Verify no unintended files are staged:
+   ```bash
+   git diff --cached --stat
+   ```
+4. If the commit includes test + production code, commit them together
+   (TDD rule: tests ship with their code).
+5. Commit with the exact message from the plan:
+   ```bash
+   git commit -m "<type>(<scope>): <description>"
+   ```
+
+For renames/deletes:
+
+```bash
+git add <new_path>
+git rm <old_path>
+git commit -m "refactor(scope): <description>"
+```
+
+**Rules**:
+- One `git commit` per planned commit message. Never squash different concerns.
+- Never use `git add .` or `git add -A` — only explicit file paths.
+- After the last commit of the PR, verify with `git log --oneline -{N}` that
+  the commits match the plan.
+
+### 4.5 — Validate
+
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs 2>/dev/null || true
+flutter analyze
+flutter test
+```
+
+**Expected**: 0 analyzer issues, 0 test failures.
+
+### 4.6 — If validation fails → repair loop
+
+| Failure type | Repair agent | Action |
+|---|---|---|
+| Flutter analyze issues | `app-agent-fix-analyzer-issues` | Load skill, fix every issue file-by-file |
+| Test failures | `app-agent-fix-tests` | Load skill, fix each failing test |
+| Build runner errors | Manual fix | Fix generated files mismatches |
+
+Steps:
+1. Load the corresponding skill
+2. Let it fix the issues
+3. Commit only the files that the repair agent changed (not `git add -A`):
+   ```bash
+   git diff --name-only  # see what changed
+   git add <changed-file-1> <changed-file-2> ...
+   git commit -m "fix(scope): resolve validation issues"
+   ```
+4. Re-validate (goto 4.4)
+5. Max 5 repair iterations per PR. If still failing after 5 → STOP. Escalate to user.
+
+### 4.7 — Mark PR as GREEN
+
+Record that PR {N} passed. Continue to PR {N+1}.
+
+### 4.8 — After ALL PRs executed → Re-validate every branch
+
+```bash
+for BRANCH in pr/01-* pr/02-* pr/03-* ...; do
+  git checkout $BRANCH
+  flutter analyze
+  flutter test
+  echo "=== $BRANCH: $([ $? -eq 0 ] && echo 'PASS' || echo 'FAIL')"
+done
+```
+
+- Checkout back to the original branch after validation.
+
+### 4.9 — If any branch FAILS in re-validation
+
+1. Identify failing branch(es)
+2. For each failing branch:
+   a. Checkout that branch
+   b. Load repair skill → fix
+   c. Commit fix: `git commit -m "fix(scope): post-validation repair"`
+   d. Re-validate this branch until GREEN
+3. After all failing branches repaired → goto 4.7 (re-validate ALL again)
+4. Max **3 global iterations** of this loop. If still failing → STOP. Escalate.
+
+### 4.10 — Show final validation summary
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║  PR Pipeline — Validation Summary                               ║
+╠══════════════════════════════════════════════════════════════════╣
+║  PR 1  feat: database migration                      ✅  PASS   ║
+║        ├─ chore(deps): replace drift with sembast               ║
+║        ├─ feat(database): implement sembast...                  ║
+║        └─ test(database): add sembast store tests               ║
+║                                                                ║
+║  PR 2  feat: shared domain models                    ✅  PASS   ║
+║        ├─ feat(models): add PatientEntity                       ║
+║        └─ test(models): add serialization tests                 ║
+║                                                                ║
+║  ...                                                             ║
+║                                                                ║
+║  Result: ALL {N} PRs PASSED ✅                                   ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+The user must see this table clearly before proceeding.
+
+> **Nota**: No se detectó GitHub Actions configurado en este repositorio.
+> Si el equipo quiere agregar CI básico, el workflow mínimo sugerido está
+> en `.github/workflows/ci.yml`. Esto no es parte del plan de PRs.
+
+---
+
+## Step 5 — Publish (always ask first)
+
+### 5.1 — Ask for confirmation
+
+**STOP.** Present the summary table from 4.9 to the user and ask:
+
+> "Todas las branches pasaron validación. ¿Deseas pushear los {N} branches y crear los Pull Requests en GitHub?"
+
+Valid affirmative answers: `yes`, `approve`, `publish`, `execute`, `si`, `sí`
+
+If the user says anything else → STOP. The branches exist locally for manual review.
+
+### 5.2 — Push all branches
+
+```bash
+for BRANCH in pr/01-* pr/02-* ...; do
+  git push origin $BRANCH
+done
+```
+
+### 5.3 — Create GitHub PRs (stacked)
+
+For each branch, create a PR targeting the previous branch's branch:
+
+**PR 1** (base = `$BASE`):
+```bash
+gh pr create \
+  --base $BASE \
+  --head pr/01-<name> \
+  --title "PR 1: feat: <title>" \
+  --body "## PR 1 — <title>
+
+**Razón**: <reason>
+
+### Commits
+- <commit-list>
+
+**Review target**: ~{N} min"
+```
+
+**PR {N}** (base = `pr/{N-1}-<name>`):
+```bash
+gh pr create \
+  --base pr/{N-1}-<name> \
+  --head pr/{N}-<name> \
+  --title "PR {N}: <type>(<scope>): <title>" \
+  --draft \
+  --body "..."
+```
+
+Use `--draft` for all PRs except PR 1 (since they depend on the previous PR being merged).
+
+### 5.4 — Return PR URLs table
+
+```
+| PR | Branch | URL | Status |
+|----|--------|-----|--------|
+| 1  | pr/01-database-migration     | https://... | Open |
+| 2  | pr/02-shared-models          | https://... | Draft |
+| 3  | pr/03-exceptions-configs     | https://... | Draft |
+| ... | ... | ... | ... |
+```
+
+---
+
+## Edge Cases
+
+| Situation | Handling |
+|-----------|----------|
+| No changes between HEAD and $BASE | STOP. Inform user there are no changes to PR. |
+| Only 1 group detected | Create a single PR, no split needed. Still run validation. |
+| Only docs/MD changes | Single `docs:` PR. Skip heavy build_runner / test steps. |
+| Feature has no `lib/features/{f}/` but has test changes | Classify as `tests` group, create standalone PR. |
+| pubspec.lock changed without pubspec.yaml | Include with closest `deps` group. |
+| Binary/generated files (.g.dart, .freezed.dart) | Include in same PR as their source files. Never separate. |
+| Merge conflicts during branch creation | STOP. Inform user. Ask them to resolve manually. |

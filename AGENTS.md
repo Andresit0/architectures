@@ -27,10 +27,9 @@ AGENTS.md         ← this file
 ├── templates/        ← File templates
 ```
 
-**.md files** — load them when the context requires that information; skip them when not needed.
+**Attention: the following .md files are available.**
 
 ```
-MD/API_COMMANDS.md          ← Commands to run the api (back-end)
 MD/APP_ARCHITECTURE.md      ← Architecture of app
 MD/APP_BARREL_PATTERN.md    ← Indication how works each folder that has barrel files in the app
 MD/APP_COMMANDS.md          ← Commands to run app (included its test)
@@ -38,7 +37,7 @@ MD/APP_DARTZ.md             ← Either/Failure/fpdart pattern: guard, fold, Fail
 MD/APP_EXCEPTION.md         ← Contains info about create and update code that contains app exceptions
 MD/APP_IMPORTANT_INFO.md    ← Basic info that should knows when is working with app
 MD/APP_PACKAGE_WRAPPER.md   ← How to wrap external packages: CustomFunction facade, cp_<pkg>.dart pattern (interface+impl), when to create Riverpod bridge, CpGoRouter.create() pattern (main.dart must NOT import go_router directly)
-MD/APP_PROVIDERS.md         ← Shared providers inventory (5: dio, token, sharePlus, user, goRouter), CustomProviders facade rules, ref.watch/read/listen per context
+MD/APP_PROVIDERS.md         ← Shared providers inventory (4: dio, token, goRouter, sembast), CustomProviders facade rules, ref.watch/read/listen per context
 MD/APP_SKILLS.md            ← Complete reference of all app_* skills and agents
 MD/APP_STATE_MANAGMENT.md   ← State management overview (Riverpod v2 code-gen) + quick ref to APP_PROVIDERS.md
 MD/APP_TREE.md              ← Show the file tree of the app. Use it always before write code
@@ -58,11 +57,62 @@ Before using any wrapper from `shared/functions/` verify its category in
 `MD/APP_PACKAGE_WRAPPER.md` (section "Access categories"). Quick summary:
 
 | Category | Wrappers | From features use |
-|---|---|---|
-| Pure utility | `fpdart`, `failure`, `logger`, `pathProvider` | `CustomFunction.xxx` directly |
-| Injectable service | `dio`, `token`, `sharePlus` | `ref.watch/read(CustomProviders.xxx)` — NEVER `CustomFunction.xxx` directly |
-| Internal dependency | `internetService`, `drift`, `encrypt`, `flutterSecureStorage`, `databaseKeyService` | Not used from features |
+|---|---|---|---|---|
+| Pure utility | `crypto`, `fpdart`, `failure`, `logger`, `pathProvider`, `sharePlus` | `CustomFunction.xxx` directly |
+| Injectable service | `dio`, `token`, `sembast` | `ref.watch/read(CustomProviders.xxx)` — NEVER `CustomFunction.xxx` directly |
+| Internal dependency | `internetService`, `encrypt`, `flutterSecureStorage`, `databaseKeyService` | Not used from features |
 | Deferred init | `goRouter` | `CpGoRouter.create(...)` in `main.dart`; `CustomFunction.goRouter.go(...)` from features |
+
+> **`fetchOrFallback()`** is a top-level function from `_function.lib.dart` (not a `CustomFunction.*` member). Provides the offline-first fallback pattern: `fetchOrFallback(remote: guard(...), local: guard(...))`. Available from any file importing `_function.lib.dart`.
+
+---
+
+## CustomModels — shared models barrel pattern
+
+Shared domain entities live in `lib/shared/models/` with the standard barrel pattern (`_models.lib.dart` + `_models.dart`).
+
+| Subdirectory | Entities |
+|---|---|
+| `patient/` | `PatientEntity` |
+| `clinical_history/` | `ClinicalHistoryEntity` + 6 sub-entities (service, facility, professional, diagnosis, attachment, state) |
+
+**Access from features:**
+```dart
+import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
+import 'package:clean_architecture_sdd_harness/shared/models/clinical_history/clinical_history_entity.dart';
+```
+
+Or import the barrel for convenience:
+```dart
+import 'package:clean_architecture_sdd_harness/shared/models/_models.lib.dart';
+```
+
+These entities were extracted from `features/auth/domain/entities/` and placed in `shared/models/` because they are shared domain models used by `shared/database/` and potentially by multiple features.
+
+---
+
+## CustomDb — database barrel pattern
+
+The `shared/database/` folder follows the standard barrel pattern (`_database.lib.dart` + `_database.dart`), mirroring `shared/functions/`.
+
+| File | Role |
+|---|---|
+| `_database.lib.dart` | Barrel: centralises imports, declares `part` for each public file |
+| `_database.dart` | Facade: `part of '_database.lib.dart'`; exposes `CustomDb` with `static` members |
+
+**Current members of `CustomDb`:**
+
+| Member | Type | Access from features |
+|---|---|---|
+| `CustomDb.clinicalHistory` | `IClinicalHistoryStore` | `await CustomDb.clinicalHistory.storeAll(...)` — accessible from any feature that imports `_database.lib.dart` |
+| `CustomDb.patientInfo` | `IPatientInfoStore` | `await CustomDb.patientInfo.storeAll(...)` — accessible from any feature that imports `_database.lib.dart` |
+| `CustomDb.resetDatabase()` | `Future<void>` | `await CustomDb.resetDatabase()` — clears sembast database |
+
+**Test override pattern:**
+```dart
+CustomDb.clinicalHistory = ClinicalHistory(database: Future.value(db));
+CustomDb.patientInfo = PatientInfo(database: Future.value(db));
+```
 
 ---
 
@@ -71,9 +121,9 @@ Before using any wrapper from `shared/functions/` verify its category in
 Interceptors live in `lib/shared/interceptors/` with their own barrel `_interceptors.lib.dart`.
 
 | Symbol | Access |
-|---|---|
-| `CustomInterceptors.auth(readToken)` | Used internally by `CpDio` to add the `Authorization` header; do not use directly from features |
-| `AuthInterceptor(readToken)` | Instantiated through `CustomInterceptors.auth(...)`; do not instantiate directly |
+|---|---|---|
+| `CustomInterceptors.auth(readToken, checkConnectivity)` | Used internally by `CpDio` to add the `Authorization` header + skip refresh when offline; do not use directly from features |
+| `AuthInterceptor(readToken, {checkConnectivity})` | Instantiated through `CustomInterceptors.auth(...)`; do not instantiate directly |
 
 > JWT utilities (`isTokenExpired`, `decodeJwtPayload`) belong to `ITokenService` / `TokenService` in `shared/functions/token_service.dart`, accessible via `CustomFunction.tokenService` or `ref.read(CustomProviders.token)`.
 
