@@ -1,54 +1,89 @@
 ### Architecture (clean + feature-first)
 
 ```
-lib/features/<feature>/
-  domain/          ← interfaces (i_*.dart), entities, usecases — no Flutter imports
-  infrastructure/  ← datasource impl, mapper, repository impl
-  presentation/    ← Riverpod notifiers/providers (.g.dart), screens, widgets
-
-lib/shared/
-  configs/         ← CustomConfigs barrel (_configs.lib.dart + _configs.dart). App variables like Colors, Strings., etc
-  models/          ← CustomModels barrel (_models.lib.dart + _models.dart). Domain entities shared across features: patient/, clinical_history/
-  database/        ← AppDatabase (sembast, AES-256-CBC via codec); barrel _database.lib.dart + _database.dart exposing CustomDb.clinicalHistory
-  functions/       ← CustomFunction barrel (_function.lib.dart + _function.dart)
-                      cp_<package>.dart wrappers + service classes
-  exceptions/      ← Failure classes, Exception classes, Either re-export
-                      (_exceptions.lib.dart + _exceptions.dart barrel)
-  interceptors/    ← CustomInterceptors barrel (_interceptors.lib.dart + _interceptors.dart)
-  providers/       ← Riverpod shared providers (dio, token, goRouter, sembast)
-  jsons/           ← CustomJsons barrel (_jsons.lib.dart + _jsons.dart); mock/test JSON data
-                       Access via CustomJsons.authJson
+lib/
+├── core/                    ← Pure infrastructure (no domain imports)
+│   ├── config/              ← AppEnvironment sealed class + environmentProvider
+│   ├── database/            ← AppDatabase (sembast, AES-256-CBC via codec)
+│   ├── network/             ← Dio wrapper, interceptors (auth, retry), connectivity, certificate pinning, timeouts (per-endpoint SLA), retry (exponential backoff + policy), api_endpoints
+│   ├── router/
+│   ├── services/            ← Wrappers organized by domain (auth, crypto, device, events, storage)
+│   └── utils/               ← General-purpose utilities
+│
+├── app/                     ← Application composition root
+│   ├── di/                  ← `_providers.lib.dart` composition root barrel (imports providers from core/), goRouterProvider
+│   └── router/              ← GoRouter definitions (`appRoutes()`), AppRoute enum, auth_guard — single source of truth
+│
+├── design_system/           ← Theme, colors, reusable UI components
+│   ├── components/          ← Reusable UI components
+│   └── theme/               ← AppColors, AppTheme (migrated from shared/configs/)
+│
+├── features/<feature>/
+│   ├── di/                  ← Feature-specific Riverpod providers (auth_provider, remember_me_provider) — migrated from presentation/providers/
+│   ├── domain/              ← interfaces (i_*.dart), entities, usecases, services, value_objects — no Flutter imports
+│   ├── infrastructure/      ← datasource impl, dtos, mapper, repository impl, service impl
+│   ├── presentation/        ← Riverpod notifiers (no providers — moved to di/), screens, widgets
+│   └── spec/                ← SDD specification files
+│
+├── l10n/                    ← AppLocalizations (i18n wired into MaterialApp.router)
+│
+└── shared/                  ← Shared domain abstractions, mock data
+    ├── error/               ← AppError sealed hierarchy, Result<T>, Failure, guard(), error_localizer
+    ├── exceptions/          ← Exception classes (ApiException, NoConnectionException, etc.)
+    ├── functions/           ← offline_first_repository.dart
+    ├── interfaces/          ← Cross-cutting domain interfaces (IAppDatabase, ISembastDb, ICredentialStore, IConnectivityChecker, ITokenStore, ITokenVerifier, IAuthenticationObserver, etc.)
+    ├── models/              ← Shared entities barrel (PatientEntity, ClinicalHistoryEntity + sub-entities)
+    └── pagination/          ← Pagination utilities (PaginatedResult, PaginationParams)
 ```
 
 ---
 
-### Either / Failure data flow
+### Result / AppError data flow
 
-All fallible operations return `Either<Failure, T>` (fpdart, via `cp_fpdart.dart`).
+All fallible operations return `Result<T>` (Success / Failure) via `guard()`.
 
 ```
-cp_dio → throws typed Exception
-datasource → raw call, no try/catch
-repository → CustomFunction.fpdart.guard(() => datasource.call())  ← creates Either
-             or fetchOrFallback(remote: guard, local: guard)       ← offline-first fallback
-usecase    → passes Either through unchanged
-notifier   → result.fold(onLeft, onRight)                          ← consumes Either
+shared/error/ → guard() in result_guard.dart catches Exception/Error → creates Failure(AppError)
+datasource  → raw call, no try/catch
+repository  → guard(() => datasource.call())                            ← creates Result
+usecase     → passes Result through unchanged, uses `is Success` / `is Failure` to branch
+notifier    → result.fold(onFailure: ..., onSuccess: ...)               ← consumes Result
 ```
 
 > See **MD/APP_DARTZ.md** for the full pattern, code examples and checklist.
 
-### Offline-first fallback pattern
+### Local datasource layer
 
-When a method should fall back to cached data on connection failure:
+If a feature needs offline persistence, add an `ILocal<Feature>Datasource` (e.g. `ILocalAuthDatasource`) in `domain/datasources/` with its implementation in `infrastructure/datasources/`. The repository combines remote + local:
 
 ```
-repository → fetchOrFallback(remote: guard(() => remoteDs.method()),
-                             local:  guard(() => localDs.method()))
-  ├── remote OK             → Right(data)
-  ├── NoConnection + local  → Right(localData)
-  └── NoConnection + null   → Left(connectionFailure)
-      or other failure
+repository → guard(() => remoteDs.method())
+              guard(() => localDs.storeSession(data))
+              guard(() => localDs.restoreSession())
 ```
 
-Available as a top-level function from `_function.lib.dart`. Defined in `lib/shared/functions/offline_first_repository.dart`.
-AuthInterceptor uses a `checkConnectivity` callback to skip token refresh when offline, preventing user expulsion.
+### Domain services
+
+Complex domain logic (e.g., session restoration with token expiry checks) lives directly in use cases under `domain/usecases/`, eliminating the need for separate service interfaces and service implementations:
+
+- `RestoreSessionUseCase` in `domain/usecases/` — reemplaza al servicio de restauracion de sesion
+- `Handle401UseCase` in `domain/usecases/` — reemplaza al servicio de retry handler
+
+### ITokenVerifier — interface in shared/interfaces/
+
+The `ITokenVerifier` interface lives in `lib/shared/interfaces/` (not `core/services/auth/`). Its implementation (`JwtTokenExpiryChecker`) remains in `core/services/auth/`. Feature code accesses it via `ref.watch(tokenVerifierProvider)` (imported from `_providers.lib.dart`).
+
+Infrastructure files that import `ITokenVerifier` — such as `local_auth_datasource_impl.dart` and `session_restoration_service_impl.dart` — import it from `shared/interfaces/_interfaces.lib.dart`.
+
+### guard() exception mapping
+
+```
+ApiException               → Failure(ApiError())
+NoConnectionException      → Failure(NetworkError())
+ServerUnreachableException → Failure(ServerUnreachableError())
+UnexpectedResponseException→ Failure(UnexpectedError())
+AppTimeoutException        → Failure(NetworkError())
+TimeoutException (dart)    → Failure(NetworkError())
+DioException (timeout)     → AppTimeoutException (checked before falling through)
+Error                      → Failure(UnexpectedError())   ← catches Error + Exception
+```

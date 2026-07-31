@@ -33,13 +33,13 @@ AGENTS.md         ← this file
 MD/APP_ARCHITECTURE.md      ← Architecture of app
 MD/APP_BARREL_PATTERN.md    ← Indication how works each folder that has barrel files in the app
 MD/APP_COMMANDS.md          ← Commands to run app (included its test)
-MD/APP_DARTZ.md             ← Either/Failure/fpdart pattern: guard, fold, Failure types, call-chain
+MD/APP_DARTZ.md             ← Result/guard/fold pattern: guard, fold, AppError types, call-chain
 MD/APP_EXCEPTION.md         ← Contains info about create and update code that contains app exceptions
 MD/APP_IMPORTANT_INFO.md    ← Basic info that should knows when is working with app
-MD/APP_PACKAGE_WRAPPER.md   ← How to wrap external packages: CustomFunction facade, cp_<pkg>.dart pattern (interface+impl), when to create Riverpod bridge, CpGoRouter.create() pattern (main.dart must NOT import go_router directly)
-MD/APP_PROVIDERS.md         ← Shared providers inventory (4: dio, token, goRouter, sembast), CustomProviders facade rules, ref.watch/read/listen per context
+MD/APP_PACKAGE_WRAPPER.md   ← How to wrap external packages: <pkg>_wrapper.dart pattern (interface+impl), when to create Riverpod bridge, goRouterProvider pattern (main.dart must NOT import go_router directly)
+MD/APP_PROVIDERS.md         ← Shared providers inventory (dio, token, goRouter), `_providers.lib.dart` composition root barrel, ref.watch/read/listen per context
 MD/APP_SKILLS.md            ← Complete reference of all app_* skills and agents
-MD/APP_STATE_MANAGMENT.md   ← State management overview (Riverpod v2 code-gen) + quick ref to APP_PROVIDERS.md
+MD/APP_STATE_MANAGMENT.md   ← State management overview (Riverpod v3 code-gen) + quick ref to APP_PROVIDERS.md
 MD/APP_TREE.md              ← Show the file tree of the app. Use it always before write code
 MD/AI_ARTIFACTS.md          ← How to create skills, agents, commands, orchestrators
 ```
@@ -51,25 +51,19 @@ Before executing any git command, write the exact command and ask the user to co
 
 ---
 
-## CustomFunction — access rule by category
+## GoRouter — access via Riverpod provider
 
-Before using any wrapper from `shared/functions/` verify its category in
-`MD/APP_PACKAGE_WRAPPER.md` (section "Access categories"). Quick summary:
+go_router is accessed exclusively via Riverpod `goRouterProvider` (in `app/di/router/router_provider.dart`). No static `CustomFunction` exists — use `ref.watch(goRouterProvider)` instead.
 
-| Category | Wrappers | From features use |
-|---|---|---|---|---|
-| Pure utility | `crypto`, `fpdart`, `failure`, `logger`, `pathProvider`, `sharePlus` | `CustomFunction.xxx` directly |
-| Injectable service | `dio`, `token`, `sembast` | `ref.watch/read(CustomProviders.xxx)` — NEVER `CustomFunction.xxx` directly |
-| Internal dependency | `internetService`, `encrypt`, `flutterSecureStorage`, `databaseKeyService` | Not used from features |
-| Deferred init | `goRouter` | `CpGoRouter.create(...)` in `main.dart`; `CustomFunction.goRouter.go(...)` from features |
-
-> **`fetchOrFallback()`** is a top-level function from `_function.lib.dart` (not a `CustomFunction.*` member). Provides the offline-first fallback pattern: `fetchOrFallback(remote: guard(...), local: guard(...))`. Available from any file importing `_function.lib.dart`.
+| Symbol | Access |
+|---|---|
+| `goRouterProvider` | `ref.watch(goRouterProvider)` in `main.dart` (returns `GoRouter`); `ref.read(goRouterProvider).go(...)` from features |
 
 ---
 
-## CustomModels — shared models barrel pattern
+## Shared Models — barrel pattern
 
-Shared domain entities live in `lib/shared/models/` with the standard barrel pattern (`_models.lib.dart` + `_models.dart`).
+Shared domain entities live in `lib/shared/models/`. The barrel `_models.lib.dart` exports entity files directly.
 
 | Subdirectory | Entities |
 |---|---|
@@ -87,45 +81,41 @@ Or import the barrel for convenience:
 import 'package:clean_architecture_sdd_harness/shared/models/_models.lib.dart';
 ```
 
-These entities were extracted from `features/auth/domain/entities/` and placed in `shared/models/` because they are shared domain models used by `shared/database/` and potentially by multiple features.
+These entities were extracted from `features/auth/domain/entities/` and placed in `shared/models/` because they are shared domain models used by `core/database/` and potentially by multiple features.
 
 ---
 
-## CustomDb — database barrel pattern
+## Database — access via Riverpod providers
 
-The `shared/database/` folder follows the standard barrel pattern (`_database.lib.dart` + `_database.dart`), mirroring `shared/functions/`.
+Database access is now managed through `core/database/` with Riverpod providers, not `CustomDb`.
 
-| File | Role |
-|---|---|
-| `_database.lib.dart` | Barrel: centralises imports, declares `part` for each public file |
-| `_database.dart` | Facade: `part of '_database.lib.dart'`; exposes `CustomDb` with `static` members |
-
-**Current members of `CustomDb`:**
-
-| Member | Type | Access from features |
+| Provider | Type | Access from features |
 |---|---|---|
-| `CustomDb.clinicalHistory` | `IClinicalHistoryStore` | `await CustomDb.clinicalHistory.storeAll(...)` — accessible from any feature that imports `_database.lib.dart` |
-| `CustomDb.patientInfo` | `IPatientInfoStore` | `await CustomDb.patientInfo.storeAll(...)` — accessible from any feature that imports `_database.lib.dart` |
-| `CustomDb.resetDatabase()` | `Future<void>` | `await CustomDb.resetDatabase()` — clears sembast database |
+| `appDatabaseProvider` | `Provider<IAppDatabase>` | `ref.watch(appDatabaseProvider)` |
+| `IAppDatabase.database` | `Future<ISembastDb>` | `await ref.read(appDatabaseProvider).database` — get sembast database wrapper |
+| `IAppDatabase.resetDatabase()` | `Future<void>` | `await ref.read(appDatabaseProvider).resetDatabase()` — clears sembast database |
 
 **Test override pattern:**
 ```dart
-CustomDb.clinicalHistory = ClinicalHistory(database: Future.value(db));
-CustomDb.patientInfo = PatientInfo(database: Future.value(db));
+return ProviderScope(
+  overrides: [
+    appDatabaseProvider.overrideWith((ref) => FakeAppDatabase()),
+  ],
+  child: ...,
+);
 ```
 
 ---
 
 ## CustomInterceptors — access rule
 
-Interceptors live in `lib/shared/interceptors/` with their own barrel `_interceptors.lib.dart`.
+Interceptors live in `lib/core/network/interceptors/` with their own barrel `_interceptors.lib.dart`.
 
 | Symbol | Access |
-|---|---|---|
-| `CustomInterceptors.auth(readToken, checkConnectivity)` | Used internally by `CpDio` to add the `Authorization` header + skip refresh when offline; do not use directly from features |
-| `AuthInterceptor(readToken, {checkConnectivity})` | Instantiated through `CustomInterceptors.auth(...)`; do not instantiate directly |
+|---|---|
+| `AuthInterceptor(onRetry, internalDio)` | Used internally by `DioWrapper` to add the `Authorization` header + handle 401 retry; do not use directly from features |
 
-> JWT utilities (`isTokenExpired`, `decodeJwtPayload`) belong to `ITokenService` / `TokenService` in `shared/functions/token_service.dart`, accessible via `CustomFunction.tokenService` or `ref.read(CustomProviders.token)`.
+> JWT utilities (`isTokenExpired`, `decodeJwtPayload`) belong to `JwtWrapper` / `JwtTokenExpiryChecker` in `core/services/auth/`, accessible via `ref.watch(jwtWrapperProvider)` or `ref.watch(tokenVerifierProvider)`.
 
 ---
 
@@ -133,7 +123,7 @@ Interceptors live in `lib/shared/interceptors/` with their own barrel `_intercep
 
 The project use 2 skills that must be used always to maintain SOLID principles to WRITE CODE.
 
-- When code is inside lib/shared/functions or is written a new provider inside lib/shared/providers the skill used is `.ai/skills/app-class-to-solid-min/SKILL.md`.
+- When code is inside lib/core/services/ the skill used is `.ai/skills/app-class-to-solid-min/SKILL.md`.
 
 - When the code is written inside lib/features the skill used is `.ai/skills/app-class-to-solid/SKILL.md`.
 
@@ -153,12 +143,12 @@ Phase A: [app-spec-definition skill] → collaborative conversation (assumptions
     ↓
 Phase B: [app-agent-spec-definer] → generates 6 files in lib/features/<name>/spec/
     ↓
-Phase C: [app-agent-phase-gate] → pre-code audit (spec completeness only — CpPackage audit at D.10.5)
+Phase C: [app-agent-phase-gate] → pre-code audit (spec completeness only — Wrapper audit at D.10.5)
     │  FAIL → repair sub-agents → re-audit → PASS
     ↓
 Phase D: [app-spec-dev skill] → All-Tests-First + 12 phases:
     │  D.0.5  → Canonical API extraction → generated_api_contract.md
-    │  D.0.6  → Package Audit + Wrapper TDD (pub add → test RED → cp_* GREEN) ← BEFORE feature tests
+    │  D.0.6  → Package Audit + Wrapper TDD (pub add → test RED → *_wrapper.dart GREEN) ← BEFORE feature tests
     │  D.0.1–D.0.5b → Write ALL feature tests from spec (domain, infra, presentation, integration, BDD)
     │           → Presentation tests mock wrapper interfaces (IFlChart etc.), never raw packages
     │  D.1–D.11 → stub → RED → implement → GREEN per layer
@@ -166,7 +156,7 @@ Phase D: [app-spec-dev skill] → All-Tests-First + 12 phases:
     │  Analyze failure → [app-agent-fix-analyzer-issues]
     │  Test failure   → [app-agent-fix-tests]
     │  Phase D.10     → [app-agent-nav-wirer]
-    │  Phase D.10.5   → [DirectImport-Auditor] → [app-agent-cp-package repair if direct imports found]
+    │  Phase D.10.5   → [DirectImport-Auditor] → [app-agent-cp-package repair: creates missing wrapper if direct imports found]
     ↓
 Phase E: [sdd-verify-adapted skill] → formal verification (PASS / FAIL)
     ↓
@@ -186,10 +176,10 @@ Phase G: [Engram persistence] → session summary
 | A | app-spec-definition | `.ai/skills/app-spec-definition/SKILL.md` | Collaborative spec |
 | B | app-agent-spec-definer | `.ai/skills/app-agent-spec-definer/SKILL.md` | Generates 6 spec files |
 | B — summary | app-agent-spec-definer-summary | `.ai/skills/app-agent-spec-definer-summary/SKILL.md` | Returns concise summary table (internal to Phase B) |
-| C | app-agent-phase-gate | `.ai/skills/app-agent-phase-gate/SKILL.md` | Pre-code audit gate (spec completeness only — CpPackage audit deferred to D.10.5) |
+| C | app-agent-phase-gate | `.ai/skills/app-agent-phase-gate/SKILL.md` | Pre-code audit gate (spec completeness only — Wrapper audit deferred to D.10.5) |
 | D | app-spec-dev | `.ai/skills/app-spec-dev/SKILL.md` | All-Tests-First + TDD implementation (D.0.5 API extraction → D.0.6 wrapper TDD → D.0.1–D.0.5b all tests → stub→RED→GREEN per layer) |
 | D — supervisor | app-agent-spec-dev-supervisor | `.ai/skills/app-agent-spec-dev-supervisor/SKILL.md` | Phase-by-phase verifier |
-| D.0.6 | *(orchestrator inline + app-cp-package)* | `.ai/skills/app-cp-package/SKILL.md` | Package Audit: detects missing cp_* wrappers, runs TDD (test RED → wrapper GREEN), appends ## Wrapper API to generated_api_contract.md — RUNS BEFORE D.0.1 |
+| D.0.6 | *(orchestrator inline + app-cp-package)* | `.ai/skills/app-cp-package/SKILL.md` | Package Audit: detects missing wrappers, runs TDD (test RED → *_wrapper.dart GREEN), appends ## Wrapper API to generated_api_contract.md — RUNS BEFORE D.0.1 |
 | D.0.1 | app-agent-domain-test-writer | `.ai/skills/app-agent-domain-test-writer/SKILL.md` | Writes domain tests from domain.md before stubs exist |
 | D.0.2 | app-agent-infrastructure-test-writer | `.ai/skills/app-agent-infrastructure-test-writer/SKILL.md` | Writes infrastructure tests (datasource + repository) from domain.md + contracts.md before infrastructure stubs exist. These tests are written from spec-derived contracts and will intentionally be compile-pending until Phase D.4 creates stubs. |
 | D.0.3 | app-agent-presentation-test-writer | `.ai/skills/app-agent-presentation-test-writer/SKILL.md` | Writes presentation tests from domain.md; reads ## Wrapper API to mock IFlChart etc., never raw packages |
@@ -200,7 +190,7 @@ Phase G: [Engram persistence] → session summary
 | D — repair | app-agent-fix-tests | `.ai/skills/app-agent-fix-tests/SKILL.md` | Fixes test failures |
 | D.10 | app-agent-nav-wirer | `.ai/skills/app-agent-nav-wirer/SKILL.md` | Wires navigation |
 | D.10.5 — audit | *(inline grep)* | D.10.5 | DirectImport-Auditor: 0 direct package imports in feature folder |
-| D.10.5 — repair | app-agent-cp-package | `.ai/skills/app-agent-cp-package/SKILL.md` | Creates cp_* wrappers on direct-import violation |
+| D.10.5 — repair | app-agent-cp-package | `.ai/skills/app-agent-cp-package/SKILL.md` | Creates *_wrapper.dart on direct-import violation |
 | E | sdd-verify-adapted | `~/.config/opencode/skills/sdd-verify-adapted/SKILL.md` | Formal verification |
 | F | app-agent-update-md | `.ai/skills/app-agent-update-md/SKILL.md` | Documentation sync |
 
@@ -236,12 +226,27 @@ The flow is complete when:
 
 ---
 
-
----
-
 ## Commands
 | Path | Description |
 |---|---|
 | `.ai/commands/super-commit.md` | Script with steps to group changes into semantic commits and push the branch |
 | `.ai/commands/super-md-update.md` | Script to sync MD/* and AGENTS.md from git changes |
 | `.ai/commands/spec-local.md` | Entry point for the Spec-Local TDD-First workflow — invoke as `/spec-local <feature name>` |
+
+---
+
+## Important info about "shared" vs "core"
+
+The project has two cross-cutting directories with distinct roles:
+
+- **`lib/shared/`** — Pure domain abstractions: error types (`error/` with `AppError`, `Result<T>`, `guard()`), domain interfaces (`interfaces/` with `IAppDatabase`, `ISembastDb`, `IConnectivityChecker`, `ITokenStore`, `ITokenVerifier`, `IAuthenticationObserver`, etc.), exception classes (`exceptions/`), models/entities (`models/`), pagination (`pagination/`), mock data (`jsons/`), offline-first mixin (`functions/offline_first_repository.dart`). Domain layer can import from `shared/`.
+
+- **`lib/core/`** — Pure infrastructure: service wrappers (`services/`), database (`database/`), network (`network/`), router adapter (`router/`), utils (`utils/`). Domain layer must NEVER import from `core/`.
+
+- **`lib/app/`** — Application composition root: `_providers.lib.dart` barrel (`di/`), GoRouter setup (`router/`), app initializer.
+
+- **`lib/core/config/`** — `AppEnvironment` sealed class + `environmentProvider`.
+
+- **`lib/design_system/`** — Theme and reusable UI components (loading indicator, theme).
+
+- **`lib/l10n/`** — AppLocalizations for i18n, wired into MaterialApp.router.

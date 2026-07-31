@@ -1,27 +1,36 @@
-### Package wrappers (`cp_<package>.dart`)
+### Package wrappers (`<package>_wrapper.dart`)
 
-All pub packages used inside the app are wrapped in `lib/shared/functions/cp_<package>.dart`
-and registered in `CustomFunction`. External code always uses `CustomFunction.xxx` — never
-imports the package directly.
+All pub packages used inside the app are wrapped in `lib/core/services/` or `lib/core/network/` 
+and registered through Riverpod providers. External code always uses `ref.watch/read(ProviderName)`
+via the `_providers.lib.dart` barrel — never imports the package directly.
 
-### Wrappers that expose a service with interface
+### Wrappers organized by domain
 
-| Wrapper | Interface | Impl class | Alias in `CustomFunction` | Riverpod Bridge (`CustomProviders`) |
+#### Network layer (`core/network/`)
+
+| Wrapper | Interface | Impl class | Access | Riverpod Bridge |
 |---|---|---|---|---|
-| `cp_crypto.dart` | `ICpCrypto` | `CpCrypto` | `CustomFunction.crypto` | — (pure utility, SHA-256 hashing) |
-| `cp_dio.dart` | `ICpDio` | `CpDio` | `CustomFunction.dio` | `CustomProviders.dio` (`httpServiceProvider`) |
-| `cp_fpdart.dart` | `ICpFpdart` | `CpFpdart` | `CustomFunction.fpdart` | — (pure utility) |
-| `cp_sembast.dart` | `ICpSembast` | `CpSembast` | `CustomFunction.sembast` | `CustomProviders.sembast` (`sembastProvider`) |
-| `cp_encrypt.dart` | `ICpEncrypt` | `CpEncrypt` | `CustomFunction.encrypt` | — (internal dependency of `cp_sembast`, wraps `package:encrypt`, AES-256-CBC) |
-| `cp_flutter_secure_storage.dart` | `ICpFlutterSecureStorage` | `CpFlutterSecureStorage` | `CustomFunction.flutterSecureStorage` | — (internal dependency; wraps `flutter_secure_storage`; injected into `TokenService` and `DatabaseKeyService`) |
-| `cp_logger.dart` | `ICpLogger` | `CpLogger` | `CustomFunction.logger` | — (internal use between wrappers) |
-| `cp_path_provider.dart` | `ICpPathProvider` | `CpPathProvider` | `CustomFunction.pathProvider` | — (pure utility) |
-| `cp_share_plus.dart` | `ICpSharePlus` | `CpSharePlus` | `CustomFunction.sharePlus` | — (pure utility, share PDF) |
-| `internet_service.dart` | `IInternetService` | `InternetService` | `CustomFunction.internetService` | — (injected into `CpDio`) |
-| `token_service.dart` | `ITokenService` | `TokenService` | `CustomFunction.tokenService` | `CustomProviders.token` (`tokenServiceProvider`) |
-| `failure_propagation.dart` | `IFailurePropagation` | `FailurePropagation` | `CustomFunction.failure` | — (pure utility) |
+| `dio/dio_wrapper.dart` | `IDioWrapper` | `DioWrapper` | `ref.watch(httpServiceProvider)` | `httpServiceProvider` |
+| `interceptors/auth_interceptor.dart` | `IAuthInterceptorProvider` | `AuthInterceptor` | Used internally by `DioWrapper`; do not use from features | — |
 
-`DatabaseKeyService` (`IDatabaseKeyService`) lives in `lib/shared/database/secure_storage_key_service.dart` and is NOT a `cp_*` wrapper — it is part of the `shared/database/` domain.
+#### Services (`core/services/`)
+
+| Domain | Wrapper | Interface | Impl class | Access |
+|---|---|---|---|---|
+| **auth** | `auth/secure_token_store.dart` | `ITokenStore` | `SecureTokenStore` | `ref.watch(tokenStoreProvider)` |
+| **auth** | `auth/secure_credential_store.dart` | `ICredentialStore` | `SecureCredentialStore` | `ref.watch(credentialStoreProvider)` |
+| **auth** | `auth/jwt_wrapper.dart` | — | `JwtWrapper` | `ref.watch(jwtWrapperProvider)` |
+| **auth** | `auth/jwt_token_expiry_checker.dart` | `ITokenVerifier` | `JwtTokenExpiryChecker` | `ref.watch(tokenVerifierProvider)` |
+| **crypto** | `crypto/bcrypt_wrapper.dart` | `IPasswordHasher` | `BcryptWrapper` | `ref.watch(passwordHasherProvider)` |
+| **device** | `device/path_provider_wrapper.dart` | `IPathProviderWrapper` | `PathProviderWrapper` | `ref.watch(pathProviderProvider)` — pure utility |
+| **device** | `device/jailbreak_detection_wrapper.dart` | — | `JailbreakDetectionWrapper` | — (internal, called during app init) |
+| **storage** | `storage/secure_storage_wrapper.dart` | `ISecureStorageWrapper` | `SecureStorageWrapper` | — (internal, injected into `SecureTokenStore` and `DatabaseKeyService`) |
+
+#### Shared functions (`lib/shared/functions/`)
+
+| Wrapper | Access | Notes |
+|---|---|---|
+| `offline_first_repository.dart` | Import directly | Offline-first CRUD mixin for repositories |
 
 ---
 
@@ -32,96 +41,94 @@ Mixing categories is an architectural error.
 
 | Category | Wrappers | Correct access from features | Riverpod Bridge |
 |---|---|---|---|
-| **Pure utility** | `cp_crypto`, `cp_fpdart`, `failure_propagation`, `cp_logger`, `cp_path_provider`, `cp_share_plus` | `CustomFunction.xxx` directly | NO |
-| **Injectable service** | `cp_dio`, `token_service`, `cp_sembast` | `ref.watch/read(CustomProviders.xxx)` — NEVER `CustomFunction.xxx` directly | YES |
-| **Internal dependency** | `internet_service`, `cp_encrypt`, `cp_flutter_secure_storage` | Only inside their consuming wrappers. Never from features | NO |
-| **Deferred init** | `cp_go_router` | `CpGoRouter.create(...)` in `main.dart`; `CustomFunction.goRouter.go(...)` from features | NO |
+| **Pure utility** | `path_provider_wrapper` | `ref.watch(provider)` directly | Provider-level (not via composition root barrel) |
+ | **Injectable service** | `dio_wrapper`, `secure_token_store`, `secure_credential_store` | `ref.watch/read(ProviderName)` via `_providers.lib.dart` | YES — composition root barrel |
+| **Internal dependency** | `internet_service`, `secure_storage_wrapper`, `jailbreak_detection_wrapper` | Only inside their consuming wrappers. Never from features | NO |
+| **GoRouter (Riverpod)** | `goRouterProvider` | `ref.watch(goRouterProvider)` from `app/di/router/router_provider.dart` | NO — accessed via `ref.watch(goRouterProvider)` directly in `main.dart` and features |
 
 **Why the injectable vs pure distinction matters:**
-- Injectable services (`dio`, `token`, `sembast`) must go through `CustomProviders` to
+- Injectable services (`dio`, `token`, `sembast`) must go through `_providers.lib.dart` to
   be overridable with mocks in widget/integration tests via `ProviderScope` overrides.
-- Pure utilities (`fpdart`, `failure`, `logger`, `sharePlus`) don't need runtime substitution;
-  accessing them via `CustomFunction.xxx` directly is correct and expected.
+- Pure utilities (`pathProvider`) don't need runtime substitution;
+  accessing them via `ref.watch(provider)` directly is correct and expected.
 
 #### Anti-patterns — what is WRONG
 
 ```dart
 // WRONG: import a pub package directly in feature code
 import 'package:dio/dio.dart';
-import 'package:fpdart/fpdart.dart';
 
-// WRONG: use an injectable service from a notifier without going through Riverpod
-await CustomFunction.tokenService.save(token);   // not mockable in tests
-await CustomFunction.sembast.database;           // not mockable in tests
-await CustomFunction.dio.get(url);               // not mockable in tests
+// WRONG: instantiate a service directly instead of using Riverpod provider
+final dio = Dio(BaseOptions(baseUrl: '...')); // should use ref.watch(httpServiceProvider)
 
-// WRONG: access internetService from a feature (internal dependency of CpDio)
-await CustomFunction.internetService.isConnected(); // CpDio already does this internally
+// WRONG: import a wrapper's internal dependency from a feature
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+// should never access internet connectivity from features — DioWrapper already handles it
 
-// WRONG: access encrypt directly from a feature (internal dependency of CpSembast)
-CustomFunction.encrypt.encrypt(text, key); // CpSembast already does this internally
-
-// WRONG: access flutterSecureStorage directly from a feature (internal dependency)
-await CustomFunction.flutterSecureStorage.read(key: 'some_key'); // use CustomProviders.token or CustomFunction.sembast
-
-// WRONG: navigate without the wrapper
+// WRONG: navigate without the goRouter provider
 import 'package:go_router/go_router.dart';
-context.go('/[feature_name]'); // should be: CustomFunction.goRouter.go('/[feature_name]')
+context.go('/[feature_name]'); // should be: ref.read(goRouterProvider).go('/[feature_name]')
 ```
 
 ---
 
 **Rule: when to create a Riverpod bridge?**
 
-Create a `shared/providers/<name>_provider.dart` when the wrapper needs to be injected into
+Create a provider in `lib/app/di/services/<name>_provider.dart` when the wrapper needs to be injected into
 feature providers via `ref.watch/read`. Not needed for pure functional utilities
-(`fpdart`, `logger`, `failure`, `sharePlus`) or for services that are only internal dependencies of other
+or for services that are only internal dependencies of other
 wrappers (`internetService`).
 
 ---
 
-**`CpGoRouter` initialization pattern in `main.dart`**
+**`goRouterProvider` pattern in `main.dart`**
 
-`main.dart` uses `CpGoRouter.create(routes:, refreshListenable:)` to build the `GoRouter` — does NOT import `package:go_router` directly.
-go_router types (`GoRoute`, `RouteBase`) are encapsulated within `cp_go_router.dart` and `app_routes.dart` (configs).
-`main.dart` gets routes via `CustomConfigs.routes.goRouter` and the listenable via `ref.read(CustomProviders.goRouter)`:
+`main.dart` uses `ref.watch(goRouterProvider)` to get the `GoRouter` instance directly from Riverpod.
+go_router types (`GoRoute`, `RouteBase`) are encapsulated within `app_router.dart` and `app_route.dart`.
+The `goRouterProvider` is defined in `app/di/router/router_provider.dart` and creates the `GoRouter` with `AuthGuard` and `authenticationObserverProvider`:
 
 ```dart
-// main.dart — CORRECT
-routerConfig: CpGoRouter.create(
-  routes: CustomConfigs.routes.goRouter,
-  refreshListenable: ref.read(CustomProviders.goRouter),
-),
+// app/di/router/router_provider.dart — CORRECT
+final goRouterProvider = Provider<GoRouter>((ref) {
+  final observer = ref.watch(authenticationObserverProvider);
+  const guard = AuthGuard();
+  return GoRouter(
+    initialLocation: '/',
+    refreshListenable: observer,
+    redirect: (context, state) => guard.redirect(...),
+    routes: appRoutes(),
+  );
+});
+
+// main.dart
+routerConfig: ref.watch(goRouterProvider),
 ```
 
-> **`CustomFunction.goRouter`** is assigned inside `CpGoRouter.create()` → the `CpGoRouter` constructor receives the already-configured `GoRouter`. Do not try to create a `CpGoRouter` instance directly.
+To add a new route: add the `GoRoute` in `lib/app/router/app_router.dart` within `appRoutes()` and add the route name to the `AppRoute` enum in `lib/app/router/app_route.dart`.
 
-To add a new route to the template: add the `GoRoute` in `shared/configs/app_routes.dart` within `Routes.goRouter`.
+**From features:** use `ref.read(goRouterProvider).go('/path')` or `ref.read(goRouterProvider).push('/path')` to navigate.
 
 ---
 
-**To add a new package** use the `cp_package` skill:
+**To add a new package** use the `app-cp-package` skill:
 1. `dart pub add <package>` from project root
-2. Create `lib/shared/functions/cp_<package>.dart` with `part of '_function.lib.dart';`
-3. Add the `import 'package:<package>/<package>.dart';` to `_function.lib.dart`
-4. Add `part 'cp_<package>.dart';` to `_function.lib.dart`
-5. Expose via `static final <Package> <name> = <Package>();` in `CustomFunction`
-6. Apply the `class_to_solid_min` skill to add an abstract interface (`I<Package>`) and update the `CustomFunction` field type to the interface type.
-7. If the service needs Riverpod injection: create `shared/providers/<name>_provider.dart` + run `build_runner` + add `import '<name>_provider.dart';` to `_providers.lib.dart` (provider files use `@riverpod` so they must be `import`, not `part`) + expose in `CustomProviders` (all covered by `class_to_solid_min` Steps 3–5).
+2. Create wrapper in `lib/core/services/<domain>/<package>_wrapper.dart`
+3. Apply the `class_to_solid_min` skill to add an abstract interface and Riverpod provider
+4. If the service needs to be injectable from features: add to `_providers.lib.dart` barrel
 
 **When a feature introduces a new package — TDD-first rule (D.0.6):**
 
-If a feature's spec (tasks.md / spec.md) requires a pub package that has no `cp_*` wrapper yet,
+If a feature's spec (tasks.md / spec.md) requires a pub package that has no wrapper yet,
 the wrapper MUST be created and tested GREEN **before** any feature test is written.
 This is enforced by Phase D.0.6 of the Spec-Local orchestrator.
 
 Strict order:
 ```
 1. dart pub add <package>                           ← from project root
-2. Write cp_<package>_test.dart → run → RED        ← wrapper doesn't exist yet
-3. Write cp_<package>.dart wrapper → run → GREEN
-4. flutter analyze lib/shared/functions/ = 0
-5. Apply class_to_solid_min (add I<Package> interface)
+2. Write <package>_wrapper_test.dart → run → RED    ← wrapper doesn't exist yet
+3. Write <package>_wrapper.dart wrapper → run → GREEN
+4. flutter analyze = 0
+5. Apply class_to_solid_min (add interface + Riverpod provider)
 6. Append ## Wrapper API section to generated_api_contract.md
 7. ONLY THEN write feature tests (D.0.1–D.0.5b)
 ```
@@ -133,15 +140,6 @@ mock the wrong type and become invalid the moment the wrapper is introduced.
 **Packages that cannot be wrapped** (framework infrastructure):
 - `flutter_riverpod` / `riverpod_annotation` — UI framework & compile-time annotations; must be imported directly.
 - `freezed_annotation` — compile-time annotation library; must be imported directly in every Freezed source file (see below).
-
-**Why `cp_freezed.dart` doesn't exist**
-
-`freezed_annotation` cannot be wrapped for three technical reasons:
-1. **Annotations must be real types**: `@freezed`, `@Default(...)` must reference the exact classes from the package; a wrapper cannot re-export annotations in a way the compiler recognizes.
-2. **The `part` directive requires co-location**: `part 'xxx.freezed.dart'` must be in the same file that imports `freezed_annotation`; it cannot be in `_function.lib.dart`.
-3. **Zero runtime behavior**: it's purely metadata for `build_runner`. There is no object, service or function to expose via `CustomFunction`.
-
-Same reasoning applies to `riverpod_annotation` (no `cp_riverpod_annotation.dart` exists).
 
 **Correct pattern in Freezed source files:**
 ```dart

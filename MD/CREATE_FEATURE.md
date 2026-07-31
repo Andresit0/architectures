@@ -24,8 +24,8 @@ app-spec-definer is an opencode skill at `.ai/skills/app-spec-definer/SKILL.md`.
 Files are written to `lib/features/<feature_name>/spec/`.
 
 If you provide a JSON sample, app-spec-definer also:
-- Creates `lib/shared/jsons/<feature>_json.dart`
-- Updates `_jsons.lib.dart` and `_jsons.dart` barrel files
+- Creates `lib/features/<feature_name>/infrastructure/datasources/fake_<feature_name>_datasource.dart`
+  with hardcoded entity constructors (the old `CustomJsons`/`_jsons.lib.dart` pattern has been removed)
 
 ---
 
