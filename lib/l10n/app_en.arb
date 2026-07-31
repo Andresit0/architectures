@@ -1,0 +1,30 @@
+{
+  "@@locale": "en",
+  "appTitle": "Clean Architecture App",
+"@appTitle": {
+  "description": "App title for window/task switcher. Currently unused -- reserved for future splash screen, about dialog, or AppBar."
+},
+  "loginButton": "Login",
+  "loginTitle": "Enter your credentials to continue",
+  "emailLabel": "Email",
+  "emailHint": "Email",
+  "passwordLabel": "Password",
+  "passwordHint": "Password",
+  "rememberMe": "Remember me",
+  "clinicalHistory": "Clinical History",
+  "welcomeUser": "Welcome, {name}",
+  "@welcomeUser": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "logout": "Logout",
+  "errorUnknown": "An unexpected error occurred",
+  "errorNetwork": "No internet connection",
+  "errorServer": "Server is under maintenance",
+  "errorInvalidCredentials": "Invalid email or password",
+  "errorInvalidEmail": "Please enter a valid email",
+  "errorPasswordTooShort": "Password must be at least 6 characters",
+  "errorEmptyEmail": "Email is required",
+  "errorEmptyPassword": "Password is required"
+}
