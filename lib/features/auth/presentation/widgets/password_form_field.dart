@@ -29,14 +29,15 @@ class _PasswordFormFieldState extends State<PasswordFormField> {
     super.dispose();
   }
 
-  String? _validate(String? value) {
-    if (value == null || value.isEmpty) return 'Password is required';
-    if (value.length < 6) return 'Minimum 6 characters';
+  String? _validate(String? value, AppLocalizations l10n) {
+    if (value == null || value.isEmpty) return l10n.errorEmptyPassword;
+    if (value.length < 6) return l10n.errorPasswordTooShort;
     return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<bool>(
       initialData: false,
       stream: _showPassword.stream,
@@ -48,9 +49,10 @@ class _PasswordFormFieldState extends State<PasswordFormField> {
           keyboardType: TextInputType.visiblePassword,
           onChanged: widget.onChanged,
           onFieldSubmitted: widget.onFieldSubmitted,
-          validator: _validate,
+          validator: (value) => _validate(value, l10n),
           decoration: InputDecoration(
-            hintText: widget.hintText ?? 'Password',
+            labelText: l10n.passwordLabel,
+            hintText: widget.hintText ?? l10n.passwordHint,
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
               icon: Icon(
@@ -59,19 +61,19 @@ class _PasswordFormFieldState extends State<PasswordFormField> {
               onPressed: () => _showPassword.add(!visible.data!),
             ),
             filled: true,
-            fillColor: CustomConfigs.appColors.grayBackground,
+            fillColor: AppColors.grayBackground,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: CustomConfigs.appColors.red),
+              borderSide: BorderSide(color: AppColors.red),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: CustomConfigs.appColors.red,
+                color: AppColors.red,
                 width: 1.5,
               ),
             ),

@@ -101,16 +101,6 @@ tests:
       when: AuthRepositoryImpl.restoreSession() is called
       then: Returns Left(UnexpectedFailure)
 
-    - name: auth_usecase_saveSession_delegates_to_repository
-      layer: domain
-      given: AuthRepository is mocked
-      when: SaveSessionUseCase.call(data, email, passwordHash) is called
-      then: Delegates to AuthRepository.saveSession and returns the result
-    - name: auth_usecase_saveSession_repository_failure_returns_Left
-      layer: domain
-      given: AuthRepository.saveSession returns Left(UnexpectedFailure)
-      when: SaveSessionUseCase.call(data, email, passwordHash) is called
-      then: Returns Left(UnexpectedFailure)
     - name: auth_usecase_clearSession_delegates_to_repository
       layer: domain
       given: AuthRepository is mocked
@@ -142,17 +132,6 @@ tests:
       given: LoginUseCase returns Right(LoginResponseEntity)
       when: AuthNotifier.login(email, password) is called
       then: State becomes AuthLoaded with the patient data, secure storage is written
-    - name: auth_notifier_login_rememberMe_calls_saveSession
-      layer: presentation
-      given: LoginUseCase returns Right(LoginResponseEntity) and rememberMe is true
-      when: AuthNotifier.login(email, password, rememberMe: true) is called
-      then: SaveSessionUseCase.call() is called via repository
-    - name: auth_notifier_login_rememberMe_and_saveSession_failure_sets_AuthFailure
-      layer: presentation
-      given: LoginUseCase returns Right(LoginResponseEntity) and saveSession returns Left(UnexpectedFailure)
-      when: AuthNotifier.login(email, password, rememberMe: true) is called
-      then: State becomes AuthFailure and navigation is blocked
-
     - name: auth_notifier_login_failure_sets_failure_state
       layer: presentation
       given: LoginUseCase returns Left(ApiFailure)

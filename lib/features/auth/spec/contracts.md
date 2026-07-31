@@ -29,8 +29,6 @@ endpoints:
             properties:
               type: string
               key: string
-              expires_in_hours: int
-              expiration_date: string (ISO 8601, nullable)
           clinical_history:
             type: array
             description: List of clinical history entries
@@ -62,7 +60,7 @@ endpoints:
     auth: none
     notes:
       - Password is hashed client-side before sending.
-      - Mock JSON file: lib/shared/jsons/auth_json.dart -> authJson.loginResponse200
+      - Uses AuthRemoteDatasourceImpl for real HTTP calls (no mock datasource)
       - When rememberMe=true, session (fullname + token) is saved to sembast and clinical_history data is stored in sembast.
       - When rememberMe=false, neither session nor clinical history is persisted.
 
@@ -84,8 +82,6 @@ endpoints:
             properties:
               type: string
               key: string
-              expires_in_hours: int
-              expiration_date: string (ISO 8601, nullable)
       401:
         error: unauthorized
         description: Token is expired or invalid — triggers auto re-login if stored credentials exist

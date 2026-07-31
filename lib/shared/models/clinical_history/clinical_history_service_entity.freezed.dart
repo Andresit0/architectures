@@ -11,7 +11,6 @@ part of 'clinical_history_service_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$ClinicalHistoryServiceEntity {
 
@@ -22,8 +21,6 @@ mixin _$ClinicalHistoryServiceEntity {
 @pragma('vm:prefer-inline')
 $ClinicalHistoryServiceEntityCopyWith<ClinicalHistoryServiceEntity> get copyWith => _$ClinicalHistoryServiceEntityCopyWithImpl<ClinicalHistoryServiceEntity>(this as ClinicalHistoryServiceEntity, _$identity);
 
-  /// Serializes this ClinicalHistoryServiceEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -31,7 +28,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is ClinicalHistoryServiceEntity&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.category, category) || other.category == category));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,code,name,category);
 
@@ -208,11 +205,11 @@ return $default(_that.code,_that.name,_that.category);case _:
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _ClinicalHistoryServiceEntity extends ClinicalHistoryServiceEntity {
   const _ClinicalHistoryServiceEntity({required this.code, required this.name, required this.category}): super._();
-  factory _ClinicalHistoryServiceEntity.fromJson(Map<String, dynamic> json) => _$ClinicalHistoryServiceEntityFromJson(json);
+  
 
 @override final  String code;
 @override final  String name;
@@ -224,17 +221,14 @@ class _ClinicalHistoryServiceEntity extends ClinicalHistoryServiceEntity {
 @pragma('vm:prefer-inline')
 _$ClinicalHistoryServiceEntityCopyWith<_ClinicalHistoryServiceEntity> get copyWith => __$ClinicalHistoryServiceEntityCopyWithImpl<_ClinicalHistoryServiceEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$ClinicalHistoryServiceEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClinicalHistoryServiceEntity&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.category, category) || other.category == category));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,code,name,category);
 

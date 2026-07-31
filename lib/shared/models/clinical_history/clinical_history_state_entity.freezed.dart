@@ -11,7 +11,6 @@ part of 'clinical_history_state_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$ClinicalHistoryStateEntity {
 
@@ -22,8 +21,6 @@ mixin _$ClinicalHistoryStateEntity {
 @pragma('vm:prefer-inline')
 $ClinicalHistoryStateEntityCopyWith<ClinicalHistoryStateEntity> get copyWith => _$ClinicalHistoryStateEntityCopyWithImpl<ClinicalHistoryStateEntity>(this as ClinicalHistoryStateEntity, _$identity);
 
-  /// Serializes this ClinicalHistoryStateEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -31,7 +28,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is ClinicalHistoryStateEntity&&(identical(other.code, code) || other.code == code)&&(identical(other.label, label) || other.label == label));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,code,label);
 
@@ -207,11 +204,11 @@ return $default(_that.code,_that.label);case _:
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _ClinicalHistoryStateEntity extends ClinicalHistoryStateEntity {
   const _ClinicalHistoryStateEntity({required this.code, required this.label}): super._();
-  factory _ClinicalHistoryStateEntity.fromJson(Map<String, dynamic> json) => _$ClinicalHistoryStateEntityFromJson(json);
+  
 
 @override final  String code;
 @override final  String label;
@@ -222,17 +219,14 @@ class _ClinicalHistoryStateEntity extends ClinicalHistoryStateEntity {
 @pragma('vm:prefer-inline')
 _$ClinicalHistoryStateEntityCopyWith<_ClinicalHistoryStateEntity> get copyWith => __$ClinicalHistoryStateEntityCopyWithImpl<_ClinicalHistoryStateEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$ClinicalHistoryStateEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClinicalHistoryStateEntity&&(identical(other.code, code) || other.code == code)&&(identical(other.label, label) || other.label == label));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,code,label);
 

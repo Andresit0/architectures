@@ -1,11 +1,13 @@
-import '../../../../shared/exceptions/_exceptions.lib.dart';
-import '../../../../shared/functions/_function.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/functions/offline_first_repository.dart';
 
 import '../../domain/datasources/i_auth_datasource.dart';
 import '../../domain/datasources/i_local_auth_datasource.dart';
 import '../../domain/entities/login_response_entity.dart';
 import '../../domain/entities/token_entity.dart';
 import '../../domain/repositories/i_auth_repository.dart';
+import '../../domain/value_objects/email.dart';
+import '../../domain/value_objects/password_hash.dart';
 
 class AuthRepositoryImpl implements IAuthRepository {
   const AuthRepositoryImpl({
@@ -17,51 +19,41 @@ class AuthRepositoryImpl implements IAuthRepository {
   final ILocalAuthDatasource _localDatasource;
 
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
-  }) async {
-    return fetchOrFallback(
-      remote: () => CustomFunction.fpdart.guard(
-        () => _remoteDatasource.login(email: email, passwordHash: passwordHash),
-      ),
-      local: () => CustomFunction.fpdart.guard(
-        () => _localDatasource.restoreSession(),
-      ),
-    );
-  }
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
+  }) =>
+      fetchOrFallback(
+        remote: () => guard(() => _remoteDatasource.login(
+          email: email.value,
+          passwordHash: passwordHash.value,
+        )),
+        local: () => guard(() => _localDatasource.restoreSession()),
+      );
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) =>
-      CustomFunction.fpdart.guard(() async {
-        return _remoteDatasource.refreshToken(token: token);
-      });
+      guard(() => _remoteDatasource.refreshToken(token: token));
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) =>
-      CustomFunction.fpdart.guard(() async {
-        await _localDatasource.saveSession(
-          data: data,
-          email: email,
-          passwordHash: passwordHash,
-        );
-      });
+      guard(() => _localDatasource.saveSession(
+            data: data,
+            email: email,
+            passwordHash: passwordHash,
+          ));
 
   @override
-  Future<Either<Failure, void>> clearSession() =>
-      CustomFunction.fpdart.guard(() async {
-        await _localDatasource.clearSession();
-      });
+  Future<Result<void>> clearSession() =>
+      guard(() => _localDatasource.clearSession());
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() =>
-      CustomFunction.fpdart.guard(() async {
-        return _localDatasource.restoreSession();
-      });
+  Future<Result<LoginResponseEntity?>> restoreSession() =>
+      guard(() => _localDatasource.restoreSession());
 }

@@ -1,6 +1,4 @@
-import 'dart:convert';
-
-import 'package:clean_architecture_sdd_harness/features/auth/presentation/providers/auth_provider.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/di/auth_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/widgets/_widgets.lib.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,26 +7,22 @@ import 'package:clean_architecture_sdd_harness/main.dart' as app;
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/token_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/login_response_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/repositories/i_auth_repository.dart';
-import 'package:clean_architecture_sdd_harness/shared/functions/_function.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/providers/go_router_notifier_provider.dart';
-import 'package:clean_architecture_sdd_harness/shared/providers/sembast_provider.dart';
-import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/database/_database.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/providers/token_provider.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/email.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/password_hash.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
-import 'package:clean_architecture_sdd_harness/shared/models/clinical_history/clinical_history_entity.dart';
+import 'package:clean_architecture_sdd_harness/core/services/auth/token_providers.dart';
 
 const _patient = PatientEntity(id: '1', name: 'John Doe');
 const _token = TokenEntity(
   type: 'Bearer',
   key: 'jwt_token_123',
-  expiresInHours: 24,
-  expirationDate: null,
 );
 const _loginResponse = LoginResponseEntity(
   patient: _patient,
   token: _token,
-  clinicalHistory: null,
+  clinicalHistory: [],
 );
 
 class _FakeAuthRepository implements IAuthRepository {
@@ -37,187 +31,197 @@ class _FakeAuthRepository implements IAuthRepository {
   LoginResponseEntity? savedSessionData;
 
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async =>
-      const Right(_loginResponse);
+      const Success(_loginResponse);
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Right(_token);
+      const Success(_token);
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async {
     savedSessionData = data;
-    return const Right(null);
+    return const Success(null);
   }
 
   @override
-  Future<Either<Failure, void>> clearSession() async => const Right(null);
+  Future<Result<void>> clearSession() async => const Success(null);
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async {
-    if (savedSessionData == null) return const Right(null);
-    return Right(savedSessionData!);
+  Future<Result<LoginResponseEntity?>> restoreSession() async {
+    if (savedSessionData == null) return const Success(null);
+    return Success(savedSessionData!);
   }
 }
 
 class _FakeSaveSessionFailingRepository implements IAuthRepository {
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async =>
-      const Right(_loginResponse);
+      const Success(_loginResponse);
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Right(_token);
+      const Success(_token);
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async =>
-      const Left(UnexpectedFailure());
+      const Failure(UnexpectedError(
+        'Ocurrió un error inesperado',
+      ));
 
   @override
-  Future<Either<Failure, void>> clearSession() async => const Right(null);
+  Future<Result<void>> clearSession() async => const Success(null);
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async =>
-      const Right(null);
+  Future<Result<LoginResponseEntity?>> restoreSession() async =>
+      const Success(null);
 }
 
 class _FakeClearSessionFailingRepository implements IAuthRepository {
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async =>
-      const Right(_loginResponse);
+      const Success(_loginResponse);
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Right(_token);
+      const Success(_token);
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async =>
-      const Right(null);
+      const Success(null);
 
   @override
-  Future<Either<Failure, void>> clearSession() async =>
-      const Left(UnexpectedFailure());
+  Future<Result<void>> clearSession() async =>
+      const Failure(UnexpectedError(
+        'Ocurrió un error inesperado',
+      ));
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async =>
-      const Right(_loginResponse);
+  Future<Result<LoginResponseEntity?>> restoreSession() async =>
+      const Success(_loginResponse);
 }
 
 class _FakeRestoreSessionFailingRepository implements IAuthRepository {
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async =>
-      const Right(_loginResponse);
+      const Success(_loginResponse);
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Right(_token);
+      const Success(_token);
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async =>
-      const Right(null);
+      const Success(null);
 
   @override
-  Future<Either<Failure, void>> clearSession() async => const Right(null);
+  Future<Result<void>> clearSession() async => const Success(null);
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async =>
-      const Left(UnexpectedFailure());
+  Future<Result<LoginResponseEntity?>> restoreSession() async =>
+      const Failure(UnexpectedError(
+        'Ocurrió un error inesperado',
+      ));
 }
 
 class _FakeInvalidCredentialsRepository implements IAuthRepository {
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async =>
-      const Left(ApiFailure());
+      const Failure(ApiError(
+        'The server returned an error. Please try again later.',
+      ));
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Left(ApiFailure());
+      const Failure(ApiError(
+        'The server returned an error. Please try again later.',
+      ));
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async =>
-      const Right(null);
+      const Success(null);
 
   @override
-  Future<Either<Failure, void>> clearSession() async => const Right(null);
+  Future<Result<void>> clearSession() async => const Success(null);
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async =>
-      const Right(null);
+  Future<Result<LoginResponseEntity?>> restoreSession() async =>
+      const Success(null);
 }
 
 class _FakeNetworkErrorRepository implements IAuthRepository {
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async =>
-      const Left(NoConnectionFailure());
+      const Failure(NetworkError('No internet connection'));
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Left(NoConnectionFailure());
+      const Failure(NetworkError('No internet connection'));
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async =>
-      const Right(null);
+      const Success(null);
 
   @override
-  Future<Either<Failure, void>> clearSession() async => const Right(null);
+  Future<Result<void>> clearSession() async => const Success(null);
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async =>
-      const Right(null);
+  Future<Result<LoginResponseEntity?>> restoreSession() async =>
+      const Success(null);
 }
 
 class _FakeOfflineWithCachedDataRepository implements IAuthRepository {
@@ -226,80 +230,75 @@ class _FakeOfflineWithCachedDataRepository implements IAuthRepository {
   set cachedData(LoginResponseEntity? data) => _cachedData = data;
 
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async {
     // Remote fails with NoConnection, but local cache has data → fallback
     if (_cachedData != null) {
-      return Right(_cachedData!);
+      return Success(_cachedData!);
     }
-    return const Left(NoConnectionFailure());
+    return const Failure(NetworkError('No internet connection'));
   }
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Left(NoConnectionFailure());
+      const Failure(NetworkError('No internet connection'));
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async {
     _cachedData = data;
-    return const Right(null);
+    return const Success(null);
   }
 
   @override
-  Future<Either<Failure, void>> clearSession() async {
+  Future<Result<void>> clearSession() async {
     _cachedData = null;
-    return const Right(null);
+    return const Success(null);
   }
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async =>
-      const Right(null);
+  Future<Result<LoginResponseEntity?>> restoreSession() async =>
+      const Success(null);
 }
 
 class _FakeServerUnreachableRepository implements IAuthRepository {
   @override
-  Future<Either<Failure, LoginResponseEntity>> login({
-    required String email,
-    required String passwordHash,
+  Future<Result<LoginResponseEntity>> login({
+    required Email email,
+    required PasswordHash passwordHash,
   }) async =>
-      const Left(ServerUnreachableFailure());
+      const Failure(ServerUnreachableError('Server under maintenance'));
 
   @override
-  Future<Either<Failure, TokenEntity>> refreshToken({
+  Future<Result<TokenEntity>> refreshToken({
     required String token,
   }) async =>
-      const Left(ServerUnreachableFailure());
+      const Failure(ServerUnreachableError('Server under maintenance'));
 
   @override
-  Future<Either<Failure, void>> saveSession({
+  Future<Result<void>> saveSession({
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
   }) async =>
-      const Right(null);
+      const Success(null);
 
   @override
-  Future<Either<Failure, void>> clearSession() async => const Right(null);
+  Future<Result<void>> clearSession() async => const Success(null);
 
   @override
-  Future<Either<Failure, LoginResponseEntity?>> restoreSession() async =>
-      const Right(null);
+  Future<Result<LoginResponseEntity?>> restoreSession() async =>
+      const Success(null);
 }
 
-class _FakeCpSembast implements ICpSembast {
-  @override
-  Future<void> clearSession() async {}
-}
-
-class _FakeTokenService implements ITokenService {
+class _FakeTokenStore implements ITokenStore {
   String? _cachedToken;
 
   @override
@@ -310,6 +309,14 @@ class _FakeTokenService implements ITokenService {
 
   @override
   Future<void> delete() async => _cachedToken = null;
+}
+
+class _FakeCredentialStore implements ICredentialStore {
+  @override
+  Future<String?> readToken() async => null;
+
+  @override
+  Future<void> saveToken(String value) async {}
 
   @override
   Future<void> saveCredentials({
@@ -324,85 +331,19 @@ class _FakeTokenService implements ITokenService {
   Future<void> deleteCredentials() async {}
 
   @override
-  Future<void> deleteAll() async => _cachedToken = null;
+  Future<void> deleteAll() async {}
 
-  @override
-  Future<bool> isTokenExpired(String token) async => false;
-
-  @override
-  Map<String, dynamic>? decodeJwtPayload(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return null;
-      var payload = parts[1];
-      switch (payload.length % 4) {
-        case 2:
-          payload += '==';
-        case 3:
-          payload += '=';
-      }
-      final decoded = utf8.decode(base64Url.decode(payload));
-      return jsonDecode(decoded) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
-    }
-  }
 }
 
-class _FakeClinicalHistory implements IClinicalHistoryStore {
-  List<ClinicalHistoryEntity> _records = [];
+class _FakeTokenVerifier implements ITokenVerifier {
+  @override
+  Future<bool> isExpired(String token) async => false;
 
   @override
-  Future<void> store(ClinicalHistoryEntity entity) async => _records.add(entity);
+  Map<String, dynamic>? decodePayload(String token) => null;
 
   @override
-  Future<void> storeAll(List<ClinicalHistoryEntity> entities) async {
-    _records = List.from(entities);
-  }
-
-  @override
-  Future<ClinicalHistoryEntity?> load(String id) async =>
-      _records.cast<ClinicalHistoryEntity?>().firstOrNull;
-
-  @override
-  Future<List<ClinicalHistoryEntity>> loadAll() async => _records;
-
-  @override
-  Future<void> delete(String id) async =>
-      _records.removeWhere((e) => e.id == id);
-
-  @override
-  Future<void> deleteAll() async => _records.clear();
-
-  @override
-  Future<void> update(ClinicalHistoryEntity entity) async =>
-      _records = _records.map((e) => e.id == entity.id ? entity : e).toList();
-
-  @override
-  Future<void> updateAll(List<ClinicalHistoryEntity> entities) async {
-    for (final entity in entities) {
-      _records = _records.map((e) => e.id == entity.id ? entity : e).toList();
-    }
-  }
-}
-
-class _FakePatientInfoStore implements IPatientInfoStore {
-  PatientEntity? _patient;
-
-  PatientEntity? get savedPatient => _patient;
-
-  @override
-  Future<void> save(PatientEntity patient) async {
-    _patient = patient;
-  }
-
-  @override
-  Future<PatientEntity?> load() async => _patient;
-
-  @override
-  Future<void> delete() async {
-    _patient = null;
-  }
+  bool verifySignature(String token, String secret) => false;
 }
 
 Future<void> _enterCredentials(
@@ -428,10 +369,7 @@ Future<void> _tapLogin(WidgetTester tester) async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    CustomDb.clinicalHistory = _FakeClinicalHistory();
-    CustomDb.patientInfo = _FakePatientInfoStore();
-  });
+
 
   testWidgets(
     'Scenario: Login form renders with email and password fields',
@@ -440,16 +378,13 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => _FakeAuthRepository(),
         ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
-        ),
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('Email'), findsOneWidget);
-      expect(find.text('Password'), findsOneWidget);
-      expect(find.text('Remember me'), findsOneWidget);
-      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.text('Correo electrónico'), findsAtLeastNWidgets(1));
+      expect(find.text('Contraseña'), findsAtLeastNWidgets(1));
+      expect(find.text('Recordarme'), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2));
       expect(find.byType(ElevatedButton), findsOneWidget);
     },
@@ -461,9 +396,6 @@ void main() {
       app.main(overrides: [
         authRepositoryProvider.overrideWith(
           (ref) => _FakeAuthRepository(),
-        ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
         ),
       ]);
       await tester.pumpAndSettle();
@@ -482,9 +414,6 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => _FakeInvalidCredentialsRepository(),
         ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
-        ),
       ]);
       await tester.pumpAndSettle();
 
@@ -492,9 +421,7 @@ void main() {
       await _tapLogin(tester);
 
       expect(
-        find.text(
-          'The server returned an error. Please try again later.',
-        ),
+        find.text('El servidor está en mantenimiento'),
         findsOneWidget,
       );
       expect(find.byType(TextField), findsNWidgets(2));
@@ -509,16 +436,13 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => _FakeNetworkErrorRepository(),
         ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
-        ),
       ]);
       await tester.pumpAndSettle();
 
       await _enterCredentials(tester);
       await _tapLogin(tester);
 
-      expect(find.text('No internet connection'), findsOneWidget);
+      expect(find.text('Sin conexión a internet'), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2));
       expect(find.byType(ElevatedButton), findsOneWidget);
     },
@@ -534,20 +458,17 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => fakeRepo,
         ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
-        ),
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
 
       await _enterCredentials(tester);
       await _tapLogin(tester);
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome, John Doe'), findsOneWidget);
-      expect(find.text('Logout'), findsOneWidget);
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
+      expect(find.text('Bienvenido, John Doe'), findsOneWidget);
+      expect(find.text('Cerrar sesión'), findsOneWidget);
     },
   );
 
@@ -558,19 +479,13 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => _FakeServerUnreachableRepository(),
         ),
-        sembastProvider.overrideWith(
-          (ref) => _FakeCpSembast(),
-        ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
-        ),
       ]);
       await tester.pumpAndSettle();
 
       await _enterCredentials(tester);
       await _tapLogin(tester);
 
-      expect(find.text('Server under maintenance'), findsOneWidget);
+      expect(find.text('El servidor está en mantenimiento'), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2));
       expect(find.byType(ElevatedButton), findsOneWidget);
     },
@@ -582,9 +497,6 @@ void main() {
       app.main(overrides: [
         authRepositoryProvider.overrideWith(
           (ref) => _FakeAuthRepository(),
-        ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
         ),
       ]);
       await tester.pumpAndSettle();
@@ -604,15 +516,12 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => _FakeAuthRepository(),
         ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
-        ),
       ]);
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsNWidgets(2));
       expect(find.byType(ElevatedButton), findsOneWidget);
-      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
     },
   );
 
@@ -622,9 +531,6 @@ void main() {
       app.main(overrides: [
         authRepositoryProvider.overrideWith(
           (ref) => _FakeAuthRepository(),
-        ),
-        goRouterListenableProvider.overrideWith(
-          (ref) => GoRouterListenable(false),
         ),
       ]);
       await tester.pumpAndSettle();
@@ -642,9 +548,6 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => _FakeAuthRepository(),
         ),
-        sembastProvider.overrideWith(
-          (ref) => _FakeCpSembast(),
-        ),
       ]);
       await tester.pumpAndSettle();
 
@@ -652,9 +555,9 @@ void main() {
       await _toggleRememberMe(tester);
       await _tapLogin(tester);
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome, John Doe'), findsOneWidget);
-      expect(find.text('Logout'), findsOneWidget);
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
+      expect(find.text('Bienvenido, John Doe'), findsOneWidget);
+      expect(find.text('Cerrar sesión'), findsOneWidget);
     },
   );
 
@@ -665,17 +568,14 @@ void main() {
         authRepositoryProvider.overrideWith(
           (ref) => _FakeAuthRepository(),
         ),
-        sembastProvider.overrideWith(
-          (ref) => _FakeCpSembast(),
-        ),
       ]);
       await tester.pumpAndSettle();
 
       await _enterCredentials(tester);
       await _tapLogin(tester);
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
-      expect(find.text('Logout'), findsOneWidget);
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
+      expect(find.text('Cerrar sesión'), findsOneWidget);
     },
   );
 
@@ -688,23 +588,25 @@ void main() {
         token: TokenEntity(
           type: 'Bearer',
           key: 'stored_token',
-          expiresInHours: 24,
-          expirationDate: null,
         ),
-        clinicalHistory: null,
+        clinicalHistory: [],
       );
-      final tokenService = _FakeTokenService();
-      await tokenService.save('stored_token');
+      final tokenStore = _FakeTokenStore();
+      await tokenStore.save('stored_token');
+      final credentialStore = _FakeCredentialStore();
+      final tokenVerifier = _FakeTokenVerifier();
 
       app.main(overrides: [
         authRepositoryProvider.overrideWith((ref) => fakeRepo),
-        tokenServiceProvider.overrideWith((ref) => tokenService),
+        tokenStoreProvider.overrideWith((ref) => tokenStore),
+        credentialStoreProvider.overrideWith((ref) => credentialStore),
+        tokenVerifierProvider.overrideWith((ref) => tokenVerifier),
       ]);
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome, Stored User'), findsOneWidget);
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
+      expect(find.text('Bienvenido, Stored User'), findsOneWidget);
     },
   );
 
@@ -712,64 +614,66 @@ void main() {
     'Scenario: Remember me persists credentials for next session',
     (tester) async {
       final fakeRepo = _FakeAuthRepository();
-      final tokenService = _FakeTokenService();
+      final tokenStore = _FakeTokenStore();
+      final credentialStore = _FakeCredentialStore();
+      final tokenVerifier = _FakeTokenVerifier();
 
       app.main(overrides: [
         authRepositoryProvider.overrideWith((ref) => fakeRepo),
-        sembastProvider.overrideWith((ref) => _FakeCpSembast()),
-        tokenServiceProvider.overrideWith((ref) => tokenService),
+        tokenStoreProvider.overrideWith((ref) => tokenStore),
+        credentialStoreProvider.overrideWith((ref) => credentialStore),
+        tokenVerifierProvider.overrideWith((ref) => tokenVerifier),
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
 
       await _enterCredentials(tester);
       await _toggleRememberMe(tester);
       await _tapLogin(tester);
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome, John Doe'), findsOneWidget);
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
+      expect(find.text('Bienvenido, John Doe'), findsOneWidget);
 
       expect(fakeRepo.savedSessionData, isNotNull);
       expect(fakeRepo.savedSessionData!.patient.name, 'John Doe');
 
-      final token = await tokenService.read();
+      final token = await tokenStore.read();
       expect(token, 'jwt_token_123');
 
       app.main(overrides: [
         authRepositoryProvider.overrideWith((ref) => fakeRepo),
-        sembastProvider.overrideWith((ref) => _FakeCpSembast()),
-        tokenServiceProvider.overrideWith((ref) => tokenService),
+        tokenStoreProvider.overrideWith((ref) => tokenStore),
+        credentialStoreProvider.overrideWith((ref) => credentialStore),
+        tokenVerifierProvider.overrideWith((ref) => tokenVerifier),
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome, John Doe'), findsOneWidget);
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
+      expect(find.text('Bienvenido, John Doe'), findsOneWidget);
     },
   );
 
   testWidgets(
     'Scenario: No rememberMe does not persist session',
     (tester) async {
-      final patientInfo = _FakePatientInfoStore();
-      CustomDb.patientInfo = patientInfo;
+      final fakeRepo = _FakeAuthRepository();
 
       app.main(overrides: [
         authRepositoryProvider.overrideWith(
-          (ref) => _FakeAuthRepository(),
+          (ref) => fakeRepo,
         ),
-        sembastProvider.overrideWith((ref) => _FakeCpSembast()),
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
 
       await _enterCredentials(tester);
       await _tapLogin(tester);
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
 
-      expect(patientInfo.savedPatient, isNull);
+      expect(fakeRepo.savedSessionData, isNull);
     },
   );
 
@@ -782,27 +686,29 @@ void main() {
         token: TokenEntity(
           type: 'Bearer',
           key: 'stored_token',
-          expiresInHours: 24,
-          expirationDate: null,
         ),
-        clinicalHistory: null,
+        clinicalHistory: [],
       );
-      final tokenService = _FakeTokenService();
-      await tokenService.save('stored_token');
+      final tokenStore = _FakeTokenStore();
+      await tokenStore.save('stored_token');
+      final credentialStore = _FakeCredentialStore();
+      final tokenVerifier = _FakeTokenVerifier();
 
       app.main(overrides: [
         authRepositoryProvider.overrideWith((ref) => fakeRepo),
-        tokenServiceProvider.overrideWith((ref) => tokenService),
+        tokenStoreProvider.overrideWith((ref) => tokenStore),
+        credentialStoreProvider.overrideWith((ref) => credentialStore),
+        tokenVerifierProvider.overrideWith((ref) => tokenVerifier),
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
 
-      await tester.tap(find.text('Logout'));
+      await tester.tap(find.text('Cerrar sesión'));
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsNWidgets(2));
-      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
     },
   );
 
@@ -816,16 +722,16 @@ void main() {
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
 
       await _enterCredentials(tester);
       await _toggleRememberMe(tester);
       await _tapLogin(tester);
 
-      expect(find.text('LOGIN'), findsOneWidget);
-      expect(find.text('Logout'), findsNothing);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
+      expect(find.text('Cerrar sesión'), findsNothing);
       expect(
-        find.text('An unexpected error occurred. Please try again later.'),
+        find.text('Ocurrió un error inesperado'),
         findsOneWidget,
       );
     },
@@ -842,8 +748,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsNWidgets(2));
-      expect(find.text('LOGIN'), findsOneWidget);
-      expect(find.text('Logout'), findsNothing);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
+      expect(find.text('Cerrar sesión'), findsNothing);
     },
   );
 
@@ -857,17 +763,18 @@ void main() {
       ]);
       await tester.pumpAndSettle();
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
 
-      await tester.tap(find.text('Logout'));
+      await tester.tap(find.text('Cerrar sesión'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
-      expect(find.text('LOGIN'), findsNothing);
+      expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
+      expect(find.text('INICIAR SESIÓN'), findsNothing);
       expect(
-        find.text('An unexpected error occurred. Please try again later.'),
+        find.text('Ocurrió un error inesperado'),
         findsOneWidget,
       );
     },
   );
+
 }

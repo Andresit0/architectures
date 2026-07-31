@@ -11,33 +11,30 @@ part of 'token_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$TokenEntity {
 
- String get type; String get key;@JsonKey(name: 'expires_in_hours') int get expiresInHours;@JsonKey(name: 'expiration_date') DateTime? get expirationDate;
+ String get type; String get key;
 /// Create a copy of TokenEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $TokenEntityCopyWith<TokenEntity> get copyWith => _$TokenEntityCopyWithImpl<TokenEntity>(this as TokenEntity, _$identity);
 
-  /// Serializes this TokenEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TokenEntity&&(identical(other.type, type) || other.type == type)&&(identical(other.key, key) || other.key == key)&&(identical(other.expiresInHours, expiresInHours) || other.expiresInHours == expiresInHours)&&(identical(other.expirationDate, expirationDate) || other.expirationDate == expirationDate));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TokenEntity&&(identical(other.type, type) || other.type == type)&&(identical(other.key, key) || other.key == key));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
-int get hashCode => Object.hash(runtimeType,type,key,expiresInHours,expirationDate);
+int get hashCode => Object.hash(runtimeType,type,key);
 
 @override
 String toString() {
-  return 'TokenEntity(type: $type, key: $key, expiresInHours: $expiresInHours, expirationDate: $expirationDate)';
+  return 'TokenEntity(type: $type, key: $key)';
 }
 
 
@@ -48,7 +45,7 @@ abstract mixin class $TokenEntityCopyWith<$Res>  {
   factory $TokenEntityCopyWith(TokenEntity value, $Res Function(TokenEntity) _then) = _$TokenEntityCopyWithImpl;
 @useResult
 $Res call({
- String type, String key,@JsonKey(name: 'expires_in_hours') int expiresInHours,@JsonKey(name: 'expiration_date') DateTime? expirationDate
+ String type, String key
 });
 
 
@@ -65,13 +62,11 @@ class _$TokenEntityCopyWithImpl<$Res>
 
 /// Create a copy of TokenEntity
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? key = null,Object? expiresInHours = null,Object? expirationDate = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? key = null,}) {
   return _then(_self.copyWith(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
-as String,expiresInHours: null == expiresInHours ? _self.expiresInHours : expiresInHours // ignore: cast_nullable_to_non_nullable
-as int,expirationDate: freezed == expirationDate ? _self.expirationDate : expirationDate // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as String,
   ));
 }
 
@@ -156,10 +151,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  String key, @JsonKey(name: 'expires_in_hours')  int expiresInHours, @JsonKey(name: 'expiration_date')  DateTime? expirationDate)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  String key)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TokenEntity() when $default != null:
-return $default(_that.type,_that.key,_that.expiresInHours,_that.expirationDate);case _:
+return $default(_that.type,_that.key);case _:
   return orElse();
 
 }
@@ -177,10 +172,10 @@ return $default(_that.type,_that.key,_that.expiresInHours,_that.expirationDate);
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  String key, @JsonKey(name: 'expires_in_hours')  int expiresInHours, @JsonKey(name: 'expiration_date')  DateTime? expirationDate)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  String key)  $default,) {final _that = this;
 switch (_that) {
 case _TokenEntity():
-return $default(_that.type,_that.key,_that.expiresInHours,_that.expirationDate);case _:
+return $default(_that.type,_that.key);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +192,10 @@ return $default(_that.type,_that.key,_that.expiresInHours,_that.expirationDate);
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  String key, @JsonKey(name: 'expires_in_hours')  int expiresInHours, @JsonKey(name: 'expiration_date')  DateTime? expirationDate)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  String key)?  $default,) {final _that = this;
 switch (_that) {
 case _TokenEntity() when $default != null:
-return $default(_that.type,_that.key,_that.expiresInHours,_that.expirationDate);case _:
+return $default(_that.type,_that.key);case _:
   return null;
 
 }
@@ -209,16 +204,14 @@ return $default(_that.type,_that.key,_that.expiresInHours,_that.expirationDate);
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _TokenEntity extends TokenEntity {
-  const _TokenEntity({required this.type, required this.key, @JsonKey(name: 'expires_in_hours') required this.expiresInHours, @JsonKey(name: 'expiration_date') required this.expirationDate}): super._();
-  factory _TokenEntity.fromJson(Map<String, dynamic> json) => _$TokenEntityFromJson(json);
+  const _TokenEntity({required this.type, required this.key}): super._();
+  
 
 @override final  String type;
 @override final  String key;
-@override@JsonKey(name: 'expires_in_hours') final  int expiresInHours;
-@override@JsonKey(name: 'expiration_date') final  DateTime? expirationDate;
 
 /// Create a copy of TokenEntity
 /// with the given fields replaced by the non-null parameter values.
@@ -226,23 +219,20 @@ class _TokenEntity extends TokenEntity {
 @pragma('vm:prefer-inline')
 _$TokenEntityCopyWith<_TokenEntity> get copyWith => __$TokenEntityCopyWithImpl<_TokenEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$TokenEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TokenEntity&&(identical(other.type, type) || other.type == type)&&(identical(other.key, key) || other.key == key)&&(identical(other.expiresInHours, expiresInHours) || other.expiresInHours == expiresInHours)&&(identical(other.expirationDate, expirationDate) || other.expirationDate == expirationDate));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TokenEntity&&(identical(other.type, type) || other.type == type)&&(identical(other.key, key) || other.key == key));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
-int get hashCode => Object.hash(runtimeType,type,key,expiresInHours,expirationDate);
+int get hashCode => Object.hash(runtimeType,type,key);
 
 @override
 String toString() {
-  return 'TokenEntity(type: $type, key: $key, expiresInHours: $expiresInHours, expirationDate: $expirationDate)';
+  return 'TokenEntity(type: $type, key: $key)';
 }
 
 
@@ -253,7 +243,7 @@ abstract mixin class _$TokenEntityCopyWith<$Res> implements $TokenEntityCopyWith
   factory _$TokenEntityCopyWith(_TokenEntity value, $Res Function(_TokenEntity) _then) = __$TokenEntityCopyWithImpl;
 @override @useResult
 $Res call({
- String type, String key,@JsonKey(name: 'expires_in_hours') int expiresInHours,@JsonKey(name: 'expiration_date') DateTime? expirationDate
+ String type, String key
 });
 
 
@@ -270,13 +260,11 @@ class __$TokenEntityCopyWithImpl<$Res>
 
 /// Create a copy of TokenEntity
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? key = null,Object? expiresInHours = null,Object? expirationDate = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? key = null,}) {
   return _then(_TokenEntity(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
-as String,expiresInHours: null == expiresInHours ? _self.expiresInHours : expiresInHours // ignore: cast_nullable_to_non_nullable
-as int,expirationDate: freezed == expirationDate ? _self.expirationDate : expirationDate // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as String,
   ));
 }
 

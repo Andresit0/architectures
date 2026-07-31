@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_state.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/screens/login_screen.dart';
+import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 
 class _FakeNotifier extends AuthNotifier {
   _FakeNotifier() : super();
@@ -22,7 +23,11 @@ ProviderContainer _createContainer() => ProviderContainer(
 Widget _buildTestApp(Widget child) {
   return UncontrolledProviderScope(
     container: _createContainer(),
-    child: MaterialApp(home: child),
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: child,
+    ),
   );
 }
 
@@ -86,6 +91,57 @@ void main() {
         find.byType(ElevatedButton),
       );
       expect(button.onPressed, isNotNull);
+    });
+
+    testWidgets('email_field_shows_localized_error_when_empty', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const LoginScreen()));
+      await tester.pump();
+
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pump();
+
+      expect(find.text('Email is required'), findsOneWidget);
+    });
+
+    testWidgets('email_field_shows_localized_error_when_invalid', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestApp(const LoginScreen()));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField).first, 'invalid');
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pump();
+
+      expect(find.text('Please enter a valid email'), findsOneWidget);
+    });
+
+    testWidgets('password_field_shows_localized_error_when_empty', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestApp(const LoginScreen()));
+      await tester.pump();
+
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pump();
+
+      expect(find.text('Password is required'), findsOneWidget);
+    });
+
+    testWidgets('password_field_shows_localized_error_when_too_short', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildTestApp(const LoginScreen()));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField).last, 'abc');
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pump();
+
+      expect(
+        find.text('Password must be at least 6 characters'),
+        findsOneWidget,
+      );
     });
   });
 }

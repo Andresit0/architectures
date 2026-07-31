@@ -1,5 +1,3 @@
-part of '_exceptions.lib.dart';
-
 class ApiException implements Exception {
   final int statusCode;
 

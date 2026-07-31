@@ -28,16 +28,8 @@ models:
         type: String
         json_key: key
         required: true
-      expiresInHours:
-        type: int
-        json_key: expires_in_hours
-        required: true
-      expirationDate:
-        type: DateTime?
-        json_key: expiration_date
-        required: true
     notes:
-      - Contains the JWT token and its metadata.
+      - Contains the JWT token. Expiration is determined via JwtTokenExpiryChecker reading the 'exp' claim from the token payload.
 
   - name: LoginResponseEntity
     layer: domain
@@ -234,7 +226,7 @@ models:
         json_key: state
         required: false
     notes:
-      - Stored in sembast via CustomDb.clinicalHistory.
+      - Stored in sembast via ref.watch(clinicalHistoryStoreProvider).
       - Contains nested sub-entities for service, facility, professional, diagnosis, attachments, and state.
 
   - name: AuthState
@@ -276,44 +268,35 @@ interfaces:
       - signature: "Future<LoginResponseEntity?> restoreSession()"
     notes:
       - Local datasource for session persistence (sembast + secure storage).
-      - Methods do not return Either — the wrapping happens in AuthRepositoryImpl via guard().
+      - Methods do not return Result — the wrapping happens in AuthRepositoryImpl via guard().
 
   - name: IAuthRepository
     file: features/auth/domain/repositories/i_auth_repository.dart
     methods:
-      - signature: "Future<Either<Failure, LoginResponseEntity>> login({required String email, required String passwordHash})"
-      - signature: "Future<Either<Failure, TokenEntity>> refreshToken({required String token})"
-      - signature: "Future<Either<Failure, void>> saveSession({required LoginResponseEntity data, required String email, required String passwordHash})"
-      - signature: "Future<Either<Failure, void>> clearSession()"
-      - signature: "Future<Either<Failure, LoginResponseEntity?>> restoreSession()"
+      - signature: "Future<Result<LoginResponseEntity>> login({required String email, required String passwordHash})"
+      - signature: "Future<Result<TokenEntity>> refreshToken({required String token})"
+      - signature: "Future<Result<void>> saveSession({required LoginResponseEntity data, required String email, required String passwordHash})"
+      - signature: "Future<Result<void>> clearSession()"
+      - signature: "Future<Result<LoginResponseEntity?>> restoreSession()"
 
 usecases:
   - name: LoginUseCase
     constructor_args:
       - repository: IAuthRepository
     methods:
-      - signature: "Future<Either<Failure, LoginResponseEntity>> call({required String email, required String passwordHash})"
+      - signature: "Future<Result<LoginResponseEntity>> call({required String email, required String passwordHash})"
 
   - name: RefreshTokenUseCase
     constructor_args:
       - repository: IAuthRepository
     methods:
-      - signature: "Future<Either<Failure, TokenEntity>> call({required String token})"
-
-  - name: SaveSessionUseCase
-    constructor_args:
-      - repository: IAuthRepository
-    methods:
-      - signature: "Future<Either<Failure, void>> call({required LoginResponseEntity data, required String email, required String passwordHash})"
-    notes:
-      - Persists patient info, clinical history, and credentials to local storage for remember-me.
-      - All storage operations are wrapped via IAuthRepository.saveSession.
+      - signature: "Future<Result<TokenEntity>> call({required String token})"
 
   - name: ClearSessionUseCase
     constructor_args:
       - repository: IAuthRepository
     methods:
-      - signature: "Future<Either<Failure, void>> call()"
+      - signature: "Future<Result<void>> call()"
     notes:
       - Deletes all tokens and resets the database.
       - All cleanup operations are wrapped via IAuthRepository.clearSession.
@@ -322,7 +305,7 @@ usecases:
     constructor_args:
       - repository: IAuthRepository
     methods:
-      - signature: "Future<Either<Failure, LoginResponseEntity?>> call()"
+      - signature: "Future<Result<LoginResponseEntity?>> call()"
     notes:
       - Loads patient info and token from local storage.
       - If token is expired, deletes all and returns null.

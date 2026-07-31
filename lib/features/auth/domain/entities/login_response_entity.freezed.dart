@@ -11,19 +11,16 @@ part of 'login_response_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$LoginResponseEntity {
 
- PatientEntity get patient; TokenEntity get token;@JsonKey(name: 'clinical_history') List<ClinicalHistoryEntity>? get clinicalHistory;
+ PatientEntity get patient; TokenEntity get token; List<ClinicalHistoryEntity> get clinicalHistory;
 /// Create a copy of LoginResponseEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $LoginResponseEntityCopyWith<LoginResponseEntity> get copyWith => _$LoginResponseEntityCopyWithImpl<LoginResponseEntity>(this as LoginResponseEntity, _$identity);
 
-  /// Serializes this LoginResponseEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -31,7 +28,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginResponseEntity&&(identical(other.patient, patient) || other.patient == patient)&&(identical(other.token, token) || other.token == token)&&const DeepCollectionEquality().equals(other.clinicalHistory, clinicalHistory));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,patient,token,const DeepCollectionEquality().hash(clinicalHistory));
 
@@ -48,7 +45,7 @@ abstract mixin class $LoginResponseEntityCopyWith<$Res>  {
   factory $LoginResponseEntityCopyWith(LoginResponseEntity value, $Res Function(LoginResponseEntity) _then) = _$LoginResponseEntityCopyWithImpl;
 @useResult
 $Res call({
- PatientEntity patient, TokenEntity token,@JsonKey(name: 'clinical_history') List<ClinicalHistoryEntity>? clinicalHistory
+ PatientEntity patient, TokenEntity token, List<ClinicalHistoryEntity> clinicalHistory
 });
 
 
@@ -65,12 +62,12 @@ class _$LoginResponseEntityCopyWithImpl<$Res>
 
 /// Create a copy of LoginResponseEntity
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? patient = null,Object? token = null,Object? clinicalHistory = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? patient = null,Object? token = null,Object? clinicalHistory = null,}) {
   return _then(_self.copyWith(
 patient: null == patient ? _self.patient : patient // ignore: cast_nullable_to_non_nullable
 as PatientEntity,token: null == token ? _self.token : token // ignore: cast_nullable_to_non_nullable
-as TokenEntity,clinicalHistory: freezed == clinicalHistory ? _self.clinicalHistory : clinicalHistory // ignore: cast_nullable_to_non_nullable
-as List<ClinicalHistoryEntity>?,
+as TokenEntity,clinicalHistory: null == clinicalHistory ? _self.clinicalHistory : clinicalHistory // ignore: cast_nullable_to_non_nullable
+as List<ClinicalHistoryEntity>,
   ));
 }
 /// Create a copy of LoginResponseEntity
@@ -173,7 +170,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PatientEntity patient,  TokenEntity token, @JsonKey(name: 'clinical_history')  List<ClinicalHistoryEntity>? clinicalHistory)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity> clinicalHistory)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginResponseEntity() when $default != null:
 return $default(_that.patient,_that.token,_that.clinicalHistory);case _:
@@ -194,7 +191,7 @@ return $default(_that.patient,_that.token,_that.clinicalHistory);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PatientEntity patient,  TokenEntity token, @JsonKey(name: 'clinical_history')  List<ClinicalHistoryEntity>? clinicalHistory)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity> clinicalHistory)  $default,) {final _that = this;
 switch (_that) {
 case _LoginResponseEntity():
 return $default(_that.patient,_that.token,_that.clinicalHistory);case _:
@@ -214,7 +211,7 @@ return $default(_that.patient,_that.token,_that.clinicalHistory);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PatientEntity patient,  TokenEntity token, @JsonKey(name: 'clinical_history')  List<ClinicalHistoryEntity>? clinicalHistory)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity> clinicalHistory)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginResponseEntity() when $default != null:
 return $default(_that.patient,_that.token,_that.clinicalHistory);case _:
@@ -226,21 +223,19 @@ return $default(_that.patient,_that.token,_that.clinicalHistory);case _:
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _LoginResponseEntity extends LoginResponseEntity {
-  const _LoginResponseEntity({required this.patient, required this.token, @JsonKey(name: 'clinical_history') required final  List<ClinicalHistoryEntity>? clinicalHistory}): _clinicalHistory = clinicalHistory,super._();
-  factory _LoginResponseEntity.fromJson(Map<String, dynamic> json) => _$LoginResponseEntityFromJson(json);
+  const _LoginResponseEntity({required this.patient, required this.token, required final  List<ClinicalHistoryEntity> clinicalHistory}): _clinicalHistory = clinicalHistory,super._();
+  
 
 @override final  PatientEntity patient;
 @override final  TokenEntity token;
- final  List<ClinicalHistoryEntity>? _clinicalHistory;
-@override@JsonKey(name: 'clinical_history') List<ClinicalHistoryEntity>? get clinicalHistory {
-  final value = _clinicalHistory;
-  if (value == null) return null;
+ final  List<ClinicalHistoryEntity> _clinicalHistory;
+@override List<ClinicalHistoryEntity> get clinicalHistory {
   if (_clinicalHistory is EqualUnmodifiableListView) return _clinicalHistory;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(value);
+  return EqualUnmodifiableListView(_clinicalHistory);
 }
 
 
@@ -250,17 +245,14 @@ class _LoginResponseEntity extends LoginResponseEntity {
 @pragma('vm:prefer-inline')
 _$LoginResponseEntityCopyWith<_LoginResponseEntity> get copyWith => __$LoginResponseEntityCopyWithImpl<_LoginResponseEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$LoginResponseEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginResponseEntity&&(identical(other.patient, patient) || other.patient == patient)&&(identical(other.token, token) || other.token == token)&&const DeepCollectionEquality().equals(other._clinicalHistory, _clinicalHistory));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,patient,token,const DeepCollectionEquality().hash(_clinicalHistory));
 
@@ -277,7 +269,7 @@ abstract mixin class _$LoginResponseEntityCopyWith<$Res> implements $LoginRespon
   factory _$LoginResponseEntityCopyWith(_LoginResponseEntity value, $Res Function(_LoginResponseEntity) _then) = __$LoginResponseEntityCopyWithImpl;
 @override @useResult
 $Res call({
- PatientEntity patient, TokenEntity token,@JsonKey(name: 'clinical_history') List<ClinicalHistoryEntity>? clinicalHistory
+ PatientEntity patient, TokenEntity token, List<ClinicalHistoryEntity> clinicalHistory
 });
 
 
@@ -294,12 +286,12 @@ class __$LoginResponseEntityCopyWithImpl<$Res>
 
 /// Create a copy of LoginResponseEntity
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? patient = null,Object? token = null,Object? clinicalHistory = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? patient = null,Object? token = null,Object? clinicalHistory = null,}) {
   return _then(_LoginResponseEntity(
 patient: null == patient ? _self.patient : patient // ignore: cast_nullable_to_non_nullable
 as PatientEntity,token: null == token ? _self.token : token // ignore: cast_nullable_to_non_nullable
-as TokenEntity,clinicalHistory: freezed == clinicalHistory ? _self._clinicalHistory : clinicalHistory // ignore: cast_nullable_to_non_nullable
-as List<ClinicalHistoryEntity>?,
+as TokenEntity,clinicalHistory: null == clinicalHistory ? _self._clinicalHistory : clinicalHistory // ignore: cast_nullable_to_non_nullable
+as List<ClinicalHistoryEntity>,
   ));
 }
 

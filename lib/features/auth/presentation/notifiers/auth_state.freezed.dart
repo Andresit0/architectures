@@ -125,13 +125,13 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)?  loaded,TResult Function( String message)?  failure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)?  loaded,TResult Function( AppError error)?  failure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AuthInitial() when initial != null:
 return initial();case AuthLoading() when loading != null:
 return loading();case AuthLoaded() when loaded != null:
 return loaded(_that.patient,_that.token,_that.clinicalHistory);case AuthFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.error);case _:
   return orElse();
 
 }
@@ -149,13 +149,13 @@ return failure(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)  loaded,required TResult Function( String message)  failure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)  loaded,required TResult Function( AppError error)  failure,}) {final _that = this;
 switch (_that) {
 case AuthInitial():
 return initial();case AuthLoading():
 return loading();case AuthLoaded():
 return loaded(_that.patient,_that.token,_that.clinicalHistory);case AuthFailure():
-return failure(_that.message);}
+return failure(_that.error);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -169,13 +169,13 @@ return failure(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)?  loaded,TResult? Function( String message)?  failure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)?  loaded,TResult? Function( AppError error)?  failure,}) {final _that = this;
 switch (_that) {
 case AuthInitial() when initial != null:
 return initial();case AuthLoading() when loading != null:
 return loading();case AuthLoaded() when loaded != null:
 return loaded(_that.patient,_that.token,_that.clinicalHistory);case AuthFailure() when failure != null:
-return failure(_that.message);case _:
+return failure(_that.error);case _:
   return null;
 
 }
@@ -212,8 +212,22 @@ String toString() {
 
 }
 
+/// @nodoc
+class $AuthInitialCopyWith<$Res> implements $AuthStateCopyWith<$Res> {
+$AuthInitialCopyWith(AuthInitial _, $Res Function(AuthInitial) __);
+}
+/// @nodoc
+class _$AuthInitialCopyWithImpl<$Res>
+    implements $AuthInitialCopyWith<$Res> {
+  _$AuthInitialCopyWithImpl(this._self, this._then);
+
+  final AuthInitial _self;
+  final $Res Function(AuthInitial) _then;
 
 
+
+
+}
 
 /// @nodoc
 
@@ -244,8 +258,22 @@ String toString() {
 
 }
 
+/// @nodoc
+class $AuthLoadingCopyWith<$Res> implements $AuthStateCopyWith<$Res> {
+$AuthLoadingCopyWith(AuthLoading _, $Res Function(AuthLoading) __);
+}
+/// @nodoc
+class _$AuthLoadingCopyWithImpl<$Res>
+    implements $AuthLoadingCopyWith<$Res> {
+  _$AuthLoadingCopyWithImpl(this._self, this._then);
+
+  final AuthLoading _self;
+  final $Res Function(AuthLoading) _then;
 
 
+
+
+}
 
 /// @nodoc
 
@@ -347,10 +375,10 @@ $TokenEntityCopyWith<$Res> get token {
 
 
 class AuthFailure implements AuthState {
-  const AuthFailure(this.message);
+  const AuthFailure(this.error);
   
 
- final  String message;
+ final  AppError error;
 
 /// Create a copy of AuthState
 /// with the given fields replaced by the non-null parameter values.
@@ -362,16 +390,16 @@ $AuthFailureCopyWith<AuthFailure> get copyWith => _$AuthFailureCopyWithImpl<Auth
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthFailure&&(identical(other.message, message) || other.message == message));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthFailure&&(identical(other.error, error) || other.error == error));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,message);
+int get hashCode => Object.hash(runtimeType,error);
 
 @override
 String toString() {
-  return 'AuthState.failure(message: $message)';
+  return 'AuthState.failure(error: $error)';
 }
 
 
@@ -382,7 +410,7 @@ abstract mixin class $AuthFailureCopyWith<$Res> implements $AuthStateCopyWith<$R
   factory $AuthFailureCopyWith(AuthFailure value, $Res Function(AuthFailure) _then) = _$AuthFailureCopyWithImpl;
 @useResult
 $Res call({
- String message
+ AppError error
 });
 
 
@@ -399,10 +427,10 @@ class _$AuthFailureCopyWithImpl<$Res>
 
 /// Create a copy of AuthState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? error = null,}) {
   return _then(AuthFailure(
-null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
-as String,
+null == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as AppError,
   ));
 }
 

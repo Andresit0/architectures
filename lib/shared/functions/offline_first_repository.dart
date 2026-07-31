@@ -1,18 +1,25 @@
-part of '_function.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 
-Future<Either<Failure, T>> fetchOrFallback<T>({
-  required Future<Either<Failure, T>> Function() remote,
-  required Future<Either<Failure, T?>> Function() local,
+Future<Result<T>> fetchOrFallback<T>({
+  required Future<Result<T>> Function() remote,
+  required Future<Result<T?>> Function() local,
 }) async {
   final r = await remote();
-  if (r.isRight()) return r;
-  final failure = r.getLeft().toNullable();
-  if (failure is NoConnectionFailure || failure is ServerUnreachableFailure) {
+  if (r.isSuccess) return r;
+
+  final error = r.fold(
+    onSuccess: (_) => null,
+    onFailure: (e) => e,
+  );
+
+  if (error != null && error.isNetworkRelated) {
     final l = await local();
-    if (l.isRight()) {
-      final localData = l.getRight().toNullable();
-      if (localData != null) return Right(localData);
-    }
+    final localData = l.fold(
+      onSuccess: (data) => data,
+      onFailure: (_) => null,
+    );
+    if (localData != null) return Success<T>(localData);
   }
+
   return r;
 }

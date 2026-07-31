@@ -8,16 +8,21 @@ import 'package:clean_architecture_sdd_harness/shared/models/clinical_history/cl
 import 'package:clean_architecture_sdd_harness/shared/models/clinical_history/clinical_history_service_entity.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/clinical_history/clinical_history_facility_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/infrastructure/datasources/local_auth_datasource_impl.dart';
-import 'package:clean_architecture_sdd_harness/shared/database/_database.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/functions/_function.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/database/_database.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/network/connectivity/internet_service.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 
 class _MockPatientInfoStore extends Mock implements IPatientInfoStore {}
 
 class _MockClinicalHistoryStore extends Mock implements IClinicalHistoryStore {}
 
-class _MockTokenService extends Mock implements ITokenService {}
+class _MockTokenStore extends Mock implements ITokenStore {}
 
-class _MockAppDatabase extends Mock implements AppDatabase {}
+class _MockCredentialStore extends Mock implements ICredentialStore {}
+
+class _MockTokenVerifier extends Mock implements ITokenVerifier {}
+
+class _MockAppDatabase extends Mock implements IAppDatabase {}
 
 class _MockInternetService extends Mock implements IInternetService {}
 
@@ -28,16 +33,16 @@ final _loginResponse = LoginResponseEntity(
   token: TokenEntity(
     type: 'Bearer',
     key: 'jwt_token_123',
-    expiresInHours: 24,
-    expirationDate: null,
   ),
-  clinicalHistory: null,
+  clinicalHistory: [],
 );
 
 void main() {
   late _MockPatientInfoStore mockPatientInfo;
   late _MockClinicalHistoryStore mockClinicalHistory;
-  late _MockTokenService mockTokenService;
+  late _MockTokenStore mockTokenStore;
+  late _MockCredentialStore mockCredentialStore;
+  late _MockTokenVerifier mockTokenVerifier;
   late _MockAppDatabase mockAppDatabase;
   late _MockInternetService mockInternetService;
   late LocalAuthDatasourceImpl datasource;
@@ -47,22 +52,26 @@ void main() {
     registerFallbackValue(<ClinicalHistoryEntity>[]);
     mockPatientInfo = _MockPatientInfoStore();
     mockClinicalHistory = _MockClinicalHistoryStore();
-    mockTokenService = _MockTokenService();
+    mockTokenStore = _MockTokenStore();
+    mockCredentialStore = _MockCredentialStore();
+    mockTokenVerifier = _MockTokenVerifier();
     mockAppDatabase = _MockAppDatabase();
     mockInternetService = _MockInternetService();
     datasource = LocalAuthDatasourceImpl(
       patientInfo: mockPatientInfo,
       clinicalHistory: mockClinicalHistory,
-      tokenService: mockTokenService,
+      tokenStore: mockTokenStore,
+      credentialStore: mockCredentialStore,
+      tokenVerifier: mockTokenVerifier,
       appDatabase: mockAppDatabase,
       internetService: mockInternetService,
     );
 
     when(() => mockPatientInfo.save(any())).thenAnswer((_) async {});
     when(() => mockClinicalHistory.storeAll(any())).thenAnswer((_) async {});
-    when(() => mockTokenService.save(any())).thenAnswer((_) async {});
+    when(() => mockTokenStore.save(any())).thenAnswer((_) async {});
     when(
-      () => mockTokenService.saveCredentials(
+      () => mockCredentialStore.saveCredentials(
         email: any(named: 'email'),
         passwordHash: any(named: 'passwordHash'),
       ),
@@ -80,9 +89,9 @@ void main() {
 
         verify(() => mockPatientInfo.save(_patientEntity)).called(1);
         verify(() => mockClinicalHistory.storeAll([])).called(1);
-        verify(() => mockTokenService.save('jwt_token_123')).called(1);
+        verify(() => mockTokenStore.save('jwt_token_123')).called(1);
         verify(
-          () => mockTokenService.saveCredentials(
+          () => mockCredentialStore.saveCredentials(
             email: 'test@example.com',
             passwordHash: 'hash',
           ),
@@ -144,18 +153,20 @@ void main() {
     });
 
     group('clearSession', () {
-      test('calls deleteAll and resetDatabase', () async {
-        when(() => mockTokenService.deleteAll()).thenAnswer((_) async {});
+      test('calls delete and resetDatabase', () async {
+        when(() => mockTokenStore.delete()).thenAnswer((_) async {});
+        when(() => mockCredentialStore.deleteAll()).thenAnswer((_) async {});
         when(() => mockAppDatabase.resetDatabase()).thenAnswer((_) async {});
 
         await datasource.clearSession();
 
-        verify(() => mockTokenService.deleteAll()).called(1);
+        verify(() => mockTokenStore.delete()).called(1);
+        verify(() => mockCredentialStore.deleteAll()).called(1);
         verify(() => mockAppDatabase.resetDatabase()).called(1);
       });
 
-      test('propagates exception from deleteAll', () async {
-        when(() => mockTokenService.deleteAll())
+      test('propagates exception from delete', () async {
+        when(() => mockTokenStore.delete())
             .thenThrow(Exception('storage error'));
 
         expect(
@@ -168,8 +179,8 @@ void main() {
     group('restoreSession', () {
       test('returns LoginResponseEntity when valid session exists', () async {
         when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
-        when(() => mockTokenService.read()).thenAnswer((_) async => 'valid_jwt');
-        when(() => mockTokenService.isTokenExpired('valid_jwt'))
+        when(() => mockTokenStore.read()).thenAnswer((_) async => 'valid_jwt');
+        when(() => mockTokenVerifier.isExpired('valid_jwt'))
             .thenAnswer((_) async => false);
         when(() => mockClinicalHistory.loadAll()).thenAnswer((_) async => []);
 
@@ -178,12 +189,12 @@ void main() {
         expect(result, isNotNull);
         expect(result!.patient.id, '1');
         expect(result.token.key, 'valid_jwt');
-        expect(result.clinicalHistory, isNull);
+        expect(result.clinicalHistory, isEmpty);
       });
 
       test('returns null when no patient stored', () async {
         when(() => mockPatientInfo.load()).thenAnswer((_) async => null);
-        when(() => mockTokenService.read()).thenAnswer((_) async => 'irrelevant');
+        when(() => mockTokenStore.read()).thenAnswer((_) async => 'irrelevant');
 
         final result = await datasource.restoreSession();
 
@@ -192,7 +203,7 @@ void main() {
 
       test('returns null when no token stored', () async {
         when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
-        when(() => mockTokenService.read()).thenAnswer((_) async => null);
+        when(() => mockTokenStore.read()).thenAnswer((_) async => null);
 
         final result = await datasource.restoreSession();
 
@@ -201,23 +212,25 @@ void main() {
 
       test('clears storage and returns null when token expired and online', () async {
         when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
-        when(() => mockTokenService.read()).thenAnswer((_) async => 'expired');
-        when(() => mockTokenService.isTokenExpired('expired'))
+        when(() => mockTokenStore.read()).thenAnswer((_) async => 'expired');
+        when(() => mockTokenVerifier.isExpired('expired'))
             .thenAnswer((_) async => true);
         when(() => mockInternetService.isConnected())
             .thenAnswer((_) async => true);
-        when(() => mockTokenService.deleteAll()).thenAnswer((_) async => {});
+        when(() => mockTokenStore.delete()).thenAnswer((_) async {});
+        when(() => mockCredentialStore.deleteAll()).thenAnswer((_) async {});
 
         final result = await datasource.restoreSession();
 
-        verify(() => mockTokenService.deleteAll()).called(1);
+        verify(() => mockTokenStore.delete()).called(1);
+        verify(() => mockCredentialStore.deleteAll()).called(1);
         expect(result, isNull);
       });
 
       test('returns session when token expired but offline', () async {
         when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
-        when(() => mockTokenService.read()).thenAnswer((_) async => 'expired');
-        when(() => mockTokenService.isTokenExpired('expired'))
+        when(() => mockTokenStore.read()).thenAnswer((_) async => 'expired');
+        when(() => mockTokenVerifier.isExpired('expired'))
             .thenAnswer((_) async => true);
         when(() => mockInternetService.isConnected())
             .thenAnswer((_) async => false);
@@ -225,7 +238,7 @@ void main() {
 
         final result = await datasource.restoreSession();
 
-        verifyNever(() => mockTokenService.deleteAll());
+        verifyNever(() => mockTokenStore.delete());
         verify(() => mockInternetService.isConnected()).called(1);
         expect(result, isNotNull);
         expect(result!.token.key, 'expired');

@@ -11,19 +11,16 @@ part of 'clinical_history_professional_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$ClinicalHistoryProfessionalEntity {
 
- String get id;@JsonKey(name: 'fullname') String get fullname; String get specialty;
+ String get id; String get fullname; String get specialty;
 /// Create a copy of ClinicalHistoryProfessionalEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $ClinicalHistoryProfessionalEntityCopyWith<ClinicalHistoryProfessionalEntity> get copyWith => _$ClinicalHistoryProfessionalEntityCopyWithImpl<ClinicalHistoryProfessionalEntity>(this as ClinicalHistoryProfessionalEntity, _$identity);
 
-  /// Serializes this ClinicalHistoryProfessionalEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -31,7 +28,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is ClinicalHistoryProfessionalEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.fullname, fullname) || other.fullname == fullname)&&(identical(other.specialty, specialty) || other.specialty == specialty));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,id,fullname,specialty);
 
@@ -48,7 +45,7 @@ abstract mixin class $ClinicalHistoryProfessionalEntityCopyWith<$Res>  {
   factory $ClinicalHistoryProfessionalEntityCopyWith(ClinicalHistoryProfessionalEntity value, $Res Function(ClinicalHistoryProfessionalEntity) _then) = _$ClinicalHistoryProfessionalEntityCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'fullname') String fullname, String specialty
+ String id, String fullname, String specialty
 });
 
 
@@ -155,7 +152,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'fullname')  String fullname,  String specialty)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String fullname,  String specialty)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryProfessionalEntity() when $default != null:
 return $default(_that.id,_that.fullname,_that.specialty);case _:
@@ -176,7 +173,7 @@ return $default(_that.id,_that.fullname,_that.specialty);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'fullname')  String fullname,  String specialty)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String fullname,  String specialty)  $default,) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryProfessionalEntity():
 return $default(_that.id,_that.fullname,_that.specialty);case _:
@@ -196,7 +193,7 @@ return $default(_that.id,_that.fullname,_that.specialty);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'fullname')  String fullname,  String specialty)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String fullname,  String specialty)?  $default,) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryProfessionalEntity() when $default != null:
 return $default(_that.id,_that.fullname,_that.specialty);case _:
@@ -208,14 +205,14 @@ return $default(_that.id,_that.fullname,_that.specialty);case _:
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _ClinicalHistoryProfessionalEntity extends ClinicalHistoryProfessionalEntity {
-  const _ClinicalHistoryProfessionalEntity({required this.id, @JsonKey(name: 'fullname') required this.fullname, required this.specialty}): super._();
-  factory _ClinicalHistoryProfessionalEntity.fromJson(Map<String, dynamic> json) => _$ClinicalHistoryProfessionalEntityFromJson(json);
+  const _ClinicalHistoryProfessionalEntity({required this.id, required this.fullname, required this.specialty}): super._();
+  
 
 @override final  String id;
-@override@JsonKey(name: 'fullname') final  String fullname;
+@override final  String fullname;
 @override final  String specialty;
 
 /// Create a copy of ClinicalHistoryProfessionalEntity
@@ -224,17 +221,14 @@ class _ClinicalHistoryProfessionalEntity extends ClinicalHistoryProfessionalEnti
 @pragma('vm:prefer-inline')
 _$ClinicalHistoryProfessionalEntityCopyWith<_ClinicalHistoryProfessionalEntity> get copyWith => __$ClinicalHistoryProfessionalEntityCopyWithImpl<_ClinicalHistoryProfessionalEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$ClinicalHistoryProfessionalEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClinicalHistoryProfessionalEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.fullname, fullname) || other.fullname == fullname)&&(identical(other.specialty, specialty) || other.specialty == specialty));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,id,fullname,specialty);
 
@@ -251,7 +245,7 @@ abstract mixin class _$ClinicalHistoryProfessionalEntityCopyWith<$Res> implement
   factory _$ClinicalHistoryProfessionalEntityCopyWith(_ClinicalHistoryProfessionalEntity value, $Res Function(_ClinicalHistoryProfessionalEntity) _then) = __$ClinicalHistoryProfessionalEntityCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'fullname') String fullname, String specialty
+ String id, String fullname, String specialty
 });
 
 

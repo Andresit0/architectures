@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/configs/_configs.lib.dart';
+import 'package:clean_architecture_sdd_harness/design_system/theme/app_colors.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import '../../../../l10n/app_localizations.dart';
 
 import '../notifiers/auth_state.dart';
 import '../notifiers/auth_notifier.dart';
@@ -17,8 +19,8 @@ class ClinicalHistoryPlaceholderScreen extends ConsumerWidget {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
-              content: Text(next.message),
-              backgroundColor: CustomConfigs.appColors.red,
+              content: Text(localizeError(next.error, AppLocalizations.of(context)!)),
+              backgroundColor: AppColors.red,
               duration: const Duration(seconds: 4),
             ),
           );
@@ -27,11 +29,11 @@ class ClinicalHistoryPlaceholderScreen extends ConsumerWidget {
     final state = ref.watch(authProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Clinical History'),
+        title: Text(AppLocalizations.of(context)!.clinicalHistory),
         actions: [
           TextButton(
             onPressed: () => ref.read(authProvider.notifier).logout(),
-            child: const Text('Logout'),
+            child: Text(AppLocalizations.of(context)!.logout),
           ),
         ],
       ),
@@ -40,12 +42,12 @@ class ClinicalHistoryPlaceholderScreen extends ConsumerWidget {
           AuthLoaded(:final patient) => Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Clinical History'),
+              Text(AppLocalizations.of(context)!.clinicalHistory),
               const SizedBox(height: 16),
-              Text('Welcome, ${patient.name}'),
+              Text(AppLocalizations.of(context)!.welcomeUser(patient.name)),
             ],
           ),
-          _ => const Text('Clinical History'),
+          _ => Text(AppLocalizations.of(context)!.clinicalHistory),
         },
       ),
     );

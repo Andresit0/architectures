@@ -11,19 +11,16 @@ part of 'clinical_history_attachment_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$ClinicalHistoryAttachmentEntity {
 
- String get id; String get type; String get name;@JsonKey(name: 'size_bytes') int get sizeBytes; String get url;
+ String get id; String get type; String get name; int get sizeBytes; String get url;
 /// Create a copy of ClinicalHistoryAttachmentEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $ClinicalHistoryAttachmentEntityCopyWith<ClinicalHistoryAttachmentEntity> get copyWith => _$ClinicalHistoryAttachmentEntityCopyWithImpl<ClinicalHistoryAttachmentEntity>(this as ClinicalHistoryAttachmentEntity, _$identity);
 
-  /// Serializes this ClinicalHistoryAttachmentEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -31,7 +28,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is ClinicalHistoryAttachmentEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.name, name) || other.name == name)&&(identical(other.sizeBytes, sizeBytes) || other.sizeBytes == sizeBytes)&&(identical(other.url, url) || other.url == url));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,id,type,name,sizeBytes,url);
 
@@ -48,7 +45,7 @@ abstract mixin class $ClinicalHistoryAttachmentEntityCopyWith<$Res>  {
   factory $ClinicalHistoryAttachmentEntityCopyWith(ClinicalHistoryAttachmentEntity value, $Res Function(ClinicalHistoryAttachmentEntity) _then) = _$ClinicalHistoryAttachmentEntityCopyWithImpl;
 @useResult
 $Res call({
- String id, String type, String name,@JsonKey(name: 'size_bytes') int sizeBytes, String url
+ String id, String type, String name, int sizeBytes, String url
 });
 
 
@@ -157,7 +154,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String name, @JsonKey(name: 'size_bytes')  int sizeBytes,  String url)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String name,  int sizeBytes,  String url)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryAttachmentEntity() when $default != null:
 return $default(_that.id,_that.type,_that.name,_that.sizeBytes,_that.url);case _:
@@ -178,7 +175,7 @@ return $default(_that.id,_that.type,_that.name,_that.sizeBytes,_that.url);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String name, @JsonKey(name: 'size_bytes')  int sizeBytes,  String url)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String name,  int sizeBytes,  String url)  $default,) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryAttachmentEntity():
 return $default(_that.id,_that.type,_that.name,_that.sizeBytes,_that.url);case _:
@@ -198,7 +195,7 @@ return $default(_that.id,_that.type,_that.name,_that.sizeBytes,_that.url);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String name, @JsonKey(name: 'size_bytes')  int sizeBytes,  String url)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String name,  int sizeBytes,  String url)?  $default,) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryAttachmentEntity() when $default != null:
 return $default(_that.id,_that.type,_that.name,_that.sizeBytes,_that.url);case _:
@@ -210,16 +207,16 @@ return $default(_that.id,_that.type,_that.name,_that.sizeBytes,_that.url);case _
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _ClinicalHistoryAttachmentEntity extends ClinicalHistoryAttachmentEntity {
-  const _ClinicalHistoryAttachmentEntity({required this.id, required this.type, required this.name, @JsonKey(name: 'size_bytes') required this.sizeBytes, required this.url}): super._();
-  factory _ClinicalHistoryAttachmentEntity.fromJson(Map<String, dynamic> json) => _$ClinicalHistoryAttachmentEntityFromJson(json);
+  const _ClinicalHistoryAttachmentEntity({required this.id, required this.type, required this.name, required this.sizeBytes, required this.url}): super._();
+  
 
 @override final  String id;
 @override final  String type;
 @override final  String name;
-@override@JsonKey(name: 'size_bytes') final  int sizeBytes;
+@override final  int sizeBytes;
 @override final  String url;
 
 /// Create a copy of ClinicalHistoryAttachmentEntity
@@ -228,17 +225,14 @@ class _ClinicalHistoryAttachmentEntity extends ClinicalHistoryAttachmentEntity {
 @pragma('vm:prefer-inline')
 _$ClinicalHistoryAttachmentEntityCopyWith<_ClinicalHistoryAttachmentEntity> get copyWith => __$ClinicalHistoryAttachmentEntityCopyWithImpl<_ClinicalHistoryAttachmentEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$ClinicalHistoryAttachmentEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClinicalHistoryAttachmentEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.name, name) || other.name == name)&&(identical(other.sizeBytes, sizeBytes) || other.sizeBytes == sizeBytes)&&(identical(other.url, url) || other.url == url));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,id,type,name,sizeBytes,url);
 
@@ -255,7 +249,7 @@ abstract mixin class _$ClinicalHistoryAttachmentEntityCopyWith<$Res> implements 
   factory _$ClinicalHistoryAttachmentEntityCopyWith(_ClinicalHistoryAttachmentEntity value, $Res Function(_ClinicalHistoryAttachmentEntity) _then) = __$ClinicalHistoryAttachmentEntityCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String type, String name,@JsonKey(name: 'size_bytes') int sizeBytes, String url
+ String id, String type, String name, int sizeBytes, String url
 });
 
 

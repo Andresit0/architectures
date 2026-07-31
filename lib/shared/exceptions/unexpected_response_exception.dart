@@ -1,5 +1,3 @@
-part of '_exceptions.lib.dart';
-
 class UnexpectedResponseException implements Exception {
   final String details;
 

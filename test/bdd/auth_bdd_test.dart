@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gherkart/gherkart.dart';
 import 'package:gherkart/gherkart_io.dart';
 
+import 'package:clean_architecture_sdd_harness/core/config/environment_provider.dart';
+import 'package:clean_architecture_sdd_harness/core/config/app_environment.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_state.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/screens/login_screen.dart';
+import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/token_entity.dart';
 
@@ -70,11 +73,16 @@ Widget _buildScreen(AuthState state, _SharedSpy spy) {
       authProvider.overrideWith(
         () => _SpyAuthNotifier(state, spy),
       ),
+      environmentProvider.overrideWith((ref) => const ProductionEnvironment()),
     ],
   );
   return UncontrolledProviderScope(
     container: _lastContainer!,
-    child: const MaterialApp(home: LoginScreen()),
+    child: const MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: LoginScreen(),
+    ),
   );
 }
 
@@ -104,13 +112,11 @@ const _tPatient = PatientEntity(id: '1', name: 'John Doe');
 const _tToken = TokenEntity(
   type: 'Bearer',
   key: 'jwt_token_123',
-  expiresInHours: 24,
-  expirationDate: null,
 );
 const _tLoaded = AuthLoaded(
   patient: _tPatient,
   token: _tToken,
-  clinicalHistory: null,
+  clinicalHistory: [],
 );
 
 // ---------------------------------------------------------------------------
