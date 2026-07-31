@@ -8,34 +8,26 @@ Every barrelled folder has **two files**:
 | `_[name].dart` | Facade: `part of '_[name].lib.dart'`; exposes `Custom[Name]` with `static final` members |
 
 **Example barrels:**
-- `shared/configs/` → `CustomConfigs.appColors`, `CustomConfigs.uries`, `CustomConfigs.vars`, `CustomConfigs.theme`, `CustomConfigs.routes`
-- `shared/models/` → `CustomModels`
-- `shared/functions/` → `CustomFunction.pathProvider`, `CustomFunction.sharePlus`, `CustomFunction.internetService`, `CustomFunction.tokenService`, `CustomFunction.dio`, `CustomFunction.logger`, `CustomFunction.fpdart`, `CustomFunction.failure`, `CustomFunction.sembast`, `CustomFunction.crypto`, `CustomFunction.encrypt`, `CustomFunction.flutterSecureStorage`, `CustomFunction.goRouter`
-- `shared/database/` → `CustomDb.clinicalHistory`, `CustomDb.patientInfo`, `CustomDb.resetDatabase()`
-- `shared/interceptors/` → `CustomInterceptors.auth(readToken, checkConnectivity)` (returns `AuthInterceptor`); also exposes `AuthInterceptor` class
-- `shared/exceptions/` → `CustomExceptions` (typedefs + factory methods); re-exports `Either`, `Left`, `Right` from fpdart
-- `shared/providers/` → `CustomProviders.dio`, `CustomProviders.token`, `CustomProviders.goRouter`, `CustomProviders.sembast`
-- `shared/jsons/` → `CustomJsons.authJson`
+- `shared/models/` → `_models.lib.dart` barrel
+- `shared/functions/` → imports individually (`offline_first_repository.dart` directly)
+- `shared/exceptions/` → Exception classes (ApiException, NoConnectionException, etc.)
+- `features/auth/di/` → feature-specific providers migrated from `presentation/providers/` — uses `@riverpod` code-gen
+- `app/di/` → `_providers.lib.dart` barrel exporting providers directly (composition root: `httpServiceProvider`, `tokenStoreProvider`, `appDatabaseProvider`, `internetServiceProvider`, `clinicalHistoryStoreProvider`, `patientInfoStoreProvider`, `passwordHasherProvider`, `connectivityCheckerProvider`, `tokenVerifierProvider`, `credentialStoreProvider`, `jwtWrapperProvider`, `environmentProvider`)
+- `shared/` → mock data lives in per-feature FakeDatasource files (no CustomJsons barrel)
+- `core/database/` → accessed via Riverpod providers (`ref.watch(appDatabaseProvider)`)
+- `core/network/interceptors/` → used internally by `DioWrapper`; not accessed from features
 
 **Rules:**
 - `*.g.dart` files are **never** added as `part` — they are owned by their source.
 - Files starting with `_` are never added as `part` of another barrel.
-- Never use `export` to re-export your own files from a barrel; always use `part of`. Exception: `_exceptions.lib.dart` uses `export 'package:fpdart/fpdart.dart' show Either, Left, Right;` to re-export external package types — this is the only allowed `export` in the project.
+- Never use `export` to re-export your own files from a barrel; always use `part of`. Exception: `_exceptions.lib.dart` uses `export` for its standalone exception files (they are not `part of` the lib). If a barrel needs to re-export an external package type, `export` is also the correct choice.
 - `static const` inside part files must be converted to `final` (instance members) so the facade can hold `static final` instances.
 
-**Exception — `shared/providers/` (and any folder with `@riverpod`-annotated files):**
+**Exception — folders with `@riverpod`-annotated files:**
 
-Files annotated with `@riverpod` declare their own `part '....g.dart';` directive. A Dart `part` file cannot itself declare `part` directives, so these files **cannot** be made `part` of the lib barrel. Instead, `_providers.lib.dart` uses `import` for each provider file and only makes `_providers.dart` (the facade) a `part`:
+Files annotated with `@riverpod` declare their own `part '....g.dart';` directive. A Dart `part` file cannot itself declare `part` directives, so these files **cannot** be made `part` of the lib barrel. Instead, use `import` for each provider file and only make the facade a `part`.
 
-```dart
-// _providers.lib.dart — CORRECT
-import 'token_provider.dart';
-import 'dio_provider.dart';
-// ...
-part '_providers.dart';   // only the facade is a part
-```
-
-Do **not** use the standard `barrel_lib` / `barrel` skill flow (which converts public files to `part`) on folders whose public files contain `@riverpod` annotations. Use the pattern above instead (`import` each provider file; only the facade `_providers.dart` is `part`).
+Do **not** use the standard `barrel_lib` / `barrel` skill flow (which converts public files to `part`) on folders whose public files contain `@riverpod` annotations.
 
 Use skills `barrel`, `barrel_lib`, `barrel_file` when creating or updating barrels.
 

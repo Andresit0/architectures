@@ -6,16 +6,19 @@
 # 1. Install / sync dependencies
 flutter pub get
 
-# 2. Regenerate Riverpod code (run whenever @riverpod files change)
+# 2. Regenerate localization code (run whenever .arb files change)
+flutter gen-l10n
+
+# 3. Regenerate Riverpod code (run whenever @riverpod files change)
 dart run build_runner build --delete-conflicting-outputs
 
-# 3. Analyze
+# 4. Analyze
 flutter analyze
 
-# 4. Unit / widget tests
+# 5. Unit / widget tests
 flutter test
 
-# 5. Run on macOS
+# 6. Run on macOS
 flutter run -d mac --dart-define-from-file=.env
 ```
 
@@ -25,4 +28,4 @@ flutter run -d mac --dart-define-from-file=.env
 flutter test integration_test/[feature_name]_integration_test.dart -d <device-id> --dart-define-from-file=.env
 ```
 
-Integration tests use `_FakeUserRepository` — no live HTTP calls needed.
+Integration tests use fake repositories (`_FakeAuthRepository`, `_FakeTokenStore`, `_FakeCredentialStore`, `_FakeTokenVerifier`) — no live HTTP calls needed.

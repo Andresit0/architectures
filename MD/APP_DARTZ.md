@@ -1,9 +1,7 @@
-# APP_DARTZ.md — Either / Failure / fpdart pattern
+# APP_DARTZ.md — Result / guard / fold pattern
 
-> Quick reference for working with `Either<Failure, T>`, `CpFpdart`, exceptions
+> Quick reference for working with `Result<T>`, `guard()`, exceptions
 > and the full error-handling chain across the clean-architecture layers.
->
-> Package: [`fpdart`](https://pub.dev/packages/fpdart) — replaces `dartz`.
 
 ---
 
@@ -11,61 +9,63 @@
 
 | Layer | Rule |
 |---|---|---|
-| `cp_dio.dart` | Throws typed exceptions (`ApiException`, `NoConnectionException`, …) |
+| `core/network/dio/dio_wrapper.dart` | Throws typed exceptions (`ApiException`, `NoConnectionException`, …) |
 | **Datasource impl** | Raw call only — **no try/catch**, lets exceptions propagate up |
-| **Repository impl** | Wraps datasource with `CustomFunction.fpdart.guard(...)` → `Either<Failure, T>`. Use `fetchOrFallback(remote: guard, local: guard)` for offline-first fallback on connection failure |
-| **Repository interface** | Declares `Future<Either<Failure, T>>` return types |
-| **UseCase** | Passes `Either<Failure, T>` through unchanged — no logic |
+| **Repository impl** | Wraps datasource with `guard(...)` → `Result<T>`. |
+| **Repository interface** | Declares `Future<Result<T>>` return types |
+| **UseCase** | Passes `Result<T>` through unchanged — uses `is Success` / `is Failure` to branch |
 | **Notifier** | Calls `.fold(onFailure, onSuccess)` — **no try/catch** |
 
 ---
 
-## 2. `guard()` — creates the Either (repository layer)
+## 2. `guard()` — creates the Result (repository layer)
 
-`guard` is the **only** place exceptions are caught and converted to `Left(Failure)`.
+`guard` is the **only** place exceptions are caught and converted to `Failure(AppError)`.
 
 ```dart
 // repository impl
 @override
-Future<Either<Failure, UserEntity>> login({...}) =>
-    CustomFunction.fpdart.guard(
+Future<Result<UserEntity>> login({...}) =>
+    guard(
       () => _datasource.login(...),
     );
 ```
 
-Exception → Failure mapping inside `guard`:
+Exception → AppError mapping inside `guard` (defined in `lib/shared/error/result_guard.dart`):
 
 ```
-ApiException               → Left(ApiFailure())
-NoConnectionException      → Left(NoConnectionFailure())
-ServerUnreachableException → Left(ServerUnreachableFailure())
-UnexpectedResponseException→ Left(UnexpectedResponseFailure())
-catch (e)                  → Left(UnexpectedFailure())   ← safety net
+ApiException               → Failure(ApiError())
+NoConnectionException      → Failure(NetworkError())
+ServerUnreachableException → Failure(ServerUnreachableError())
+UnexpectedResponseException→ Failure(UnexpectedError())
+AppTimeoutException        → Failure(NetworkError())
+TimeoutException (dart:async) → Failure(NetworkError())
+Error                      → Failure(UnexpectedError())   ← catches Error + Exception
 ```
 
 ---
 
-## 3. `fold()` — consumes the Either (notifier layer)
+## 3. `fold()` — consumes the Result (notifier layer)
 
 ```dart
 final result = await ref.read(useCaseProvider).call(...);
 state = result.fold(
-  (failure) => switch (failure) {
-    ApiFailure()               => MyFailureState(failure.message),
-    NoConnectionFailure()      => const MyFailureState('No connection'),
-    ServerUnreachableFailure() => const MyFailureState('Under maintenance'),
-    _                          => MyFailureState(failure.message),
+  onFailure: (error) => switch (error) {
+    ApiError()               => MyFailureState(error.message),
+    NetworkError()           => const MyFailureState('No connection'),
+    ServerUnreachableError() => const MyFailureState('Under maintenance'),
+    _                        => MyFailureState(error.message),
   },
-  (data) => MySuccessState(data),
+  onSuccess: (data) => MySuccessState(data),
 );
 ```
 
 When the success branch is async:
 
 ```dart
-await result.fold<Future<void>>(
-  (failure) async { state = _mapFailure(failure); },
-  (data) async {
+state = await result.fold<Future<void>>(
+  onFailure: (error) async { state = _mapFailure(error); },
+  onSuccess: (data) async {
     await someAsyncOperation();
     state = MySuccessState(data);
   },
@@ -83,116 +83,98 @@ await result.fold<Future<void>>(
 
 ---
 
-## 5. `FailurePropagation.launch()` — optional helper
+## 5. `localizeError()` — UI-level localization
 
-Avoids writing a `switch` on `Failure` in every notifier:
+`AppError` is passed to state directly. The UI layer maps it to localized strings via `localizeError()`:
 
 ```dart
+// Notifier — passes AppError to state
 state = result.fold(
-  (failure) => CustomFunction.failure.launch<MyState>(
-    failure,
-    onFailure: (msg) => MyFailureState(msg),
-  ),
-  (data) => MySuccessState(data),
+  onFailure: (error) => MyFailureState(error),
+  onSuccess: (data) => MySuccessState(data),
 );
+
+// UI Screen — localizes the AppError for display
+ref.listen<MyState>(myProvider, (_, state) {
+  state.maybeWhen(
+    failure: (error) {
+      final msg = localizeError(error, AppLocalizations.of(context)!);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    },
+    orElse: () {},
+  );
+});
+```
+
+Import:
+```dart
+import 'package:clean_architecture_sdd_harness/shared/error/error_localizer.dart';
 ```
 
 ---
 
-## 6. `Either` / `Left` / `Right` imports
+## 6. `Result` / `Success` / `Failure` imports
 
-**Never** import `package:fpdart/fpdart.dart` directly.  
-`_exceptions.lib.dart` re-exports these types — import it once:
+Import `_error.lib.dart` from the feature layer:
 
 ```dart
-import '../../../../shared/exceptions/_exceptions.lib.dart';
-// Either, Left, Right, Failure and all CustomXxxFailure typedefs available
+import '../../../../shared/error/_error.lib.dart';
+// Result, Success, Failure, AppError and all subclasses available
 ```
+
+Import `shared/exceptions/_exceptions.lib.dart` separately for exception classes (ApiException, NoConnectionException, etc.).
 
 ---
 
-## 7. Adding a new Failure type (checklist)
+## 7. Adding a new Exception type (checklist)
 
-> The existing failure classes (`ApiFailure`, `NoConnectionFailure`, etc.) use their raw class names in switch patterns and `on` clauses — they predate the typedef convention. Follow the steps below **only when creating a new Failure type**.
-
-1. Create `<name>_failure.dart` in `shared/exceptions/`:
+1. Create `<name>_exception.dart` in `shared/exceptions/`:
    ```dart
    part of '_exceptions.lib.dart';
-   class MyFailure extends Failure {
-     const MyFailure(String message) : super(message);
+   class MyException implements Exception {
+     const MyException(this.message);
+     final String message;
    }
    ```
-2. Add `part '<name>_failure.dart';` to `_exceptions.lib.dart`.
-3. Add `typedef CustomMyFailure = MyFailure;` to `_exceptions.dart`.
-4. Add `static MyFailure myFailure(...) => MyFailure(...);` factory to `CustomExceptions`.
-5. Add the matching `on CustomMyException` branch to `CpFpdart.guard()` in `cp_fpdart.dart` (new exceptions use the `typedef` alias — see `APP_EXCEPTION.md`).
+2. Add `part '<name>_exception.dart';` to `_exceptions.lib.dart`.
+3. Add the matching `on MyException catch` branch to `guard()` in `result_guard.dart`.
 
 ---
 
-## 8. `fetchOrFallback()` — offline-first fallback (repository layer)
-
-When a method should fall back to cached data on connection failure, use `fetchOrFallback()` instead of bare `guard()`:
-
-```dart
-// repository impl — offline-first
-@override
-Future<Either<Failure, LoginResponseEntity>> login({...}) async {
-  return fetchOrFallback(
-    remote: () => CustomFunction.fpdart.guard(
-      () => _remoteDatasource.login(email: email, passwordHash: passwordHash),
-    ),
-    local: () => CustomFunction.fpdart.guard(
-      () => _localDatasource.restoreSession(),
-    ),
-  );
-}
-```
-
-Behavior:
-- Remote succeeds → returns `Right(data)`
-- Remote fails with `NoConnectionFailure` / `ServerUnreachableFailure` + local has data → returns `Right(localData)`
-- Remote fails with connection error + local is null → returns `Left(connectionFailure)`
-- Remote fails with non-connection error → returns `Left(originalFailure)`
-
-Available as a top-level function from `_function.lib.dart`. Defined in `lib/shared/functions/offline_first_repository.dart`.
-
----
-
-## 9. Call-chain summary (read top to bottom)
+## 8. Call-chain summary (read top to bottom)
 
 ```
 Notifier.someMethod()
   ├── state = Loading
-  ├── result = await useCase.call(...)      // Either<Failure, T>
+  ├── result = await useCase.call(...)      // Result<T>
   │     └── repository.someMethod(...)
-  │           └── CpFpdart.guard(
+  │           └── guard(
   │                 () => datasource.someMethod()   ← can throw
   │               )
-  │                 ├── OK  → Right(data)
-  │                 └── err → Left(Failure)
+  │                 ├── OK  → Success(data)
+  │                 └── err → Failure(AppError)
   │
   └── state = result.fold(
-        Left(failure)  → FailureState(failure.message),
-        Right(data)    → SuccessState(data),
+        onFailure(error) → FailureState(error.message),
+        onSuccess(data)  → SuccessState(data),
       )
-
-**Offline-first variant** (repository uses `fetchOrFallback`):
 ```
-Notifier.someMethod()
-  ├── state = Loading
-  ├── result = await useCase.call(...)        // Either<Failure, T>
-  │     └── repository.someMethod(...)
-  │           └── fetchOrFallback(
-  │                 remote: CpFpdart.guard(() => remoteDs.method()),
-  │                 local:  CpFpdart.guard(() => localDs.method()),
-  │               )
-  │                 ├── remote OK             → Right(data)
-  │                 ├── NoConnection + local  → Right(localData)
-  │                 └── NoConnection + null
-  │                       or other failure    → Left(Failure)
-  │
-  └── state = result.fold(
-        Left(failure)  → FailureState(failure.message),
-        Right(data)    → SuccessState(data),
-      )
+
+## 9. Composing Results in a UseCase
+
+Use `is Success` / `is Failure` (NOT `fold`) when a UseCase needs to inspect intermediate results:
+
+```dart
+final result = await _repository.restoreSession();
+if (result is Failure) return result;  ← propagate unchanged
+
+final data = (result as Success).data;
+if (data == null) return const Success(null);
+
+if (await _tokenExpiryChecker.isExpired(data.token.key)) {
+  if (await _connectivityChecker.isConnected()) {
+    return _tryRefresh(data);
+  }
+}
+return Success(data);
 ```

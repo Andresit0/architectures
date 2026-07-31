@@ -12,7 +12,7 @@ description: Minimum skills that should be read before writing code in the app.
 | 1 | `app-spec-definer` | Always — run before any code for a new feature |
 | 2 | `app-lib-structure` | Always — confirm file location and architecture layer |
 | 3 | `app-class-to-solid` | When writing code inside `lib/features/` |
-| 4 | `app-class-to-solid-min` | When writing code inside `lib/shared/functions/` or `shared/providers/` |
+| 4 | `app-class-to-solid-min` | When writing code inside `lib/core/services/` |
 | 5 | `app-barrel` | When a new folder is created under `lib/` |
 | 6 | `app-cp-package` | When a new pub.dev package is added to the project |
 | 7 | `app-test-driven-development` | Before writing implementation code for any feature or bugfix |
@@ -82,7 +82,7 @@ Reads `domain.md` and `spec.md` from the spec folder to align naming.
 
 **Skill:** `.ai/skills/app-class-to-solid-min/SKILL.md`
 
-Applies DI + Riverpod + Interface (pattern 5c) to shared service classes inside `lib/shared/functions/`.
+Applies DI + Riverpod + Interface to service classes inside `lib/core/services/`.
 
 ---
 
@@ -98,9 +98,9 @@ Orchestrates `barrel_lib` then `barrel_file` to create `_[name].lib.dart` and `_
 
 **Skill:** `.ai/skills/app-cp-package/SKILL.md`
 
-Convention for adding a new pub.dev package and creating a local wrapper (`cp_<package>.dart`) in `lib/shared/functions/`.
+Convention for adding a new pub.dev package and creating a local wrapper (`<package>_wrapper.dart`) in `lib/core/services/<domain>/`.
 
-Run before using any new package that does not yet have a wrapper in `shared/functions/`.
+Run before using any new package that does not yet have a wrapper in `lib/core/services/<domain>/`.
 
 ---
 
@@ -166,7 +166,7 @@ Invoked at Phase D.0.5 by the orchestrator. Never call directly.
 
 **Skill:** `.ai/skills/app-agent-phase-gate/SKILL.md`
 
-Audits spec pre-conditions before spec-dev: 6 spec files complete with valid bdd.feature, domain.md usecases and state variants, and unchecked tasks.md items. CpPackage wrappers are NOT checked here — that audit runs at D.10.5 after all imports are known.
+Audits spec pre-conditions before spec-dev: 6 spec files complete with valid bdd.feature, domain.md usecases and state variants, and unchecked tasks.md items. Wrappers are NOT checked here — that audit runs at D.10.5 after all imports are known.
 
 **Verdict:** PASS | FAIL | BLOCKED — blocks spec-dev until all checks pass.
 
@@ -242,7 +242,7 @@ Fixes failing tests. Analyzes each failure, fixes implementation or test, re-run
 
 **Skill:** `.ai/skills/app-agent-nav-wirer/SKILL.md`
 
-Wires navigation: URI in uries.dart, route name in cp_go_router.dart, GoRoute in app_routes.dart, screen import in _configs.lib.dart, trigger in parent screen.
+Wires navigation: AppRoute enum entry in app_route.dart, GoRoute in app_router.dart, screen import, trigger in parent screen.
 
 ---
 
@@ -256,11 +256,11 @@ Updates MD/* and AGENTS.md based on project changes. Bucket A (`.ai/*`) requires
 
 ---
 
-### app-agent-cp-package — cp_* wrapper creator
+### app-agent-cp-package — wrapper creator
 
 **Skill:** `.ai/skills/app-agent-cp-package/SKILL.md`
 
-Sub-agent dedicated to creating `cp_<package>.dart` wrappers for new pub.dev packages. Invoked by the orchestrator at D.10.5 (DirectImport-Auditor repair) when a direct package import is found in feature code.
+Sub-agent dedicated to creating `<package>_wrapper.dart` wrappers for new pub.dev packages. Invoked by the orchestrator at D.10.5 (DirectImport-Auditor repair) when a direct package import is found in feature code.
 
 ⚠️ **Do NOT use `app-cp-package` skill directly for wrappers required by a feature.** The orchestrator delegates this via `task()` to this agent.
 

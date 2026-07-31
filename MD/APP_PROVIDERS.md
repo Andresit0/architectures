@@ -1,29 +1,45 @@
-### Shared providers — usage rules
+### Providers — usage rules
 
-All global providers live in `lib/shared/providers/`.
-The `CustomProviders` facade (in `_providers.dart`) exposes them under static aliases.
-
----
-
-#### Inventory of the 4 global providers
-
-| `CustomProviders` alias | Raw provider | Type | Exposed state |
-|---|---|---|---|---|
-| `CustomProviders.dio` | `httpServiceProvider` | `Provider<ICpDio>` | HTTP singleton (Dio) |
-| `CustomProviders.token` | `tokenServiceProvider` | `Provider<ITokenService>` | Token storage singleton |
-| `CustomProviders.goRouter` | `goRouterListenableProvider` | `Provider<GoRouterListenable>` | `ChangeNotifier` that notifies the router when `isAuthenticated` changes |
-| `CustomProviders.sembast` | `sembastProvider` | `Provider<ICpSembast>` | Sembast database singleton (AES-256-CBC encrypted) |
-
-All are `keepAlive: true` — never discarded from memory.
+Global providers are defined in `lib/core/` and `lib/app/di/`.
+The `_providers.lib.dart` barrel in `lib/app/di/` is the complete composition root — it exports all 10 shared providers directly.
 
 ---
 
-#### Access rule: `CustomProviders` vs direct import
+#### Inventory of global providers
+
+All `keepAlive: true` — never discarded from memory.
+
+| Provider | Location | Type | Exposed state |
+|---|---|---|---|
+| `httpServiceProvider` | `app/di/network/dio_provider.dart` | `Provider<IDioWrapper>` | HTTP singleton (Dio) WITH auth interceptor (401 retry + force logout) |
+| `authDioProvider` | `app/di/network/dio_provider.dart` | `Provider<IDioWrapper>` | Dio WITHOUT auth interceptor. Used by AuthRemoteDatasource for login/refresh where no token exists yet |
+| `tokenStoreProvider` | `core/services/auth/token_providers.dart` | `Provider<ITokenStore>` | Token storage singleton |
+| `appDatabaseProvider` | `core/database/app_database_provider.dart` | `Provider<IAppDatabase>` | Sembast database instance (AES-256-CBC encrypted) |
+| `internetServiceProvider` | `core/network/connectivity/connectivity_providers.dart` | `Provider<IInternetService>` | Internet connectivity checker |
+| *(removed)* `errorPropagation` | *(removed)* | Error propagation replaced by `localizeError()` in `shared/error/error_localizer.dart` — UI layer calls `localizeError(error, AppLocalizations.of(context)!)` |
+| `clinicalHistoryStoreProvider` | `core/database/tables/clinical_history.dart` | `Provider<IClinicalHistoryStore>` | Clinical history store |
+| `patientInfoStoreProvider` | `core/database/tables/patient_info.dart` | `Provider<IPatientInfoStore>` | Patient info store |
+| `passwordHasherProvider` | `core/services/crypto/password_hasher_provider.dart` | `Provider<IPasswordHasher>` | Password hashing (bcrypt) |
+| `connectivityCheckerProvider` | `core/network/connectivity/connectivity_providers.dart` | `Provider<IConnectivityChecker>` | Connectivity check abstraction |
+| `tokenVerifierProvider` | `core/services/auth/token_providers.dart` | `Provider<ITokenVerifier>` | JWT token verification |
+| `credentialStoreProvider` | `core/services/auth/token_providers.dart` | `Provider<ICredentialStore>` | Credential storage (remember-me) |
+| `jwtWrapperProvider` | `core/services/auth/token_providers.dart` | `Provider<IJwtWrapper>` | JWT utility wrapper |
+| `environmentProvider` | `core/config/environment_provider.dart` | `Provider<AppEnvironment>` | App environment config |
+
+**Unaliased global providers** (accessed via direct `ref.watch(provider)` — see access categories in MD/APP_PACKAGE_WRAPPER.md):
+
+| Raw provider | Location | Type | Exposed state |
+|---|---|---|---|
+| `pathProviderProvider` | `core/services/device/path_provider_provider.dart` | `Provider<IPathProviderWrapper>` | File system paths (pure utility) |
+| `flutterJailbreakDetectionProvider` | `core/services/device/jailbreak_provider.dart` | `Provider<IJailbreakDetectionWrapper>` | Jailbreak detection (internal) |
+
+---
+
+#### Access rule: import from `_providers.lib.dart`
 
 | From | Use | Reason |
 |---|---|---|
-| Code in `features/` | `CustomProviders.xxx` | The barrel centralizes access; never import the provider file directly |
-| Code inside `shared/providers/` | Direct import of the file (`token_provider.dart`, etc.) | Provider files use `@riverpod` and declare their own `part '...g.dart'`; importing them from the barrel (`_providers.lib.dart`) would cause circular dependencies if the barrel re-imports them
+| Code in `features/` | `ref.watch/read(httpServiceProvider)` etc. | Import from `_providers.lib.dart` barrel; never import the provider file directly |
 
 ---
 
@@ -39,46 +55,59 @@ All are `keepAlive: true` — never discarded from memory.
 
 #### Canonical examples by context
 
-**Functional provider — builds a datasource**
+**Functional provider — builds a datasource or usecase**
 ```dart
 // CORRECT: ref.watch to declare dependencies
 @riverpod
 IAuthDatasource userDatasource(Ref ref) =>
-    AuthDatasourceImpl(ref.watch(CustomProviders.dio));
+    AuthDatasourceImpl(ref.watch(httpServiceProvider));
 
 @riverpod
-IEncounterDatasource encounterDatasource(Ref ref) =>
-    EncounterDatasourceImpl(
-      ref.watch(CustomProviders.token),
-      ref.watch(CustomProviders.dio),
+LoginUseCase loginUseCase(Ref ref) =>
+    LoginUseCase(
+      repository: ref.watch(authRepositoryProvider),
+      passwordHasher: ref.watch(passwordHasherProvider),
+      tokenStore: ref.watch(tokenStoreProvider),
     );
 ```
 
-**Notifier — async method (callback)**
+**Notifier — async method (callback)** — token persistence is handled by `LoginUseCase`, not by the notifier
 ```dart
 // CORRECT: ref.read for one-shot actions
 Future<void> doLogin(LoginResponseEntity entity) async {
-  await ref.read(CustomProviders.token).save(user.token);
+  final result = await ref.read(loginUseCaseProvider).call(
+    email: email,
+    password: password,
+    rememberMe: rememberMe,
+  );
+  await result.fold(
+    onSuccess: (data) async {
+      state = AuthState.loaded(patient: data.patient, ...);
+      ref.read(goRouterProvider).go('/clinical_history');
+    },
+    onFailure: (error) async {
+      state = AuthState.failure(error);
+    },
+  );
 }
 
 // CORRECT: ref.read in logout
 Future<void> logout() async {
-  await ref.read(tokenServiceProvider).delete(); // inside shared/providers/
+  await ref.read(tokenStoreProvider).delete(); // inside core/services/auth/token_providers.dart
 }
 ```
 
-**Root widget initState**
+**Root widget build**
 ```dart
-// CORRECT: ref.read to get the listenable and pass it to the router
-final notifier = ref.read(CustomProviders.goRouter);
-routerConfig: CpGoRouter.create(
-  routes: CustomConfigs.routes.goRouter,
-  refreshListenable: notifier,
-),
+// CORRECT: ref.watch to get the GoRouter instance
+final router = ref.watch(goRouterProvider);
+routerConfig: router,
 ```
 
 ---
 
-#### GoRouterListenable — ChangeNotifier + Provider pattern
+#### GoRouter navigation — Riverpod pattern
 
-`GoRouterListenable` is a `ChangeNotifier` (not a Riverpod Notifier) that mirrors the authentication state from `auth_notifier.dart` and is passed to `CpGoRouter.create()` as `refreshListenable`. It is a static `Provider<GoRouterListenable>` (not code-gen `@riverpod`). Never access this provider for UI data; its only consumer is `main.dart` which passes it to `CpGoRouter.create()`.
+`goRouterProvider` in `app/di/router/router_provider.dart` creates the `GoRouter` instance with `AuthGuard` and `authenticationObserverProvider` as `refreshListenable`. From features, use `ref.read(goRouterProvider).go('/path')` or `ref.read(goRouterProvider).push('/path')` to navigate — never import `go_router` package types in feature code.
+
+The router observes `authProvider` directly — `GoRouterListenable` was removed. From the notifier, navigate via `ref.read(goRouterProvider).go('/path')`.

@@ -49,10 +49,13 @@ Tools • Dart 3.12.0 • DevTools 2.57.0
 
 ```bash
 flutter pub get
+flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-> The last command regenerates the `.g.dart` files required by Riverpod.
+> `flutter gen-l10n` regenerates the `.dart` localization files from `.arb` sources.
+> It is required after modifying `app_en.arb` or `app_es.arb`, or after cloning the project.
+> `dart run build_runner` regenerates the `.g.dart` files required by Riverpod.
 > It is only needed after modifying providers or notifiers annotated with `@riverpod`.
 
 ## 1.3 Run the app
@@ -83,7 +86,7 @@ flutter test --coverage
 ### Run a specific test file
 
 ```bash
-flutter test test/shared/functions/cp_drift_test.dart
+flutter test test/core/database/app_database_test.dart
 ```
 
 ### Run tests by pattern
@@ -125,7 +128,7 @@ flutter test integration_test/auth_integration_test.dart -d macos
 ```
 
 > Note: Running all integration tests together (`flutter test integration_test/`) may cause a "Unable to start the app on the device" error. Execute them separately as shown above.
-> Integration tests use fake repositories (`_FakeUserRepository`, `_FakeEncounterRepository`) injected via Riverpod overrides — **no real HTTP calls are made** to the backend.
+> Integration tests use fake repositories (`_FakeAuthRepository`, `_FakeTokenStore`, `_FakeCredentialStore`, `_FakeTokenVerifier`) injected via Riverpod overrides — **no real HTTP calls are made** to the backend.
 
 ---
 
@@ -133,11 +136,11 @@ flutter test integration_test/auth_integration_test.dart -d macos
 
 ## 2.1 Code rules (non-negotiable)
 
-1. **Every new external package requires its `cp_<package>.dart`** with `I<Name>` interface + concrete implementation. Never import an external package directly in a feature.
+1. **Every new external package requires its `<name>_wrapper.dart`** with `I<Name>` interface + concrete implementation in `lib/core/services/<domain>/`. Never import an external package directly in a feature.
 
-2. **Access to shared services from features:** always via `ref.watch/read(CustomProviders.xxx)`. Never via `CustomFunction.xxx` directly.
+2. **Access to shared services from features:** always via `ref.watch/read(ProviderName)` from `_providers.lib.dart`. Never via static functions directly.
 
-3. **`CustomFunction`** is only the composition root. Do not add business logic in `_function.dart`.
+3. **`_providers.lib.dart`** is the composition root barrel in `app/di/`. Do not add business logic in providers.
 
 4. **Every new feature follows exactly the same structure:**
    ```
@@ -149,32 +152,32 @@ flutter test integration_test/auth_integration_test.dart -d macos
    features/<name>/infrastructure/mappers/<name>_mapper.dart
    features/<name>/infrastructure/repositories/<name>_repository_impl.dart
    features/<name>/presentation/notifiers/<name>_notifier.dart + _state.dart (@freezed)
-   features/<name>/presentation/providers/<name>_providers.dart (@riverpod)
+   features/<name>/di/<name>_provider.dart (@riverpod)
    features/<name>/presentation/screens/<name>_screen.dart
    features/<name>/presentation/widgets/...
    ```
 
-5. **Repositories never throw exceptions.** All exceptions caught in `CpFpdart.guard()` → `Either<Failure, T>`. If a new Failure type is needed, add in `shared/exceptions/`.
+5. **Repositories never throw exceptions.** All exceptions caught in `guard()` in `shared/error/` → `Result<T>` (Success / Failure). If a new exception type is needed, add in `shared/exceptions/`.
 
 6. **`.g.dart` and `.freezed.dart` files are never edited manually.** Always regenerate with `dart run build_runner build --delete-conflicting-outputs`.
 
-7. **`GoRouter` is only imported in `main.dart` via `CpGoRouter.create(...)`.** In features, navigation uses `CustomFunction.goRouter.go(...)`.
+7. **`GoRouter` is accessed via `goRouterProvider` from `app/di/router/router_provider.dart`.** In `main.dart`, use `ref.watch(goRouterProvider)` to get the instance. In features, use `ref.read(goRouterProvider).go(...)`.
 
-8. **New routes** are added in `app_routes.dart` with their string constant and registered in `CpGoRouter.create(...)`.
+8. **New routes** are added in `app_router.dart` (`appRoutes()`) with the route name added to `AppRoute` enum in `app_route.dart`.
 
 9. **Use `@freezed` for all entities and states.** Do not create mutable data classes in the domain.
 
-10. **Apply the `class_to_solid`** skill (in features) or **`class_to_solid_min`** (in shared) when creating any new class. The skills document the mandatory correct pattern.
+10. **Apply the `class_to_solid`** skill (in features) or **`class_to_solid_min`** (in `core/services/`) when creating any new class. The skills document the mandatory correct pattern.
 
 ## 2.2 Configuration and environment rules
 
 11. **Never hardcode URLs or credentials** in code. Use `String.fromEnvironment` with a safe default value. Document each variable in `MD/APP_COMMANDS.md`.
 
-12. **For Android emulator development:** change `host` in `uries.dart` from `localhost` → `10.0.2.2`. **Revert before commit.** (Or better: use `--dart-define=API_HOST=10.0.2.2` to avoid code changes.)
+12. **For Android emulator development:** use `--dart-define=API_HOST=10.0.2.2` to override the API host. Endpoints are defined in `lib/core/network/api_endpoints.dart`.
 
-13. **The `useMockRepository` flag in `Vars` is only for development/tests.** It must never reach a staging or production build. Validate in CI that `USE_MOCK=false` in release builds.
+13. **Testing with mock data:** Use Riverpod provider overrides in tests to replace the real implementation with a `FakeDatasource` class. The provider always returns `DatasourceImpl` directly — no `useMock` environment flag. Mock data uses typed entity constructors, not raw JSON maps.
 
-14. **Logger production:** `bool.fromEnvironment('PRODUCTION')` must be set to `true` in all release builds to silence local logger.
+14. **Logger removed:** `LoggerWrapper` and `loggerProvider` have been removed from the project. Use `debugPrint` directly for temporary debug output (remove before PR). No structured logging provider is currently wired.
 
 ## 2.3 Barrel and organization rules
 
@@ -185,7 +188,7 @@ flutter test integration_test/auth_integration_test.dart -d macos
 
 16. **Files inside a barrel are `part` of the library hub** (`_xxx.lib.dart`). They must not have their own `import`s; all imports go in `_xxx.lib.dart`.
 
-17. **Do not create cross imports between features.** If `feature_A` needs a type from `feature_B`, that type must move to `shared/`.
+17. **Do not create cross imports between features.** If `feature_A` needs a type from `feature_B`, that type must move to `shared/` (domain abstractions) or `core/` (infrastructure).
 
 ## 2.4 Git rules
 
