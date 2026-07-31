@@ -105,10 +105,12 @@ For each changed file in Bucket B, determine which documentation files are affec
 |---------------------|--------------------------|
 | `lib/features/<name>/**` | `MD/APP_TREE.md`, `AGENTS.md` (feature list)|
 | `lib/shared/functions/**` | `MD/APP_PACKAGE_WRAPPER.md`, `MD/APP_TREE.md` |
-| `lib/shared/providers/**` | `MD/APP_PROVIDERS.md`, `MD/APP_TREE.md` |
-| `lib/shared/interceptors/**` | `MD/APP_ARCHITECTURE.md`, `MD/APP_TREE.md` |
+| `lib/core/services/**` | `MD/APP_PACKAGE_WRAPPER.md`, `MD/APP_TREE.md` |
+| `lib/app/di/**` | `MD/APP_PROVIDERS.md`, `MD/APP_TREE.md` |
+| `lib/core/services/**` | `MD/APP_TREE.md` |
+| `lib/core/database/**` | `MD/APP_TREE.md` |
+| `lib/core/network/interceptors/**` | `MD/APP_TREE.md` |
 | `lib/shared/exceptions/**` | `MD/APP_EXCEPTION.md` |
-| `lib/shared/database/**` |  `MD/APP_TREE.md` |
 | `pubspec.yaml` | `MD/APP_PACKAGE_WRAPPER.md` |
 | `api/**` | `MD/API_COMMANDS.md` |
 | `AGENTS.md` | (self-referential — skip) |

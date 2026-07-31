@@ -19,13 +19,13 @@ Run these commands to discover actual paths. Do NOT skip:
 
 ```bash
 # 1. Locate colors/theme file
-find lib/shared/configs/ -name "*.dart" | head -20
+find lib/core/network/ -name "api_endpoints.dart"
 
 # 2. List existing JSON mock files
 ls lib/shared/jsons/
 
 # 3. List existing wrappers
-ls lib/shared/functions/
+find lib/core/services/ -name "*_wrapper.dart" -type f 2>/dev/null | sort
 
 # 4. Find existing usecases (naming varies: get_X_usecase, X_usecase)
 find lib/features/ -name "*usecase*.dart" | head -20
@@ -102,11 +102,11 @@ mem_save(
 - Spec folder always lives at: `lib/features/<feature_name>/spec/`
 - Six artifact files per feature: `spec.md`, `bdd.feature`, `tests.md`, `contracts.md`, `domain.md`, `tasks.md`
 - When the user provides a JSON sample it goes to: `lib/shared/jsons/<feature>_json.dart`
-- Barrel files for jsons folder: `_jsons.lib.dart` (add `part '<feature>_json.dart'`) and `_jsons.dart` (add `static final <Feature>Json <feature>Json = <Feature>Json()` to `CustomJsons`)
-- All shared providers: `CustomProviders.{dio, token, sharePlus, user, goRouter}`
-- Injectable services must be accessed via `ref.watch/read(CustomProviders.xxx)` — never `CustomFunction.xxx` directly
-- Failure conversion at repository boundary: `CustomFunction.fpdart.guard()`
-- Error message in notifier: `CustomFunction.failure.launch()`
+- FakeDatasource: create `lib/features/<feature>/infrastructure/datasources/fake_<feature>_datasource.dart` implementing the datasource interface with hardcoded entity constructors. See `lib/features/auth/infrastructure/datasources/auth_datasource_impl.dart` as a reference implementation.
+- All shared providers: `httpServiceProvider`, `tokenStoreProvider`, `credentialStoreProvider`, `goRouterProvider`
+- Injectable services must be accessed via `ref.watch/read(<name>Provider)` — never static locators directly
+- Failure conversion at repository boundary: `guard()` from `shared/error/result_guard.dart`
+- Error message in notifier: pass `AppError` to state via `AuthState.failure(error)`. UI localizes via `localizeError(error, AppLocalizations.of(context)!)`
 - Architecture layers: `domain/`, `infrastructure/`, `presentation/`
 - Interface naming: `I<Name>Datasource`, `I<Name>Repository`
 - State variants: `<Name>Initial`, `<Name>Loading`, `<Name>Loaded`, `<Name>Failure` or domain-specific names
@@ -118,10 +118,10 @@ After running Step 0 discovery, reference ONLY the actual file paths found. Comm
 
 | Wrong assumption | How to find the real path |
 |---|---|
-| `lib/shared/configs/app_colors.dart` | `find lib/shared/configs/ -name "*.dart"` |
+| `lib/design_system/theme/app_colors.dart` | `find lib/design_system/ -name "*.dart"` |
 | `lib/features/X/domain/usecases/get_X_usecase.dart` | `find lib/features/X/ -name "*usecase*"` |
 | `lib/shared/jsons/X_json.dart` (assume exists) | `ls lib/shared/jsons/` |
-| `lib/shared/functions/cp_X.dart` (assume exists) | `ls lib/shared/functions/` |
+| `lib/core/services/<domain>/X_wrapper.dart` (assume exists) | `ls lib/core/services/<domain>/` |
 
 If a file is not at the assumed path, search — don't guess.
 
@@ -162,28 +162,29 @@ Feature folder name: `medical_appointments`
 Confirm? (yes / suggest a different name)
 ```
 
-### Phase 4 — Store JSON sample (when provided)
+### Phase 4 — Create FakeDatasource (when JSON sample provided)
 
-If the user provided a JSON sample, write it to `lib/shared/jsons/<feature>_json.dart` and update the two barrel files. Class naming convention:
+If the user provided a JSON sample, create a FakeDatasource at `lib/features/<feature>/infrastructure/datasources/fake_<feature>_datasource.dart`. This replaces the old `CustomJsons` pattern which has been removed.
 
 ```dart
-// lib/shared/jsons/<feature>_json.dart
-part of '_jsons.lib.dart';
+// lib/features/<feature>/infrastructure/datasources/fake_<feature>_datasource.dart
+import '../../domain/datasources/i_<feature>_datasource.dart';
+import '../../domain/entities/<feature>_entity.dart';
+// add other entity imports as needed
 
-class <Feature>Json {
-  final Map<String, dynamic> get<Feature>Response200 = {
-    // the provided JSON here
-  };
+class Fake<Feature>Datasource implements I<Feature>Datasource {
+  const Fake<Feature>Datasource();
+
+  @override
+  Future<<Feature>Entity> <method>(<args>) async {
+    return const <Feature>Entity(
+      // hardcoded data from JSON sample, using entity constructors
+    );
+  }
 }
 ```
 
-```dart
-// _jsons.lib.dart — add:
-part '<feature>_json.dart';
-
-// _jsons.dart — add to CustomJsons:
-static final <Feature>Json <feature>Json = <Feature>Json();
-```
+**Important**: Use entity constructors, not raw `Map<String, dynamic>`. This keeps mock data out of the production binary and follows the single-responsibility principle.
 
 ### Phase 5 — Generate and write all six artifacts
 
@@ -318,7 +319,7 @@ interfaces:
   - name: I<Name>Repository
     file: features/<name>/domain/repositories/i_<name>_repository.dart
     methods:
-      - signature: "Future<Either<Failure, T>> <method>(<args>)"
+      - signature: "Future<Result<T>> <method>(<args>)"
 
 usecases:
   - name: <Name>UseCase
@@ -332,9 +333,8 @@ usecases:
 ```md
 ## <Feature Name> — Implementation Tasks
 
-### Shared mock data (if JSON provided)
-- [ ] Create lib/shared/jsons/<feature>_json.dart
-- [ ] Update _jsons.lib.dart and _jsons.dart barrel files
+### FakeDatasource (if JSON provided)
+- [ ] Create lib/features/<feature>/infrastructure/datasources/fake_<feature>_datasource.dart
 
 ### Domain
 - [ ] Define I<Name>Datasource interface
@@ -355,11 +355,11 @@ usecases:
 - [ ] Create feature widgets
 
 ### Navigation (if applicable)
-- [ ] Add route to app_routes.dart
+- [ ] Add route to app_router.dart
 - [ ] Add navigation trigger to entry screen
 
 ### Shared dependencies used
-- [ ] Document each CustomProviders.xxx and CustomFunction.xxx used
+- [ ] Document each provider dependency used
 
 ### Tests
 - [ ] Unit and widget tests per tests.md
@@ -402,6 +402,5 @@ Specification written to lib/features/<feature_name>/spec/
   domain.md        Domain models and interfaces
   tasks.md         Implementation task checklist
 
-JSON mock data written to lib/shared/jsons/<feature>_json.dart
-Barrel files updated: _jsons.lib.dart and _jsons.dart
+FakeDatasource written to lib/features/<feature>/infrastructure/datasources/fake_<feature>_datasource.dart
 ```

@@ -32,14 +32,14 @@ Behavior — Phase 2: execute barrel_file (all steps are mandatory)
 12. Build the facade filename: `_[name].dart`.
 13. Scan the folder and collect public Dart files (not starting with `_` and not `*.g.dart`).
 14. In each public file in the folder: **mandatorily** replace all `static const` declarations with `final` (remove the `static` modifier and change `const` to `final`). This step converts class properties into instance properties, enabling chained access through the facade. Example: `static const String endpoint = '/api';` → `final String endpoint = '/api';`. Do not skip this step under any circumstances.
-15. For each public file in `_[name].lib.dart`: extract the public class names and add them to the `Custom[Name]` class (PascalCase) as `static final` members. The facade class must never contain `static const`; always use `static final`. Example: `static final TokenService tokenService = TokenService();`.
+15. For each public file in `_[name].lib.dart`: extract the public class names and add them to the `Custom[Name]` class (PascalCase) as `static final` members. The facade class must never contain `static const`; always use `static final`. Example: `static final SecureCredentialStore secureCredentialStore = SecureCredentialStore();`.
 16. Write `_[name].dart` with the following content in this exact order:
     a. Mandatory first line: `part of '_[name].lib.dart';` (relative path to the same directory, e.g., `part of '_functions.lib.dart';`).
     b. Then, the complete `Custom[Name]` class with all `static final` members.
     c. Do not add user-oriented comments or `// TODO`.
 17. Update `_[name].lib.dart` to include `_[name].dart` as part of the library: add the line `part '_[name].dart';` (e.g., `part '_functions.dart';`) alongside other `part` declarations if it doesn't already exist. This action is mandatory.
 18. Run `dart analyze` on the affected package. Fix `import_of_non_library` errors or undefined references.
-19. Throughout the project, replace direct uses of the folder's public files with chained access through `Custom[Name]`. Examples: `InternetService()` → `CustomFunction.internetService`; `TokenService().save(token)` → `CustomFunction.tokenService.save(token)`. Property or method access on the object is chained directly on the facade member.
+19. Throughout the project, replace direct uses of the folder's public files with chained access through `Custom[Name]`. Example: given a folder `colors/`, access via `CustomColors.primaryColor`. Property or method access on the object is chained directly on the facade member.
 20. Update imports throughout the workspace: start with files from the `import list` from step 10 and continue with any other file that still imports files from the folder directly, replacing each individual `import` directive with a single one pointing to `_[name].dart`.
 21. Run `dart analyze` again. Fix any remaining errors.
 22. Generate barrel_file summary: markdown table with columns `static final` classes created and file paths where they are used.
@@ -54,12 +54,13 @@ Output
 - Imports in the repo updated to use the barrel where appropriate.
 
 Usage example
-- `directory=lib/shared/configs, name=configs` → barrel executes all 23 steps in order. Result: `_configs.lib.dart`, `_configs.dart` with the `CustomConfigs` class, and all external files updated to import the barrel.
-- **Note**: the `name` parameter can override automatic derivation from the last segment of `directory`. Real example: the `shared/functions/` directory uses `name=function` (singular) → `_function.lib.dart` / `_function.dart` / `CustomFunction` class, not `_functions.lib.dart`. Always verify existing files before assuming automatic derivation.
+- `directory=lib/shared/colors, name=colors` → barrel executes all 23 steps in order. Result: `_colors.lib.dart`, `_colors.dart` with the `CustomColors` class, and all external files updated to import the barrel.
+- **Note**: the `name` parameter can override automatic derivation from the last segment of `directory`. For example, `directory=lib/shared/colors, name=colors` → `_colors.lib.dart` / `_colors.dart` with the `CustomColors` class. Always verify existing files before assuming automatic derivation.
+- **Note**: the `shared/jsons/` directory has been removed. The project no longer uses `CustomJsons` for mock data. Mock data now lives in per-feature `FakeDatasource` classes.
 
 Considerations and safety
 - Respect files starting with `_` and `*.g.dart`; do not convert them to `part`.
-- **Do not convert to `part` files that already declare their own `part`** (for example, files annotated with `@riverpod` that contain `part '....g.dart';`). A `part` file cannot declare other `part` files. Instead, add them as `import` in `_[name].lib.dart`. See `shared/providers/_providers.lib.dart` as reference.
+- **Do not convert to `part` files that already declare their own `part`** (for example, files annotated with `@riverpod` that contain `part '....g.dart';`). A `part` file cannot declare other `part` files. Instead, add them as `import` in `_[name].lib.dart`.
 - Do not create automatic `.bak` backups.
 - Do not use `export` in generated files.
 - Do not generate user-oriented comments or `// TODO` in created or modified files.

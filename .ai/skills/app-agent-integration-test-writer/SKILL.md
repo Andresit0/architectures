@@ -18,7 +18,8 @@ Before starting, load these resources in order:
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
    - DI chain: datasource → repository → usecase → notifier
    - The DI seam rule: integration tests override ONLY repositories
-   - `CpGoRouter.create()` and navigation patterns
+    - `goRouterProvider` and navigation patterns (access via `ref.read(goRouterProvider).go(...)`)
+    - Route enums in `AppRoute` and route definitions in `appRoutes()`
 
 2. **`MD/APP_ARCHITECTURE.md`** — layer paths. Required to:
    - Identify the correct repository interface to override
@@ -113,13 +114,13 @@ Sections (in order):
 ```dart
 class _Fake<Name>Repository implements I<Name>Repository {
   @override
-  Future<Either<Failure, <ReturnType>>> get<Name>() async =>
+  Future<Result<<ReturnType>>> get<Name>() async =>
       const Right(<fixture_data>);
 }
 
 class _Error<Name>Repository implements I<Name>Repository {
   @override
-  Future<Either<Failure, <ReturnType>>> get<Name>() async =>
+  Future<Result<<ReturnType>>> get<Name>() async =>
       const Left(NoConnectionFailure());
 }
 ```

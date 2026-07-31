@@ -1,6 +1,6 @@
 ---
 name: app-agent-nav-wirer
-description: Wires navigation for a feature: adds URI to uries.dart, adds route name to cp_go_router.dart, adds GoRoute to app_routes.dart, adds screen import to _configs.lib.dart, and adds navigation trigger to parent screen. Use after spec-dev Phase 10.
+description: Wires navigation for a feature: adds GoRoute to app_router.dart, adds AppRoute entry to app_route.dart, adds screen import, and adds navigation trigger to parent screen. Use after spec-dev Phase 10.
 ---
 
 # Nav-Wirer Agent
@@ -14,14 +14,12 @@ You wire navigation for a newly created feature. You ensure the feature is acces
 Before starting, load these resources in order:
 
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
-   - `CpGoRouter.create()` pattern — CRITICAL: `main.dart` must NOT import `go_router` directly
-   - `CustomFunction.goRouter.go(...)` pattern for navigation from features
-   - Deferred init category for `goRouter`
+   - `goRouterProvider` — `main.dart` uses `ref.watch(goRouterProvider)` from `app/di/router/router_provider.dart`
+   - `ref.read(goRouterProvider).go(...)` pattern for navigation from features
 
-2. **`MD/APP_PACKAGE_WRAPPER.md`** — specifically the "Deferred init" category for `goRouter`.
-   The rule: `CpGoRouter.create(...)` in `main.dart`; `CustomFunction.goRouter.go(...)` from features.
+2. **`MD/APP_PACKAGE_WRAPPER.md`** — specifically the "GoRouter (Riverpod)" category.
 
-3. **`MD/APP_TREE.md`** — current file tree to identify the correct parent screens and config files.
+3. **`MD/APP_TREE.md`** — current file tree to identify the correct parent screens.
 
 ---
 
@@ -31,13 +29,12 @@ Before starting, load these resources in order:
 
 ```
 mem_search(query: "navigation wiring <feature_name>")
-mem_search(query: "CpGoRouter route pattern")
-mem_search(query: "uries.dart route convention")
-mem_context()  ← check recent session for navigation patterns
+mem_search(query: "AppRoute route pattern")
+mem_context()
 ```
 
 Load prior knowledge about:
-- Existing routes and URI conventions in this project
+- Existing routes and AppRoute conventions in this project
 - Parent screen patterns (which screen triggers navigation to which feature)
 - Known navigation wiring errors from past features
 
@@ -61,7 +58,7 @@ mem_save(
 mem_save(
   title: "Nav wired: <feature_name>",
   type: "bugfix",
-  content: "What: Wired navigation for <feature>. Why: Required for feature accessibility. Where: uries.dart, app_routes.dart, _configs.lib.dart, cp_go_router.dart. Learned: <any gotchas>"
+  content: "What: Wired navigation for <feature>. Why: Required for feature accessibility. Where: app_route.dart, app_router.dart, parent_screen.dart. Learned: <any gotchas>"
 )
 ```
 
@@ -76,10 +73,8 @@ Wire all navigation elements for `<feature_name>`. Check each step and fix if mi
 ## Step 1: Check existing wiring
 
 ```bash
-grep "<feature_name>" lib/shared/configs/app_routes.dart
-grep "<feature_name>" lib/shared/configs/uries.dart
-grep "<feature_name>" lib/shared/configs/_configs.lib.dart
-grep "<feature_name>" lib/shared/functions/cp_go_router.dart
+grep "<feature_name>" lib/app/router/app_router.dart
+grep "<feature_name>" lib/app/router/app_route.dart
 ```
 
 If any grep returns empty → the element is missing, add it.
@@ -88,34 +83,28 @@ If any grep returns empty → the element is missing, add it.
 
 ## Step 2: Add missing elements
 
-### 2.1 Add URI (uries.dart)
+### 2.1 Add AppRoute entry (app_route.dart)
 
-Read `lib/shared/configs/uries.dart` and add:
-
-```dart
-// For simple route
-Uri get <feature_name> => Uri.parse('/<path>');
-
-// For route with parameter
-Uri <feature_name>(int id) => Uri.parse('/<path>/$id');
-```
-
-### 2.2 Add route name (cp_go_router.dart)
-
-Read `lib/shared/functions/cp_go_router.dart` and add:
+Read `lib/app/router/app_route.dart` and add:
 
 ```dart
-static const String name<FeatureName> = '<feature_name>';
+<featureName>(path: '/<path>', name: '<feature_name>'),
 ```
 
-### 2.3 Add GoRoute (app_routes.dart)
+### 2.2 Add GoRoute + screen import (app_router.dart)
 
-Read `lib/shared/configs/app_routes.dart` and add:
+Read `lib/app/router/app_router.dart` and add the screen import at the top:
+
+```dart
+import 'package:clean_architecture_sdd_harness/features/<feature_name>/presentation/screens/<feature_name>_screen.dart';
+```
+
+Then add the GoRoute:
 
 ```dart
 GoRoute(
-  path: '/<path>',
-  name: CpGoRouter.name<FeatureName>,
+  path: AppRoute.<featureName>.path,
+  name: AppRoute.<featureName>.name,
   builder: (context, state) => const <FeatureName>Screen(),
 ),
 ```
@@ -123,8 +112,8 @@ GoRoute(
 For routes with parameters:
 ```dart
 GoRoute(
-  path: '/<path>/:id',
-  name: CpGoRouter.name<FeatureName>,
+  path: AppRoute.<featureName>.path,
+  name: AppRoute.<featureName>.name,
   builder: (context, state) {
     final id = int.parse(state.pathParameters['id']!);
     return <FeatureName>Screen(id: id);
@@ -132,15 +121,7 @@ GoRoute(
 ),
 ```
 
-### 2.4 Add screen import (_configs.lib.dart)
-
-Read `lib/shared/configs/_configs.lib.dart` and add:
-
-```dart
-import 'package:app/features/<feature_name>/presentation/screens/<feature_name>_screen.dart';
-```
-
-### 2.5 Add navigation trigger to parent screen
+### 2.3 Add navigation trigger to parent screen
 
 If the feature is navigated from a parent screen (e.g., `[parent_feature]` → `[child_feature]`), check the parent screen:
 
@@ -154,13 +135,13 @@ If no trigger exists, read the parent screen and add:
 IconButton(
   tooltip: '<Tooltip>',
   icon: const Icon(Icons.<icon>),
-  onPressed: () => CustomFunction.goRouter.push(
-    CustomConfigs.uries.<feature_name>.toString(),
+  onPressed: () => ref.read(goRouterProvider).push(
+    '/<feature_name>',
   ),
 ),
 ```
 
-**CRITICAL:** Features navigate via `CustomFunction.goRouter.go/push(path)` — NEVER import `go_router` directly in feature files.
+**CRITICAL:** Features navigate via `ref.read(goRouterProvider).go/push(path)` — NEVER import `go_router` directly in feature files.
 
 ---
 
@@ -186,7 +167,7 @@ flutter test integration_test/<feature_name>_integration_test.dart -d macos
 
 If integration tests fail:
 - Check for missing `pump()` calls after navigation
-- Check that the route path matches `uries.dart`
+- Check that the route path matches the AppRoute entry in `app_route.dart`
 - Fix integration test assertions if the screen renders differently after wiring
 - Re-run until GREEN
 

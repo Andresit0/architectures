@@ -16,10 +16,10 @@ You are called at Phase D.0 of spec-dev — before any domain or infrastructure 
 Before starting, load these resources in order:
 
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
-   - fpdart pattern: `Either<Failure, T>` return types
-   - `CustomFunction.fpdart.guard()` boundary rule
+    - `Result<T>` return types
+    - `guard()` from `shared/error/result_guard.dart` boundary rule
 
-2. **`MD/APP_DARTZ.md`** — Either/Failure/fpdart pattern. Required to:
+2. **`MD/APP_DARTZ.md`** — Result/guard/fold pattern. Required to:
    - Write correct repository interface method signatures in tests
    - Use correct Failure types in test assertions
 
@@ -87,7 +87,7 @@ Create domain test files that:
 ```
 test/features/<feature_name>/domain/
   <feature_name>_usecase_test.dart  ← tests for each usecase
-  <feature_name>_entity_test.dart   ← tests for entity factory, equality, fromJson
+  <feature_name>_entity_test.dart   ← tests for entity factory, equality
 ```
 
 ---
@@ -97,7 +97,7 @@ test/features/<feature_name>/domain/
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:fpdart/fpdart.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 
 import 'package:app/features/<feature_name>/domain/repositories/i_<feature_name>_repository.dart';
 import 'package:app/features/<feature_name>/domain/usecases/<feature_name>_usecase.dart';
@@ -155,15 +155,23 @@ void main() {
       expect(entity, equals(const <Name>Entity(id: 1, /* same fields */)));
     });
 
-    test('fromJson creates entity from JSON map', () {
-      final json = {'id': 1, /* JSON fields */};
-      final result = <Name>Entity.fromJson(json);
-      expect(result.id, 1);
-    });
-
     test('copyWith creates modified copy', () {
       final copy = entity.copyWith(id: 2);
       expect(copy.id, 2);
+    });
+
+    test('Dto fromJson creates DTO from valid JSON', () {
+      final json = {'id': 1, /* JSON fields */};
+      final dto = <Name>Dto.fromJson(json);
+      expect(dto.field, expectedValue);
+    });
+
+    test('Dto toJson roundtrip', () {
+      final json = {'id': 1, /* JSON fields */};
+      final dto = <Name>Dto.fromJson(json);
+      final jsonOut = dto.toJson();
+      final restored = <Name>Dto.fromJson(jsonOut);
+      expect(restored, dto);
     });
   });
 }

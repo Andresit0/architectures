@@ -1,6 +1,6 @@
 ---
 name: app-agent-context-reader
-description: "Trigger: context questions, project context, MD files, providers, fpdart, tree, architecture. Reads Engram memory and MD/ docs to answer project context questions. Returns a structured context report. Used by other skills/agents to avoid reading multiple MD files directly."
+description: "Trigger: context questions, project context, MD files, providers, Result pattern, tree, architecture. Reads Engram memory and MD/ docs to answer project context questions. Returns a structured context report. Used by other skills/agents to avoid reading multiple MD files directly."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -17,7 +17,7 @@ You centralize project context retrieval. You are called by other skills/agents 
 
 You are invoked via `task()` with a list of context questions. Examples:
 - "What providers are available?"
-- "How does the fpdart/Either pattern work?"
+- "How does the Result/guard pattern work?"
 - "What is the tree structure of the app?"
 
 You NEVER generate code. You ONLY read, consolidate, and return context.
@@ -37,12 +37,12 @@ You NEVER generate code. You ONLY read, consolidate, and return context.
 
 | Keywords in question | File to read |
 |---|---|
-| providers, DI, CustomProviders, ref.watch, ref.read | `MD/APP_PROVIDERS.md` |
-| fpdart, Either, Failure, guard, fold | `MD/APP_DARTZ.md` |
+| providers, DI, ref.watch, ref.read | `MD/APP_PROVIDERS.md` |
+| Result, guard, fold, AppError | `MD/APP_DARTZ.md` |
 | architecture, layers, clean, hexagonal | `MD/APP_ARCHITECTURE.md` |
 | barrel, part of, library, _lib.dart | `MD/APP_BARREL_PATTERN.md` |
 | tree, structure, paths, tree, where to put | `MD/APP_TREE.md` |
-| wrapper, cp_, package, CustomFunction | `MD/APP_PACKAGE_WRAPPER.md` |
+| wrapper, package, CustomFunction | `MD/APP_PACKAGE_WRAPPER.md` |
 | state, Riverpod, notifier, state management | `MD/APP_STATE_MANAGMENT.md` |
 | exceptions, Failure types, AppException | `MD/APP_EXCEPTION.md` |
 | conventions, general info, imports, forbidden | `MD/APP_IMPORTANT_INFO.md` |
@@ -77,9 +77,9 @@ Return exactly this structure (omit sections that were not requested):
 
 ### Available Providers
 [Content from APP_PROVIDERS.md — only if providers were asked]
+### Result / guard Patterns
 
-### fpdart / Either Patterns
-[Content from APP_DARTZ.md — only if fpdart was asked]
+[Content from APP_DARTZ.md — only if Result pattern was asked]
 
 ### Project Tree
 [Content from APP_TREE.md — only if tree/paths were asked]

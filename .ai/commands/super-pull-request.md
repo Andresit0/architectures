@@ -67,14 +67,13 @@ For each file in the diff, detect the **group name** using these rules:
 | `integration_test/**`                                 | `integration-tests`     | —                                     |
 | `test/bdd/**`                                         | `bdd-tests`             | —                                     |
 | `MD/**` / `AGENTS.md`                                 | `docs`                  | —                                     |
-| `lib/shared/database/**`                              | `database`              | `test/shared/database/**` → merge     |
+| `lib/core/database/**`                                | `database`              | `test/core/database/**` → merge       |
 | `lib/shared/models/**`                                | `models`                | `test/shared/models/**` → merge       |
 | `lib/shared/exceptions/**`                            | `exceptions`            | `test/shared/exceptions/**` → merge   |
-| `lib/shared/configs/**`                               | `configs`               | `test/shared/configs/**` → merge      |
-| `lib/shared/functions/**`                             | `functions:{filename}`  | `test/shared/functions/**` → merge    |
-| `lib/shared/interceptors/**`                          | `interceptors`          | `test/shared/interceptors/**` → merge |
-| `lib/shared/providers/**`                             | `providers`             | `test/shared/providers/**` → merge    |
-| `lib/shared/widgets/**`                               | `shared-widgets`        | `test/shared/widgets/**` → merge      |
+| `lib/design_system/theme/**`                           | `theme`                 | —                                     |
+| `lib/core/services/**`                                | `services:{filename}`   | `test/core/services/**` → merge       |
+| `lib/core/network/interceptors/**`                    | `interceptors`          | `test/core/network/interceptors/**` → merge |
+| `lib/app/di/**`                                       | `app-di`                | `test/app/di/**` → merge              |
 | `lib/features/{f}/spec/**`                            | `{f}-spec`              | —                                     |
 | `lib/features/{f}/domain/**`                          | `{f}-domain`            | `test/features/{f}/domain/**` → merge |
 | `lib/features/{f}/infrastructure/**`                  | `{f}-infra`             | `test/features/{f}/infrastructure/**` → merge |
@@ -93,7 +92,7 @@ Output a table:
 ```
 | File | Group |
 |------|-------|
-| lib/shared/database/app_database.dart | database |
+| lib/core/database/app_database.dart | database |
 | lib/features/auth/domain/login_entity.dart | auth-domain |
 | test/features/auth/domain/login_entity_test.dart | auth-domain (merged) |
 ```
@@ -124,11 +123,11 @@ Apply these merge rules in order:
 |---|------|----------------|---------------------------|
 | R1 | Dependency setup | If `deps` + `platform` both exist | `chore: setup dependencies and platform config` |
 | R2 | Shared models | If `models` exists | `feat: add shared domain models` |
-| R3 | Database migration | If `database` exists + any of `functions:cp_sembast`, `functions:cp_crypto` | `feat: migrate database to <engine>` |
+| R3 | Database migration | If `database` exists | `feat: migrate database` |
 | R4 | Infrastructure cleanup | If `exceptions` + `configs` + `jsons` all exist and sum < 200 lines | `refactor: consolidate exceptions and configuration` |
-| R5 | Network infrastructure | If `functions:internet_service` + `functions:reachability` both exist | `feat: add server reachability strategies` |
-| R6 | Auth interceptor | If `interceptors` exists + `functions:offline_first` + `functions:cp_dio` | `feat: implement auth interceptor with offline-first` |
-| R7 | Routing + providers | If `providers` exists + `functions:cp_go_router` | `refactor: update routing and provider wiring` |
+| R5 | Network infrastructure | If `services:internet_service` + `services:reachability` both exist | `feat: add server reachability strategies` |
+| R6 | Auth interceptor | If `interceptors` exists + `services:dio` | `feat: implement auth interceptor` |
+| R7 | Routing + providers | If `providers` exists + `app:router` | `refactor: update routing and provider wiring` |
 | R8 | AI tooling | If `ai` exists | `chore: update AI tooling configuration` |
 | R9a | Feature spec | If `{f}-spec` exists | `docs({f}): add feature specification files` |
 | R9b | Feature domain | If `{f}-domain` exists | `feat({f}): add domain layer` |
@@ -156,10 +155,10 @@ Sort capabilities by dependency order (not by rule number):
 ```
  1. dependency-setup       (R1)   — deps + platform
  2. shared-models          (R2)   — models only
- 3. database-migration     (R3)   — database + cp_*
+ 3. database-migration     (R3)   — database + wrappers
  4. infrastructure-cleanup (R4)   — exceptions + configs + jsons
- 5. network-infra          (R5)   — internet_service + reachability
- 6. auth-interceptor       (R6)   — interceptors + offline_first + dio
+  5. network-infra          (R5)   — internet_service + server_reachability_strategy
+  6. auth-interceptor       (R6)   — interceptors + dio
  7. routing-providers      (R7)   — providers + go_router
  8. ai-tooling             (R8)   — .ai/ tooling changes
  9. {f}-spec               (R9a)  — feature specification docs
@@ -250,7 +249,7 @@ Commit messages follow **Conventional Commits** (full table):
 ### PR 1 — `chore: setup dependencies and platform config`
 **Razón**: Un solo cambio atómico de configuración del proyecto.
 ```
-chore(deps): replace drift with sembast (+ encrypt, crypto, pointycastle)
+chore(deps): replace drift with sembast (+ encrypt, crypto)
 chore(platform): remove sqlite3_flutter_libs from linux/macos/windows
 ```
 ~{N} lines, review target: {N} min

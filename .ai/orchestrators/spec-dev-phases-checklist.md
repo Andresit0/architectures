@@ -38,12 +38,9 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
         AGENTS.md
 
 [ ] 0.3  Read shared configuration files:
-        lib/shared/configs/uries.dart
-        lib/shared/configs/app_routes.dart
-        lib/shared/configs/_configs.lib.dart
-        lib/shared/functions/cp_go_router.dart
-        lib/shared/jsons/_jsons.dart
-        lib/shared/jsons/_jsons.lib.dart
+        lib/core/network/api_endpoints.dart
+        lib/app/router/app_route.dart
+        lib/app/router/app_router.dart
 
 [ ] 0.4  Read the reference feature:
         lib/features/[feature_name]/domain/entities/[feature_name]_entity.dart
@@ -51,7 +48,7 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
         lib/features/[feature_name]/infrastructure/repositories/[feature_name]_repository_impl.dart
         lib/features/[feature_name]/presentation/notifiers/[feature_name]_state.dart
         lib/features/[feature_name]/presentation/notifiers/[feature_name]_notifier.dart
-        lib/features/[feature_name]/presentation/providers/[feature_name]_provider.dart
+        lib/features/[feature_name]/di/[feature_name]_provider.dart
         lib/features/[feature_name]/presentation/screens/[feature_name]_screen.dart
         lib/features/[feature_name]/presentation/widgets/_widgets.lib.dart
         integration_test/[feature_name]_integration_test.dart
@@ -70,9 +67,11 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 [ ] 1.2  Run: dart run build_runner build --delete-conflicting-outputs
         
 
-[ ] 1.3  Verify .freezed.dart and .g.dart exist for each entity
+[ ] 1.3  Create DTOs (infrastructure/dtos/)
 
-[ ] 1.4  IMPORTANT: Do NOT create _entities.lib.dart with library+part for @freezed
+[ ] 1.4  Verify .freezed.dart and .g.dart exist for each entity
+
+[ ] 1.5  IMPORTANT: Do NOT create _entities.lib.dart with library+part for @freezed
 ```
 
 ---
@@ -134,11 +133,13 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 ## Phase 5 — Infrastructure Implementation → GREEN
 
 ```
-[ ] 5.1  Implement datasource with mock check (CustomConfigs.vars.useMockRepository)
+[ ] 5.1  Implement datasource (pure HTTP — no mock conditional inside datasource)
+        FakeDatasource is a separate file at infrastructure/datasources/fake_*_datasource.dart
+        Provider returns DatasourceImpl directly: @riverpod IDatasource datasource(Ref ref) => DatasourceImpl(dio: ...)
 
-[ ] 5.2  Implement mapper (direct delegation to entity.fromJson)
+[ ] 5.2  Implement mapper (named constructors from DTO, VGV-standard)
 
-[ ] 5.3  Implement repository with CustomFunction.fpdart.guard()
+[ ] 5.3  Implement repository with guard() from shared/error/result_guard.dart
         NEVER use raw try/catch
 
 [ ] 5.4  Run: flutter test test/features/<feature>/infrastructure/
@@ -154,7 +155,7 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 
 [ ] 6.2  Create presentation/notifiers/<name>_notifier.dart (@riverpod, stub load())
 
-[ ] 6.3  Create presentation/providers/<name>_provider.dart (DI chain)
+[ ] 6.3  Create di/<name>_provider.dart (DI chain — moved from presentation/providers/)
 
 [ ] 6.4  Run: dart run build_runner build --delete-conflicting-outputs
         
@@ -185,7 +186,7 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 ## Phase 8 — Presentation Implementation → GREEN
 
 ```
-[ ] 8.1  Implement notifier with CustomFunction.failure.launch()
+[ ] 8.1  Implement notifier — state passes AppError via AuthState.failure(error)
 
 [ ] 8.2  Implement screen (ConsumerStatefulWidget + ref.watch + ref.listen)
 
@@ -232,16 +233,16 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 [ ] 10.1  Run barrel skill for presentation/widgets/
         → Create _widgets.lib.dart + _widgets.dart
 
-[ ] 10.2  Add URI in lib/shared/configs/uries.dart
+[ ] 10.2  Add AppRoute entry in lib/app/router/app_route.dart
 
-[ ] 10.3  Add name in lib/shared/functions/cp_go_router.dart
+[ ] 10.3  Add GoRoute + screen import in lib/app/router/app_router.dart
 
-[ ] 10.4  Add route in lib/shared/configs/app_routes.dart
+[ ] 10.4  [Removed — route registration consolidated in steps 10.2-10.3]
 
-[ ] 10.5  Add screen import in lib/shared/configs/_configs.lib.dart
+[ ] 10.5  [Removed — screen import goes directly in app_router.dart]
 
 [ ] 10.6  If the spec says there is a navigation trigger in parent screen:
-        → Add IconButton with CustomFunction.goRouter.push() in that screen
+        → Add IconButton with ref.read(goRouterProvider).push() in that screen
 
 [ ] 10.7  Run: dart run build_runner build --delete-conflicting-outputs
         

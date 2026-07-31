@@ -16,10 +16,11 @@ Include `app_lib_structure` in your request when working under `lib/`. The assis
 ## Project-specific conventions
 
 - Layered by feature under `lib/features/<feature>` with subfolders: `domain`, `infrastructure`, `presentation`.
-- Shared utilities under `lib/shared`: `configs`, `database`, `functions`, `exceptions`, `interceptors`, `providers`, `jsons`.
+- Infrastructure wrappers live in `lib/core/` organized by domain (`services/`, `network/`, `database/`, `error/`).
+- Shared domain abstractions under `lib/shared/`: `interfaces`, `exceptions`, `models`, `validators`, `pagination`, `jsons`, `functions` (`offline_first_repository.dart`).
 - Generated files (`*.g.dart`, `*.freezed.dart`) live next to their annotated source file; never edit them by hand. Re-generate with `dart run build_runner build --delete-conflicting-outputs` from the project root.
-- All pub packages are wrapped in `lib/shared/functions/cp_<package>.dart`; code always uses `CustomFunction.xxx`, never imports packages directly (except `flutter_riverpod`, `riverpod_annotation`, and `freezed_annotation`).
-- Barrelled folders have two files: `_[name].lib.dart` (root library, centralises imports, declares `part`) and `_[name].dart` (facade `Custom[Name]` with `static final` members). Use the `barrel`, `barrel_lib`, `barrel_file` skills when creating or updating barrels.
+- All pub packages are wrapped in `lib/core/services/` or `lib/core/network/`; code always uses Riverpod providers, never imports packages directly (except `flutter_riverpod`, `freezed_annotation`, and `intl`).
+- Some folders (under `shared/` and `core/`) have barrel files: `_[name].lib.dart` (root library, centralises imports via `export`). Libraries now use `export` directly or `part of`. Use the `barrel`, `barrel_lib`, `barrel_file` skills when creating or updating barrels.
 
 ---
 
@@ -28,142 +29,84 @@ Include `app_lib_structure` in your request when working under `lib/`. The assis
 ```
 lib/
 ├── main.dart
+├── app/                              ← Composition root
+│   ├── di/
+│   │   ├── _providers.lib.dart
+│   │   ├── _providers.lib.dart       ← composition root barrel (exports all providers)
+│   │   ├── auth/
+│   │   │   └── auth_provider.dart
+│   │   ├── network/
+│   │   │   ├── auth_interceptor_impl.dart
+│   │   │   └── dio_provider.dart
+│   │   ├── router/
+│   │   │   └── router_provider.dart
+│   │   └── services/
+│   │       └── sembast_provider.dart
+│   └── router/
+│       ├── app_route.dart            ← AppRoute enum
+│       ├── app_router.dart           ← GoRouter definitions
+│       └── guards/
+│           └── auth_guard.dart
+├── core/                             ← Pure infrastructure
+│   ├── config/
+│   │   ├── app_environment.dart      ← sealed AppEnvironment (dev/staging/prod)
+│   │   └── environment_provider.dart
+│   ├── database/                     ← AppDatabase, providers
+│   ├── network/                      ← Dio wrappers, interceptors, connectivity
+│   ├── router/
+│   ├── services/                     ← Wrappers by domain (auth, crypto, device, events, logging, storage)
+│   └── utils/
+├── design_system/
+│   ├── _design.lib.dart
+│   ├── components/
+│   └── theme/
 ├── features/
-│   ├── auth/
-│   │   ├── domain/
-│   │   │   ├── datasources/
-│   │   │   │   └── i_auth_datasource.dart
-│   │   │   ├── entities/                         ← partial BARREL (lib only)
-│   │   │   │   ├── _entities.lib.dart
-│   │   │   │   ├── user_entity.dart
-│   │   │   │   ├── user_entity.freezed.dart      ← generated
-│   │   │   │   └── user_entity.g.dart            ← generated
-│   │   │   ├── repositories/
-│   │   │   │   └── i_auth_repository.dart
-│   │   │   └── usecases/
-│   │   │       └── auth_usecase.dart
-│   │   ├── infrastructure/
-│   │   │   ├── datasources/
-│   │   │   │   └── auth_datasource_impl.dart
-│   │   │   ├── mappers/
-│   │   │   │   └── auth_mapper.dart
-│   │   │   └── repositories/
-│   │   │       └── auth_repository_impl.dart
-│   │   └── presentation/
-│   │       ├── notifiers/
-│   │       │   ├── auth_state.dart
-│   │       │   ├── auth_state.freezed.dart       ← generated
-│   │       │   ├── auth_notifier.dart
-│   │       │   └── auth_notifier.g.dart          ← generated
-│   │       ├── providers/
-│   │       │   ├── login_providers.dart
-│   │       │   └── login_providers.g.dart         ← generated
-│   │       ├── screens/
-│   │       │   └── login_screen.dart
-│   │       └── widgets/                           ← ✅ BARREL
-│   │           ├── _widgets.lib.dart
-│   │           ├── _widgets.dart                  ←   facade: CustomWidgets
-│   │           ├── button_principal.dart
-│   │           ├── id_form_field.dart
-│   │           └── password_form_field.dart
-│   └── encounter/
+│   └── auth/
 │       ├── domain/
 │       │   ├── datasources/
-│       │   │   └── i_encounter_datasource.dart
-│       │   ├── entities/
-│       │   │   ├── encounter_entity.dart
-│       │   │   ├── encounter_entity.freezed.dart ← generated
-│       │   │   └── encounter_entity.g.dart       ← generated
+│       │   ├── entities/              ← @freezed entities
+│       │   ├── interfaces/
 │       │   ├── repositories/
-│       │   │   └── i_encounter_repository.dart
-│       │   └── usecases/
-│       │       └── download_pdf_usecase.dart
+│       │   ├── services/
+│       │   ├── usecases/
+│       │   └── value_objects/
 │       ├── infrastructure/
 │       │   ├── datasources/
-│       │   │   └── encounter_datasource_impl.dart
+│       │   ├── dtos/
 │       │   ├── mappers/
-│       │   │   └── encounter_mapper.dart
-│       │   └── repositories/
-│       │       └── encounter_repository_impl.dart
-│       └── presentation/
-│           ├── notifiers/
-│           │   ├── encounter_state.dart
-│           │   ├── encounter_state.freezed.dart   ← generated
-│           │   ├── encounter_notifier.dart
-│           │   └── encounter_notifier.g.dart      ← generated
-│           ├── providers/
-│           │   ├── encounter_provider.dart
-│           │   └── encounter_provider.g.dart      ← generated
-│           ├── screens/
-│           │   └── encounter_screen.dart
-│           └── widgets/                           ← ✅ BARREL
-│               ├── _widgets.lib.dart
-│               ├── _widgets.dart                  ←   facade: CustomWidgets
-│               ├── download_file.dart
-│               └── expanded_card.dart
-└── shared/
-    ├── configs/                          ← ✅ BARREL
-    │   ├── _configs.lib.dart             ←   root library (imports + part declarations)
-    │   ├── _configs.dart                 ←   facade: CustomConfigs
-    │   ├── app_routes.dart               ←   Routes (GoRoute definitions)
-    │   ├── colors.dart                   ←   AppColors
-    │   ├── theme.dart                    ←   AppTheme
-    │   ├── uries.dart                    ←   AppUries
-    │   └── vars.dart                     ←   Vars
-    ├── database/                         ← Drift database (no barrel facade)
-    │   ├── _database.lib.dart            ←   root library (exports AppDatabase)
-    │   ├── app_database.dart             ←   AppDatabase (Drift @DriftDatabase)
-    │   └── app_database.g.dart           ←   generated
-    ├── functions/                        ← ✅ BARREL
-    │   ├── _function.lib.dart            ←   root library (centralises all package imports)
-    │   ├── _function.dart                ←   facade: CustomFunction
-    │   ├── cp_dartz.dart                 ←   CpDartz implements ICpDartz (Either/guard)
-    │   ├── cp_dio.dart                   ←   CpDio implements ICpDio (HTTP client)
-    │   ├── cp_drift.dart                 ←   CpDrift implements ICpDrift (session persistence)
-    │   ├── cp_go_router.dart             ←   CpGoRouter implements ICpGoRouter (navigation)
-    │   ├── cp_logger.dart                ←   CpLogger implements ICpLogger (logging)
-    │   ├── cp_path_provider.dart         ←   CpPathProvider implements ICpPathProvider
-    │   ├── cp_share_plus.dart            ←   CpSharePlus implements ICpSharePlus (PDF share)
-    │   ├── failure_propagation.dart      ←   FailurePropagation implements IFailurePropagation
-    │   ├── internet_service.dart         ←   InternetService implements IInternetService
-    │   └── token_service.dart            ←   TokenService implements ITokenService
-    ├── exceptions/                       ← ✅ BARREL
-    │   ├── _exceptions.lib.dart          ←   root library (re-exports Either/Left/Right from dartz)
-    │   ├── _exceptions.dart              ←   facade: CustomExceptions (typedefs + factories)
-    │   ├── failure.dart                  ←   abstract Failure base class
+│       │   ├── repositories/
+│       │   └── services/
+│       ├── presentation/
+│       │   ├── notifiers/             ← Riverpod notifiers + states (providers moved to features/<f>/di/)
+│       │   ├── screens/
+│       │   └── widgets/               ← ✅ BARREL
+│       └── spec/                      ← SDD artifacts
+├── l10n/
+└── shared/                            ← Pure domain abstractions
+    ├── error/
+    ├── exceptions/                    ← ✅ BARREL
+    │   ├── _exceptions.lib.dart
     │   ├── api_exception.dart
-    │   ├── api_failure.dart
-    │   ├── go_router_exception.dart
-    │   ├── go_router_failure.dart
-    │   ├── no_connection_exception.dart
-    │   ├── no_connection_failure.dart
-    │   ├── no_request_exception.dart
-    │   ├── no_request_failure.dart
-    │   ├── server_unreachable_exception.dart
-    │   ├── server_unreachable_failure.dart
-    │   ├── unexpected_failure.dart
-    │   ├── unexpected_response_exception.dart
-    │   └── unexpected_response_failure.dart
-    ├── interceptors/                     ← ✅ BARREL
-    │   ├── _interceptors.lib.dart        ←   root library
-    │   ├── _interceptors.dart            ←   facade: CustomInterceptors
-    │   └── auth_interceptor.dart         ←   AuthInterceptor (Dio interceptor)
-    ├── providers/                        ← ✅ BARREL
-    │   ├── _providers.lib.dart           ←   root library
-    │   ├── _providers.dart               ←   facade: CustomProviders
-    │   ├── dio_provider.dart             ←   httpServiceProvider → Provider<ICpDio>
-    │   ├── dio_provider.g.dart                   ← generated
-    │   ├── go_router_notifier_provider.dart ←   goRouterListenableProvider → Provider<GoRouterListenable>
-    │   ├── share_plus_provider.dart      ←   sharePlusServiceProvider → Provider<ICpSharePlus>
-    │   ├── share_plus_provider.g.dart            ← generated
-    │   ├── token_provider.dart           ←   tokenServiceProvider → Provider<ITokenService>
-    │   ├── token_provider.g.dart                 ← generated
-    │   ├── user_entity_notifier.dart
-    │   └── user_entity_notifier.g.dart           ← generated
-    └── jsons/                            ← ✅ BARREL
-        ├── _jsons.lib.dart
-        ├── _jsons.dart                   ←   facade: CustomJsons
-        └── user_json.dart                ←   mock/test data
+    │   └── ...
+    ├── functions/                     ← offline_first_repository
+    │   └── offline_first_repository.dart
+    ├── interfaces/
+    │   ├── _interfaces.lib.dart
+    │   ├── i_connectivity_checker.dart
+    │   ├── i_token_store.dart
+    │   └── ...
+    ├── jsons/                         ← ✅ BARREL
+    │   (jsons/ directory removed — mock data now lives in FakeDatasource files per feature)
+    ├── models/
+    │   ├── _models.lib.dart
+    │   ├── patient/
+    │   └── clinical_history/
+    └── error/                         ← ✅ BARREL
+        ├── _error.lib.dart
+        ├── app_error.dart             ← sealed AppError hierarchy
+        ├── error_localizer.dart       ← localizeError() pure function
+        ├── result.dart                ← sealed Result<T>
+        └── result_guard.dart
 ```
 
 ---
@@ -172,15 +115,15 @@ lib/
 
 | Layer | Location | Rule |
 |---|---|---|
-| **Domain** | `features/<f>/domain/` | No Flutter imports. Pure Dart: interfaces (`i_*.dart`), entities, usecases. |
-| **Infrastructure** | `features/<f>/infrastructure/` | Implements domain interfaces. HTTP calls use `ICpDio` injected via constructor. |
-| **Presentation** | `features/<f>/presentation/` | Riverpod notifiers/providers, screens, widgets. All state via `@riverpod`. |
-| **Shared configs** | `shared/configs/` | App-wide constants, theme, routes. Access via `CustomConfigs.xxx`. |
-| **Shared database** | `shared/database/` | Drift `AppDatabase`. Used only via `CustomFunction.drift` (internal). |
-| **Shared functions** | `shared/functions/` | Service classes + `cp_*` package wrappers. Access via `CustomFunction.xxx`. |
-| **Shared interceptors** | `shared/interceptors/` | Dio interceptors. Access via `CustomInterceptors.xxx` (internal to `CpDio`). |
-| **Shared providers** | `shared/providers/` | Riverpod `Provider<IInterface>` for shared services. Consumed via `ref.watch` (reactive) or `ref.read` (one-shot callbacks). See `MD/APP_PROVIDERS.md` for the full rules. |
-| **Shared exceptions** | `shared/exceptions/` | Custom exception and Failure types. Re-exports `Either`, `Left`, `Right`. |
+| **Domain** | `features/<f>/domain/` | No Flutter imports. Pure Dart: interfaces (`i_*.dart`), entities, usecases, value_objects. Can import from `shared/` only. |
+| **DI (feature)** | `features/<f>/di/` | Feature-specific Riverpod providers (auth_provider, remember_me_provider) — migrated from `presentation/providers/`. |
+| **Infrastructure** | `features/<f>/infrastructure/` | Implements domain interfaces. HTTP calls use `IDioWrapper` via constructor injection. |
+| **Presentation** | `features/<f>/presentation/` | Riverpod notifiers, screens, widgets. Providers are in `features/<f>/di/`. |
+| **core/** | `core/` | Infrastructure wrappers, database, error types, network, api_endpoints. Domain must NEVER import from `core/`. |
+| **shared/** | `shared/` | Domain abstractions (interfaces, exceptions, models, validators, events) + utilities (jsons, pagination, functions). Domain-safe; can be imported by any layer. |
+| **app/** | `app/` | Composition root: `_providers.lib.dart` barrel. GoRouter setup (`goRouterProvider`). Orchestrates `core/` services. |
+| **core/config/** | `core/config/` | `AppEnvironment` sealed class + `environmentProvider`. |
+| **design_system/** | `design_system/` | Theme, colors, reusable UI components (AppColors, AppTheme — migrated from shared/configs/). |
 
 ---
 
@@ -188,41 +131,20 @@ lib/
 
 | Facade class | File | Exposes |
 |---|---|---|
-| `CustomConfigs` | `shared/configs/_configs.dart` | `.appColors`, `.uries`, `.vars`, `.theme`, `.routes` |
-| `CustomFunction` | `shared/functions/_function.dart` | `.pathProvider`, `.sharePlus`, `.internetService`, `.tokenService`, `.dio`, `.logger`, `.dartz`, `.failure`, `.drift` |
-| `CustomInterceptors` | `shared/interceptors/_interceptors.dart` | `.auth(readToken)` → `AuthInterceptor` |
-| `CustomExceptions` | `shared/exceptions/_exceptions.dart` | typedefs + factories for all exception/failure types |
-| `CustomProviders` | `shared/providers/_providers.dart` | `.dio`, `.token`, `.sharePlus`, `.user`, `.goRouter` |
-| `CustomJsons` | `shared/jsons/_jsons.dart` | mock/test JSON data |
-
----
-
-## Package wrappers in `shared/functions/`
-
-| File | Interface | Class | Purpose |
-|---|---|---|---|
-| `cp_dartz.dart` | `ICpDartz` | `CpDartz` | `guard()` — converts exceptions to `Either<Failure, T>` |
-| `cp_dio.dart` | `ICpDio` | `CpDio` | HTTP client (get / post) with auth headers and typed exceptions |
-| `cp_drift.dart` | `ICpDrift` | `CpDrift` | Session persistence (read / save / clear) via Drift `AppDatabase` |
-| `cp_go_router.dart` | `ICpGoRouter` | `CpGoRouter` | Navigation wrapper; `CpGoRouter.create(routes:, refreshListenable:)` builds the `GoRouter` in `main.dart` |
-| `cp_logger.dart` | `ICpLogger` | `CpLogger` | Logging utility (internal to other wrappers) |
-| `cp_path_provider.dart` | `ICpPathProvider` | `CpPathProvider` | Filesystem path utilities (temp dir, documents dir) |
-| `cp_share_plus.dart` | `ICpSharePlus` | `CpSharePlus` | `pdf()` — shares a PDF via the OS share sheet |
-| `failure_propagation.dart` | `IFailurePropagation` | `FailurePropagation` | `launch()` — maps `Failure` to typed UI state without a `switch` |
-| `internet_service.dart` | `IInternetService` | `InternetService` | Connectivity check (used internally by `CpDio` only) |
-| `token_service.dart` | `ITokenService` | `TokenService` | Secure token storage (`save` / `read` / `delete` / `isTokenExpired` / `decodeJwtPayload` + refresh token variants) |
+| `_providers.lib.dart` | `app/di/_providers.lib.dart` | Exports all shared providers (httpServiceProvider, tokenStoreProvider, appDatabaseProvider, etc.) |
+| *(removed)* | *(jsons/ directory deleted)* | mock data now in per-feature FakeDatasource |
+| — | `design_system/components/loading_indicator.dart` | `LoadingIndicator` widget |
 
 ---
 
 ## Where to add new code
 
-- **New feature**: create `lib/features/<feature>/` mirroring `auth/` or `encounter/`.
-- **New pub package**: use the `cp_package` skill → creates `cp_<package>.dart` and registers it in `CustomFunction`; then **always** apply `class_to_solid_min` to add the abstract interface and update the `CustomFunction` field type to the interface. The Riverpod provider in `shared/providers/` is only needed when the service is injectable (category "Servicio inyectable" in `MD/APP_PACKAGE_WRAPPER.md`); skip it for pure utilities (`dartz`, `failure`, `logger`, `pathProvider`) and internal dependencies (`internetService`, `drift`).
-- **New shared service**: use the `class_to_solid_min` skill → interface → impl → `CustomFunction` entry → Riverpod provider (if injectable).
+- **New feature**: create `lib/features/<feature>/` mirroring `auth/` (include `di/` folder for feature providers).
+- **New pub package**: create wrapper in `lib/core/services/<domain>/<package>_wrapper.dart`. Use the `app-cp-package` skill, then apply `class_to_solid_min` to add the abstract interface and Riverpod provider. Export the provider through `_providers.lib.dart` barrel.
+- **New shared service in core/**: use the `class_to_solid_min` skill → interface → impl → Riverpod provider → export through `_providers.lib.dart` barrel.
 - **New barrel**: use the `barrel` skill (orchestrates `barrel_lib` then `barrel_file`).
 
 ---
 
 ## Example request using this skill
 > "Use skill: app_lib_structure — Add a usecase in `features/encounter` to mark an encounter as read and wire it through repository and datasource stubs."
-

@@ -19,7 +19,7 @@ Before starting, load these resources in order:
    - SOLID/DI conventions
    - Barrel pattern rules
 
-2. **`MD/APP_PACKAGE_WRAPPER.md`** — wrapper access categories table. Required to determine if a direct package import needs a `cp_<pkg>` wrapper.
+2. **`MD/APP_PACKAGE_WRAPPER.md`** — wrapper access categories table. Required to determine if a direct package import needs a `<pkg>_wrapper.dart` wrapper.
 
 3. **`MD/APP_BARREL_PATTERN.md`** — barrel pattern rules. Required to fix wrong barrel references.
 
@@ -40,14 +40,14 @@ mem_context()  ← check recent session for related analyzer work
 
 Load prior knowledge about:
 - Known fix patterns for this project
-- Packages that already have wrappers (`cp_<pkg>.dart`)
+- Packages that already have wrappers (`<pkg>_wrapper.dart`)
 - Barrel import conventions discovered in past sessions
 
 ### During work
 
 Save to Engram after discovering:
 - A new fix pattern not previously documented
-- A package that needed a new `cp_<pkg>` wrapper
+- A package that needed a new `<pkg>_wrapper.dart` wrapper
 - A recurring barrel import error pattern
 
 ```
@@ -83,8 +83,8 @@ mem_save(
 
 ### Missing imports
 ```
-Issue: "The method 'guard' isn't defined for the class 'CpFpdart'"
-Fix:  Add import 'package:app/shared/functions/_function.lib.dart';
+Issue: "The method 'guard' isn't defined. Did you mean to import 'shared/error/result_guard.dart'?"
+Fix:  Add import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 ```
 
 ### Unused imports
@@ -108,20 +108,20 @@ Fix:  Add @override annotation above the method
 ### Wrong barrel reference
 ```
 Issue: "The uri 'package:app/...' isn't a library"
-Fix:  Change direct import to barrel: import 'package:app/shared/functions/_function.dart';
+Fix:  Remove the direct package import and use the wrapper instead (import 'package:clean_architecture_sdd_harness/core/services/<domain>/<package>_wrapper.dart').
 ```
 
 ### Direct package import (CRITICAL)
 ```
 Issue: "Direct import of 'package:fl_chart/fl_chart.dart'"
 Fix:  This is a CRITICAL violation. The wrapper MUST be the only file that imports the package.
-  - If cp_<pkg> doesn't exist → create it via app_cp_package skill
-  - If cp_<pkg> EXISTS but the feature imports the package anyway → the wrapper is TOO THIN.
+  - If <pkg>_wrapper.dart doesn't exist → create it via app-cp-package skill
+  - If <pkg>_wrapper.dart EXISTS but the feature imports the package anyway → the wrapper is TOO THIN.
     The wrapper exposes a method that accepts a package type (e.g. LineChartData), forcing the
     feature to construct that type. Fix: enhance the wrapper to accept simple types (List<double>,
     Color, String, etc.) instead. See app-agent-cp-package/SKILL.md for the correct pattern.
   - Remove the direct import from the feature file. The feature must use ONLY the wrapper's API
-    with simple types — no package types, no re-exports from _function.lib.dart.
+    with simple types — no package types, no re-exports from the wrapper's namespace.
 ```
 
 ---
@@ -136,7 +136,7 @@ Before running `flutter analyze`, proactively scan the feature folder for direct
 grep -rn "import 'package:" lib/features/<feature_name>/ \
   | grep -v "package:flutter" \
   | grep -v "package:flutter_riverpod" \
-  | grep -v "package:fpdart" \
+  | grep -v "package:clean_architecture_sdd_harness" \
   | grep -v "package:freezed_annotation" \
   | grep -v "package:json_annotation" \
   | grep -v "package:riverpod_annotation" \
@@ -145,9 +145,9 @@ grep -rn "import 'package:" lib/features/<feature_name>/ \
 ```
 
 If any matches found → these are CRITICAL violations. For each:
-1. Check `lib/shared/functions/` — does a `cp_<package>.dart` wrapper exist?
-2. If YES → replace direct import with the barrel (`package:app/shared/functions/_function.dart`) and update usage to `CustomFunction.<wrapper>`
-3. If NO → this package needs a new wrapper. Report: `BLOCKED — cp_<package>.dart missing. Launch app-cp-package before continuing.`
+1. Check `lib/core/services/<domain>/` — does a `<package>_wrapper.dart` exist?
+2. If YES → remove the direct package import and import the wrapper file instead (`package:clean_architecture_sdd_harness/core/services/<domain>/<package>_wrapper.dart`), then use the wrapper class/interface directly
+3. If NO → this package needs a new wrapper. Report: `BLOCKED — <package>_wrapper.dart missing. Launch app-cp-package before continuing.`
 
 Do NOT proceed to Step 1 if any CRITICAL direct-import violation was found and not resolved.
 
@@ -191,7 +191,7 @@ flutter analyze 2>&1
 2. **No re-writes.** Edit only the minimal lines needed.
 3. **Check for the direct package import pattern.** This is the most critical fix — check AGENTS.md wrapper access categories first.
 4. **Re-run analyze after every fix.** Don't batch-fix and check once at the end.
-5. **Injectable services** must be accessed via `ref.watch/read(CustomProviders.xxx)` — never `CustomFunction.xxx` directly from features.
+5. **Injectable services** must be accessed via `ref.watch/read(<name>Provider)` — never static locators directly from features.
 
 ---
 
@@ -207,7 +207,7 @@ These actions are strictly prohibited regardless of how they silence analyzer wa
 | Remove a method from an interface to silence "missing override" | Breaks the contract defined in domain.md |
 | Add `// ignore:` suppression instead of fixing root cause | Masks real violations — never suppress, always fix |
 | Delete files to silence "unused import" chains | Always trace the import to its root and fix there |
-| Wrap a direct package import in a comment instead of creating cp_wrapper | The wrapper MUST be created — silence is not a fix |
+| Wrap a direct package import in a comment instead of creating a wrapper | The wrapper MUST be created — silence is not a fix |
 
 **When you encounter an analyze issue that would require any forbidden action:**
 1. Stop immediately

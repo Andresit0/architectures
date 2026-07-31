@@ -19,16 +19,16 @@ You are a **strict auditor**. You do not write code. You only verify, report, an
    - CustomFunction access categories (injectable vs pure utility)
    - SOLID/DI conventions — used to verify provider DI chain
    - Barrel pattern rules — used to verify Phase 10
+2. **`MD/APP_DARTZ.md`** — Result/guard/fold pattern. Verify:
 
-2. **`MD/APP_DARTZ.md`** — Either/Failure/fpdart pattern. Verify:
-   - Repository uses `CustomFunction.fpdart.guard()`, NOT raw try/catch
+   - Repository uses `guard()`, NOT raw try/catch
 
 3. **`MD/APP_STATE_MANAGMENT.md`** — Riverpod v2 conventions. Verify:
    - `@freezed sealed class` for state (no `._()` constructor)
    - `@riverpod` annotation on notifiers
 
 4. **`MD/APP_EXCEPTION.md`** — Verify:
-   - `CustomFunction.failure.launch()` in notifier (not `failure.message` directly)
+   - `localizeError()` at UI layer; notifier passes `AppError` to state (not `failure.message` directly)
 
 ---
 
@@ -207,15 +207,17 @@ FAIL CONDITIONS:
 
 ```
 VERIFIED:
-[ ] Datasource uses CustomConfigs.vars.useMockRepository for mock mode
-[ ] Mapper delegates to entity.fromJson
-[ ] Repository uses CustomFunction.fpdart.guard() (NOT try/catch)
+[ ] Datasource is pure HTTP (no mock conditional inside datasource)
+[ ] FakeDatasource exists at infrastructure/datasources/fake_*_datasource.dart (for testing via Riverpod overrides)
+[ ] Provider returns DatasourceImpl directly (no useMock conditional): @riverpod IDatasource datasource(Ref ref) => DatasourceImpl(dio: ...)
+[ ] Mapper uses named constructors (NO Entity.fromJson)
+[ ] Repository uses guard() from shared/error/result_guard.dart (NOT try/catch)
 [ ] Infrastructure tests pass (GREEN)
 [ ] CONTRACT DRIFT CHECK: repository method signatures in <name>_repository_impl.dart match generated_api_contract.md (same method names, return types, parameter names)
 
 FAIL CONDITIONS:
 - Raw try/catch in repository → CRITICAL
-- CustomFunction.dio used directly (not via CustomProviders) → CRITICAL
+- Static locator used directly (must be ref.watch(httpServiceProvider)) → CRITICAL
 - Infrastructure tests fail → BLOCK
 - Repository method signature differs from generated_api_contract.md → CRITICAL (contract drift detected)
 ```
@@ -255,7 +257,7 @@ FAIL CONDITIONS:
 
 ```
 VERIFIED:
-[ ] Notifier uses CustomFunction.failure.launch() for errors (NOT failure.message)
+[ ] Notifier passes `AppError` to state via `AuthState.failure(error)` (NOT failure.message directly)
 [ ] Screen uses ConsumerStatefulWidget + ref.watch + ref.listen pattern
 [ ] ref.listen handles failure state → snackbar shown
 [ ] ref.read(notifierProvider.notifier).reset() called after failure
@@ -306,8 +308,8 @@ VERIFIED:
 [ ] presentation/widgets/_widgets.lib.dart exists
 [ ] presentation/widgets/_widgets.dart exists (facade)
 [ ] URI added to uries.dart
-[ ] Route name added to cp_go_router.dart
-[ ] GoRoute added to app_routes.dart
+[ ] AppRoute enum entry added to app_route.dart
+[ ] GoRoute added to app_router.dart
 [ ] Screen import added to _configs.lib.dart
 [ ] Navigation trigger (IconButton) added to parent screen if required
 [ ] build_runner ran for providers
@@ -317,23 +319,23 @@ VERIFIED:
 FAIL CONDITIONS:
 - _widgets.lib.dart or _widgets.dart missing → CRITICAL
 - URI missing from uries.dart → CRITICAL
-- Route missing from app_routes.dart → CRITICAL
+- Route missing from app_router.dart → CRITICAL
 - Screen import missing from _configs.lib.dart → CRITICAL
 - analyze has errors → BLOCK
 - Integration test not run after nav wiring AND not documented as deferred → BLOCK
 ```
 
-### Phase 10.5 — CpPackage + DirectImport Audit
+### Phase 10.5 — Wrapper + DirectImport Audit
 
 ```
 VERIFIED:
-[ ] grep found no direct package imports in feature folder (excluding flutter, flutter_riverpod, fpdart)
-[ ] Every external package used has a cp_<package>.dart wrapper in shared/functions/
-[ ] flutter analyze lib/shared/functions/ = 0 issues (for any new wrapper)
+[ ] grep found no direct package imports in feature folder (excluding flutter, flutter_riverpod)
+[ ] Every external package used has a <package>_wrapper.dart wrapper in core/services/<domain>/
+[ ] flutter analyze lib/core/services/ = 0 issues (for any new wrapper)
 
 FAIL CONDITIONS:
 - Direct package import found (e.g., import 'package:fl_chart/...') → CRITICAL
-- Package used without cp_wrapper → CRITICAL
+- Package used without wrapper → CRITICAL
 - Wrapper has analyze errors → BLOCK
 ```
 
@@ -366,9 +368,9 @@ FAIL CONDITIONS:
 | All-Tests-First: tests exist BEFORE production code | Phases 2, 4, 7, 9 | CRITICAL |
 | No artificial RED | Any RED phase | CRITICAL |
 | No direct package imports | Any `.dart` in feature folder | CRITICAL |
-| Injectable via CustomProviders | Notifiers, providers | CRITICAL |
-| CustomFunction.fpdart.guard() | Repository implementations | CRITICAL |
-| CustomFunction.failure.launch() | Notifier error handling | CRITICAL |
+| Injectable via providers | Notifiers, providers | CRITICAL |
+| guard() | Repository implementations | CRITICAL |
+| AuthState.failure(AppError) | Notifier error handling | CRITICAL |
 | @freezed entity + const Foo._() | Entity files | CRITICAL |
 | @freezed sealed state (NO ._()) | State files | CRITICAL |
 | No _entities.lib.dart for freezed | domain/entities/ | CRITICAL |

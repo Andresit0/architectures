@@ -29,12 +29,12 @@ A fully autonomous implementing agent. Given a spec folder path, it reads all si
 Read these MD files directly to understand the project:
 
 - `MD/APP_ARCHITECTURE.md` — feature layer structure and folder conventions
-- `MD/APP_DARTZ.md` — Either/Failure/fpdart pattern (guard, fold, Failure types)
+- `MD/APP_DARTZ.md` — Result/guard/fold pattern (guard, fold, AppError types)
 - `MD/APP_IMPORTANT_INFO.md` — critical rules and project constraints
 - `MD/APP_TREE.md` — current app directory tree
-- `MD/APP_PROVIDERS.md` — shared providers (dio, token, sharePlus, user, goRouter)
+- `MD/APP_PROVIDERS.md` — shared providers (dio, token, user, goRouter)
 - `MD/APP_STATE_MANAGMENT.md` — Riverpod v2 state management conventions
-- `MD/APP_PACKAGE_WRAPPER.md` — cp_* wrapper pattern and CustomFunction access categories
+- `MD/APP_PACKAGE_WRAPPER.md` — wrapper pattern and access categories
 - `MD/APP_EXCEPTION.md` — exception types and CustomFunction.failure.launch() pattern
 
 ### 0.3 Read reference feature code
@@ -45,7 +45,7 @@ Read the appointments feature as canonical example:
 - `lib/features/appointments/infrastructure/repositories/appointments_repository_impl.dart`
 - `lib/features/appointments/presentation/notifiers/appointments_state.dart`
 - `lib/features/appointments/presentation/notifiers/appointments_notifier.dart`
-- `lib/features/appointments/presentation/providers/appointments_provider.dart`
+- `lib/features/appointments/di/appointments_provider.dart`
 - `lib/features/appointments/presentation/screens/appointments_screen.dart`
 - `lib/features/appointments/presentation/widgets/_widgets.lib.dart`
 - `integration_test/encounter_integration_test.dart` ← integration test pattern
@@ -65,7 +65,7 @@ The correct sequence is:
 ```
 Phase 0   — Context gathering (read specs, reference feature, TodoWrite)
 Phase 0.5 — Canonical API extraction → generated_api_contract.md
-Phase 0.6 — Package Audit + wrapper TDD (pub add → test RED → cp_wrapper GREEN) [BEFORE feature tests]
+Phase 0.6 — Package Audit + Wrapper TDD (pub add → test RED → *_wrapper.dart GREEN) [BEFORE feature tests]
 Phase 0.1 through 0.5b — Write ALL feature tests (domain, infra, presentation, integration, BDD)
             → Presentation tests use wrapper mocks (IFlChart, etc.) not raw package mocks
             → Tests cannot run yet because stubs don't exist
@@ -121,9 +121,9 @@ Create:
 - `test/features/<feature_name>/presentation/screens/<feature_name>_screen_test.dart`
 - `test/features/<feature_name>/presentation/widgets/<feature_name>_widget_test.dart`
 
-**Wrapper mock rule:** For any cp_* wrapper used in the presentation layer, mock its interface in the test — not the raw package. Example:
+**Wrapper mock rule:** For any wrapper used in the presentation layer, mock its interface in the test — not the raw package. Example:
 ```dart
-class _MockFlChart extends Mock implements IFlChart {}
+class _MockFlChart extends Mock implements IFlChartWrapper {}
 // In test: when(() => mockFlChart.lineChart(any())).thenReturn(const SizedBox.shrink());
 ```
 
@@ -154,20 +154,20 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:app/features/<feature_name>/domain/datasources/i_<feature_name>_datasource.dart';
 import 'package:app/features/<feature_name>/infrastructure/datasources/<feature_name>_datasource_impl.dart';
-import 'package:app/shared/functions/_functions.lib.dart';
+// IDioWrapper, ICredentialStore, etc. are injected via Riverpod providers — no import needed here.
 
-class _MockDio extends Mock implements ICpDio {}
-class _MockTokenService extends Mock implements ITokenService {}
+class _MockDio extends Mock implements IDioWrapper {}
+class _MockCredentialStore extends Mock implements ICredentialStore {}
 
 void main() {
   late _MockDio dio;
-  late _MockTokenService tokenService;
+  late _MockCredentialStore credentialStore;
   late <Name>DatasourceImpl datasource;
 
   setUp(() {
     dio = _MockDio();
-    tokenService = _MockTokenService();
-    datasource = <Name>DatasourceImpl(dio: dio, tokenService: tokenService);
+    credentialStore = _MockCredentialStore();
+    datasource = <Name>DatasourceImpl(dio: dio, credentialStore: credentialStore);
   });
 
   group('<Name>DatasourceImpl', () {
@@ -189,12 +189,11 @@ void main() {
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:fpdart/fpdart.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 
 import 'package:app/features/<feature_name>/domain/datasources/i_<feature_name>_datasource.dart';
 import 'package:app/features/<feature_name>/domain/repositories/i_<feature_name>_repository.dart';
 import 'package:app/features/<feature_name>/infrastructure/repositories/<feature_name>_repository_impl.dart';
-import 'package:app/shared/exceptions/_exceptions.lib.dart';
 
 class _MockDatasource extends Mock implements I<Name>Datasource {}
 
@@ -208,22 +207,22 @@ void main() {
   });
 
   group('<Name>RepositoryImpl', () {
-    test('returns Right when datasource succeeds', () async {
+    test('returns Success when datasource succeeds', () async {
       when(() => datasource.<methodName>(<args>)).thenAnswer(
         (_) async => <fixture_data>,
       );
 
       final result = await repository.<methodName>(<args>);
 
-      expect(result.isRight(), isTrue);
+      expect(result.isSuccess, isTrue);
     });
 
-    test('returns Left(Failure) when datasource throws', () async {
+    test('returns Failure when datasource throws', () async {
       when(() => datasource.<methodName>(<args>)).thenThrow(Exception('error'));
 
       final result = await repository.<methodName>(<args>);
 
-      expect(result.isLeft(), isTrue);
+      expect(result.isSuccess, isFalse);
     });
   });
 }
@@ -260,7 +259,7 @@ ls test/bdd/<feature_name>_bdd_test.dart
 
 > ℹ️ **This phase is executed by the orchestrator (D.0.6) BEFORE the feature test writers run.** When spec-dev is run standalone (without orchestrator), this phase must be executed here, between Phase 0.5 and Phase 1.
 
-**Purpose:** Every pub package needed by the feature (presentation + infra) must have a `cp_*` wrapper with passing tests BEFORE the feature tests are written. This ensures presentation tests mock the correct interface (`IFlChart`, not `LineChart`).
+**Purpose:** Every pub package needed by the feature (presentation + infra) must have a `*_wrapper.dart` with passing tests BEFORE the feature tests are written. This ensures presentation tests mock the correct interface (`IFlChartWrapper`, not `LineChart`).
 
 ### 0.6.1 Detect packages
 
@@ -279,7 +278,7 @@ grep -iE "fl_chart|lottie|syncfusion|image_picker|pdf|camera|qr_flutter|printing
 ### 0.6.2 For each package: check if wrapper exists
 
 ```bash
-ls lib/shared/functions/cp_<package_name>.dart 2>/dev/null && echo "EXISTS" || echo "MISSING"
+find lib/core/services/ -name "<package_name>_wrapper.dart" 2>/dev/null && echo "EXISTS" || echo "MISSING"
 ```
 
 If all EXISTS → skip to 0.6.4 (existing wrappers enumeration). No new wrappers needed, but `## Wrapper API` must still document GROUP 2.
@@ -289,23 +288,22 @@ If all EXISTS → skip to 0.6.4 (existing wrappers enumeration). No new wrappers
 ```
 1. pub add: run 'dart pub add <package_name>' from the project root.
 2. Write test FIRST (RED):
-   - File: test/shared/functions/cp_<package_name>_test.dart
+   - File: test/core/services/<domain>/<package_name>_wrapper_test.dart
    - Test the wrapper's public API only. For UI packages: test factory returns a Widget.
    - Run flutter test → MUST FAIL (wrapper doesn't exist yet). Confirm RED.
 3. Write wrapper (GREEN):
-   - File: lib/shared/functions/cp_<package_name>.dart as 'part of _function.lib.dart'.
-   - UI-only: factory method accepting package types, returning Widget.
-   - NEVER invent types. NEVER add feature logic.
-   - Register in _function.lib.dart (import + part) and _function.dart (static accessor).
-4. Run 'flutter test test/shared/functions/cp_<package_name>_test.dart' → MUST PASS GREEN.
-5. Run 'flutter analyze lib/shared/functions/' → 0 issues.
+    - File: lib/core/services/<domain>/<package_name>_wrapper.dart (standalone file).
+    - Pattern reference: see `.ai/skills/app-agent-cp-package/SKILL.md`.
+    - UI-only: factory method accepting simple types, returning Widget.
+    - NEVER invent types. NEVER add feature logic.
+4. Run 'flutter test test/core/services/<domain>/<package_name>_wrapper_test.dart' → MUST PASS GREEN.
+5. Run 'flutter analyze lib/core/services/' → 0 issues.
 6. Apply SOLID interface pattern. Read `.ai/skills/app-class-to-solid-min/SKILL.md` and follow it
-   for `cp_<package_name>.dart`. Concretely:
-   a) In `cp_<package_name>.dart`, add `abstract class ICp<PkgName>` ABOVE `class Cp<PkgName>`.
+   for `<package_name>_wrapper.dart`. Concretely:
+   a) In `<package_name>_wrapper.dart`, add `abstract interface class I<PkgName>Wrapper` ABOVE `class <PkgName>Wrapper`.
       The interface declares only the public method signatures — no bodies.
-   b) Add `implements ICp<PkgName>` to `Cp<PkgName>` and `@override` on every method.
-   c) In `_function.dart`, change the static field type from `Cp<PkgName>` to `ICp<PkgName>`.
-   d) Re-run `flutter analyze lib/shared/functions/` → 0 issues before proceeding.
+   b) Add `implements I<PkgName>Wrapper` to `<PkgName>Wrapper` and `@override` on every method.
+   d) Re-run `flutter analyze lib/core/services/` → 0 issues before proceeding.
    Do NOT create a Riverpod provider for UI-only packages (fl_chart, lottie, etc.).
 ```
 
@@ -317,22 +315,22 @@ Append a `## Wrapper API` section documenting TWO groups:
 - Wrapper class, interface (I<Name>), CustomFunction accessor, and every public method signature.
 
 **GROUP 2 — Existing wrappers used by this feature:**
-- Scan `lib/shared/functions/` and the spec files to identify which existing wrappers the feature needs (e.g. `ICpDio` for HTTP, `ITokenService` for auth, `ICpSharePlus` for sharing).
+- Scan `lib/core/services/` and the spec files to identify which existing wrappers the feature needs (e.g. `IDioWrapper` for HTTP, `ICredentialStore` for auth, `ISharePlusWrapper` for sharing).
 - Document the same fields for each.
 
 Example:
 ```
 ## Wrapper API
-### CustomFunction.flChart (CpFlChart / IFlChart)
+### FlChartWrapper — accessed via ref.watch(flChartProvider)
 - lineChart({required List<double> values, List<String>? labels, Color? lineColor, Color? fillColor}) → Widget
 - pieChart({required Map<String, double> segments, List<Color>? colors}) → Widget
-### CustomFunction.dio (CpDio / ICpDio)
+### DioWrapper (IDioWrapper) — accessed via ref.watch(httpServiceProvider)
 - get(String path, {Map<String, String>? headers}) → Future<dynamic>
-### CustomFunction.tokenService (TokenService / ITokenService)
+### CredentialStore (ICredentialStore) — accessed via ref.watch(credentialStoreProvider)
 - read() → Future<String?>
 ```
 
-**Why both groups:** Test writers for D.0.1–D.0.5b mock ALL wrapper interfaces — not only new ones. Without this section listing `ICpDio`, an infrastructure test writer might mock `Dio` directly.
+**Why both groups:** Test writers for D.0.1–D.0.5b mock ALL wrapper interfaces — not only new ones. Without this section listing `IDioWrapper`, an infrastructure test writer might mock `Dio` directly.
 
 ### 0.6.5 Gate check
 
@@ -344,10 +342,10 @@ Example:
 grep "## Wrapper API" lib/features/<name>/spec/generated_api_contract.md
 ```
 ```bash
-flutter test test/shared/functions/
+flutter test test/core/services/
 ```
 ```bash
-flutter analyze lib/shared/functions/ --fatal-infos 2>&1 | tail -1
+flutter analyze lib/core/services/ --fatal-infos 2>&1 | tail -1
 ```
 
 All 3 must pass. If not → fix → re-verify. Do NOT proceed to Phase 1 until all pass.
@@ -366,30 +364,23 @@ File: `domain/entities/<entity_name>.dart`
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part '<entity_name>.freezed.dart';
-part '<entity_name>.g.dart';
 
 @freezed
 abstract class <EntityName> with _$<EntityName> {
   const <EntityName>._();
 
-  @JsonSerializable(fieldRename: FieldRename.none)
   const factory <EntityName>({
-    @JsonKey(name: '<json_key>') required <Type> <fieldName>,
+    required <Type> <fieldName>,
     // ... other fields from domain.md
   }) = _<EntityName>;
-
-  factory <EntityName>.fromJson(Map<String, dynamic> json) =>
-      _$<EntityName>FromJson(json);
 }
 ```
 
 **Rules:**
 - `@freezed abstract class` with `const Foo._()` private constructor
-- One `@JsonKey(name: '<json_key>')` per field whose Dart name differs from the JSON key
-- Nullable fields: `String? nextDoseDate` — use `@JsonKey(name: 'nextDoseDate') required String? nextDoseDate`
-- List of nested entities: `required List<ChildEntity> fieldName`
+- NO fromJson, NO @JsonKey, NO @JsonSerializable
 - Each nested entity gets its own file in the same `domain/entities/` directory
-- **NEVER** create `_entities.lib.dart` with `library`+`part` for `@freezed` entity files — this causes Dart analyzer issues. Import each entity file directly via its `package:app/...` path.
+- NEVER create `_entities.lib.dart` with `library`+`part` for @freezed entity files
 
 ### 1.2 Run build_runner for entities only
 
@@ -399,6 +390,42 @@ dart run build_runner build --delete-conflicting-outputs
 ```
 
 Verify that `.freezed.dart` and `.g.dart` are generated for each entity file.
+
+### 1.3 Create DTOs in infrastructure/dtos/
+
+Create Data Transfer Objects (DTOs) in `infrastructure/dtos/`. DTOs handle ALL JSON serialization — entities NEVER have fromJson/toJson.
+
+Template for each DTO (create one per entity):
+
+```dart
+// infrastructure/dtos/<name>_dto.dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part '<name>_dto.freezed.dart';
+part '<name>_dto.g.dart';
+
+@freezed
+abstract class <Name>Dto with _$<Name>Dto {
+  const factory <Name>Dto({
+    @JsonKey(name: '<json_key>') required <Type> <fieldName>,
+  }) = _<Name>Dto;
+
+  factory <Name>Dto.fromJson(Map<String, dynamic> json) => _$<Name>DtoFromJson(json);
+}
+```
+
+Rules:
+- Use `@freezed abstract class` for DTOs
+- Include `fromJson` factory AND `toJson` (generated automatically)
+- Use `@JsonKey(name: 'snake_case')` when the Dart field is camelCase and JSON is snake_case
+- All fields `required` in the constructor
+- `List<T>` with `@Default([])` instead of `List<T>?` nullable
+- Create `_dtos.lib.dart` barrel that exports all DTOs
+
+Run build_runner:
+```bash
+dart run build_runner build
+```
 
 ---
 
@@ -420,7 +447,7 @@ abstract interface class I<Name>Datasource {
 
 ```dart
 abstract interface class I<Name>Repository {
-  Future<Either<Failure, <T>>> <methodName>(<args>);
+  Future<Result<<T>>> <methodName>(<args>);
 }
 ```
 
@@ -431,7 +458,7 @@ class <Name>UseCase {
   const <Name>UseCase(this._repository);
   final I<Name>Repository _repository;
 
-  Future<Either<Failure, <T>>> call(<args>) => throw UnimplementedError();
+  Future<Result<T>> call(<args>) => throw UnimplementedError();
 }
 ```
 
@@ -452,7 +479,7 @@ Expected: usecase tests FAIL with `UnimplementedError`. Entity tests PASS (entit
 Replace `throw UnimplementedError()` with the correct delegation:
 
 ```dart
-Future<Either<Failure, <T>>> call(<args>) => _repository.<methodName>(<args>);
+Future<Result<T>> call(<args>) => _repository.<methodName>(<args>);
 ```
 
 ### 3.2 Run domain tests → expect GREEN
@@ -476,13 +503,13 @@ All domain tests must pass before proceeding.
 ```dart
 class <Name>DatasourceImpl implements I<Name>Datasource {
   const <Name>DatasourceImpl({
-    required ICpDio dio,
-    required ITokenService tokenService,
+    required IDioWrapper dio,
+    required ICredentialStore credentialStore,
   })  : _dio = dio,
-        _tokenService = tokenService;
+        _credentialStore = credentialStore;
 
-  final ICpDio _dio;
-  final ITokenService _tokenService;
+  final IDioWrapper _dio;
+  final ICredentialStore _credentialStore;
 
   @override
   Future<<ReturnType>> <methodName>(<args>) => throw UnimplementedError();
@@ -493,7 +520,7 @@ class <Name>DatasourceImpl implements I<Name>Datasource {
 
 ```dart
 class <Name>Mapper {
-  <EntityType> fromJson(Map<String, dynamic> json) => throw UnimplementedError();
+  <EntityType> fromDto(<Name>Dto dto) => throw UnimplementedError();
 }
 ```
 
@@ -505,7 +532,7 @@ class <Name>RepositoryImpl implements I<Name>Repository {
   final I<Name>Datasource _datasource;
 
   @override
-  Future<Either<Failure, <T>>> <methodName>(<args>) => throw UnimplementedError();
+  Future<Result<T>> <methodName>(<args>) => throw UnimplementedError();
 }
 ```
 
@@ -523,33 +550,42 @@ Expected: all infra tests FAIL with `UnimplementedError`.
 
 ### 5.1 Implement datasource
 
+Create a pure HTTP datasource — no mock mode, no conditional branches.
+
 ```dart
 @override
 Future<<ReturnType>> <methodName>(<args>) async {
-  if (CustomConfigs.vars.useMockRepository) {
-    // return parsed mock data from CustomJsons.<feature>Json.<getter>
-  }
   final token = await _tokenService.read();
   final response = await _dio.get(
-    CustomConfigs.uries.<endpoint>.toString(),
+    'api/v1/<endpoint>',
     headers: token != null ? {'Authorization': 'Bearer $token'} : null,
   ) as Map<String, dynamic>;
-  return <EntityName>.fromJson(response);
+  final dto = <Name>Dto.fromJson(response);
+  return <Name>Mapper().fromDto(dto);
 }
 ```
 
 **For list responses** (`{"items": [...]}`):
 ```dart
 final list = (response['<key>'] as List)
-    .map((e) => <EntityName>.fromJson(e as Map<String, dynamic>))
+    .map((e) => <Name>Dto.fromJson(e as Map<String, dynamic>))
+    .map((dto) => <Name>Mapper().fromDto(dto))
     .toList();
 return list;
 ```
 
+FakeDatasource classes are used for testing via Riverpod provider overrides, not via a useMock environment flag. The provider always returns the real implementation:
+```dart
+@riverpod
+IDatasource datasource(Ref ref) =>
+    DatasourceImpl(dio: ref.watch(dioProvider));
+```
+For tests, override the datasourceProvider with FakeDatasource in the ProviderScope.
+
 **For routes with path parameters** (e.g., `/user/appointments/{id}/history`):
 ```dart
 final response = await _dio.get(
-  CustomConfigs.uries.<endpoint>(id).toString(),
+  'api/v1/<endpoint>/${id}',
   headers: ...,
 ) as Map<String, dynamic>;
 ```
@@ -557,18 +593,25 @@ final response = await _dio.get(
 ### 5.2 Implement mapper
 
 ```dart
-<EntityType> fromJson(Map<String, dynamic> json) => <EntityType>.fromJson(json);
-```
+<EntityType> fromDto(<Name>Dto dto) =>
+    <EntityType>(
+      field1: dto.field1,
+      field2: dto.field2,
+      // ... map each field from DTO to Entity using named constructors
+    );
+
+
+IMPORTANT VGV RULE: NEVER use Entity.fromJson() in mappers. Always use named constructors.```
 
 ### 5.3 Implement repository
 
 ```dart
 @override
-Future<Either<Failure, <T>>> <methodName>(<args>) =>
-    CustomFunction.fpdart.guard(() => _datasource.<methodName>(<args>));
+Future<Result<T>> <methodName>(<args>) =>
+    guard(() => _datasource.<methodName>(<args>));
 ```
 
-**Rule:** Always use `CustomFunction.fpdart.guard()`. Never raw try/catch.
+**Rule:** Always use `guard()` from `shared/error/result_guard.dart`. Never raw try/catch.
 
 ### 5.4 Run infrastructure tests → expect GREEN
 
@@ -625,7 +668,7 @@ class <Name>Notifier extends _$<Name>Notifier {
 
 ### 6.3 Write providers (DI chain)
 
-File: `presentation/providers/<name>_provider.dart`
+File: `di/<name>_provider.dart`
 
 ```dart
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -635,8 +678,8 @@ part '<name>_provider.g.dart';
 @riverpod
 I<Name>Datasource <name>Datasource(<Name>DatasourceRef ref) =>
     <Name>DatasourceImpl(
-      dio: ref.watch(CustomProviders.dio),
-      tokenService: ref.watch(CustomProviders.token),
+      dio: ref.watch(httpServiceProvider),
+      tokenService: ref.watch(tokenStoreProvider),
     );
 
 @riverpod
@@ -674,7 +717,7 @@ Expected: notifier tests FAIL (load() stub does nothing, no state transitions). 
 
 ## Phase 8 — Presentation implementation → GREEN
 
-> ℹ️ All cp_* wrappers required by this feature were already created and tested GREEN at Phase 0.6. The `## Wrapper API` section of `generated_api_contract.md` lists every wrapper and its method signatures. Use `CustomFunction.<wrapper>` — NEVER import the raw package directly.
+> ℹ️ All wrappers required by this feature were already created and tested GREEN at Phase 0.6. The `## Wrapper API` section of `generated_api_contract.md` lists every wrapper and its method signatures. Use `ProviderName` or `ref.watch(provider)` — NEVER import the raw package directly.
 
 ### 8.1 Implement notifier
 
@@ -686,7 +729,7 @@ Future<void> load(<args>) async {
   final result = await ref.read(<name>UseCaseProvider).call(<args>);
   result.fold(
     (failure) => state = <Name>State.failure(
-      CustomFunction.failure.launch(failure),
+      failure, // AppError passed directly to state; UI localizes via localizeError()
     ),
     (data) => state = <Name>State.loaded(data),
   );
@@ -847,34 +890,28 @@ class CustomWidgets {
 }
 ```
 
-### 10.2 Add URI
+### 10.2 Add AppRoute entry
 
-In `lib/shared/configs/uries.dart`:
-
-```dart
-// Simple route
-Uri get <name> => Uri.parse('/<path>');
-
-// Route with path parameter
-Uri <name>(int id) => Uri.parse('/<path>/$id');
-```
-
-### 10.3 Add named route constant
-
-In `lib/shared/functions/cp_go_router.dart`:
+In `lib/app/router/app_route.dart`:
 
 ```dart
-static const String name<Name> = '<name>';
+<name>(path: '/<path>', name: '<name>'),
 ```
 
-### 10.4 Add route
+### 10.3 Add GoRoute
 
-In `lib/shared/configs/app_routes.dart`:
+In `lib/app/router/app_router.dart`, add the screen import at the top:
+
+```dart
+import 'package:clean_architecture_sdd_harness/features/<name>/presentation/screens/<name>_screen.dart';
+```
+
+Then add the GoRoute:
 
 ```dart
 GoRoute(
   path: '/<path>',
-  name: CpGoRouter.name<Name>,
+  name: AppRoute.<name>.name,
   builder: (context, state) => const <Name>Screen(),
 ),
 ```
@@ -883,20 +920,12 @@ For routes with path parameters:
 ```dart
 GoRoute(
   path: '/<path>/:id',
-  name: CpGoRouter.name<Name>,
+  name: AppRoute.<name>.name,
   builder: (context, state) {
     final id = int.parse(state.pathParameters['id']!);
     return <Name>Screen(id: id);
   },
 ),
-```
-
-### 10.5 Add screen import to configs barrel
-
-In `lib/shared/configs/_configs.lib.dart`, add:
-
-```dart
-import 'package:app/features/<name>/presentation/screens/<name>_screen.dart';
 ```
 
 ### 10.6 Add navigation trigger to parent screen
@@ -907,8 +936,8 @@ If `tasks.md` specifies adding a trigger on a parent screen:
 IconButton(
   tooltip: '<Tooltip Text>',
   icon: const Icon(Icons.<icon>),
-  onPressed: () => CustomFunction.goRouter.push(
-    CustomConfigs.uries.<name>.toString(),
+  onPressed: () => ref.read(goRouterProvider).push(
+    '/<name>',
   ),
 ),
 ```
@@ -1004,9 +1033,9 @@ When in doubt, read the corresponding file from appointments and adapt it.
 
 | Rule | Correct | Wrong |
 |---|---|---|
-| Injectable services | `ref.watch(CustomProviders.dio)` | `CustomFunction.dio` directly |
-| Repository error handling | `CustomFunction.fpdart.guard(...)` | raw `try/catch` |
-| Notifier error message | `CustomFunction.failure.launch(failure)` | `failure.message` directly |
+| Injectable services | `ref.watch(httpServiceProvider)` | direct static locator |
+| Repository error handling | `guard(...)` from `shared/error/result_guard.dart` | raw `try/catch` |
+| Notifier error message | `state = State.failure(error)` passes `AppError` to state | `failure.message` directly |
 | Freezed entity | `@freezed abstract class` + `const Foo._()` | `@freezed class` without `._()` |
 | Freezed state | `@freezed sealed class` | state with `._()` |
 | Entity barrel | import entity files directly | `library`+`part` barrel for `@freezed` entities |
