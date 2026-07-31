@@ -1,0 +1,31 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          any_map: false
+          checked: false
+          create_to_json: true
+          create_json_keys: true
+          explicit_to_json: true
+
+      freezed:
+        options:
+          copy_with: true
+          equal: true
+          to_string_override: true
+
+      riverpod_generator:
+        options:
+          provider_name_suffix: 'Provider'
+
+      source_gen|combining_builder:
+        options:
+          ignore_for_file:
+            - type=lint
+            - implicit_dynamic_parameter
+            - implicit_dynamic_type
+            - implicit_dynamic_method
+            - implicit_dynamic_variable
+
+
