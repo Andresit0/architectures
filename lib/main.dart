@@ -1,20 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
-import 'shared/configs/_configs.lib.dart';
-import 'shared/functions/_function.lib.dart';
-import 'shared/providers/_providers.lib.dart';
-import 'shared/interceptors/_interceptors.lib.dart';
-import 'shared/widgets/_widgets.lib.dart';
+import 'app/app_initializer.dart';
+import 'app/di/router/router_provider.dart';
+import 'core/config/app_environment.dart';
+import 'core/services/_services.lib.dart';
+import 'l10n/app_localizations.dart';
+import 'package:clean_architecture_sdd_harness/design_system/theme/app_theme.dart';
+import 'package:clean_architecture_sdd_harness/design_system/_design.lib.dart';
 import 'features/auth/presentation/notifiers/auth_notifier.dart';
 
 void main({List<Override> overrides = const []}) {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  AppInitializer.configurePlatform();
   runApp(
     ProviderScope(overrides: overrides, child: const TudesarrolladorApp()),
   );
@@ -37,9 +36,13 @@ class _TudesarrolladorAppState extends ConsumerState<TudesarrolladorApp> {
   }
 
   Future<void> _init() async {
-    AuthInterceptor.onForceLogout = () {
-      ref.read(CustomProviders.goRouter).update(false);
-    };
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+         defaultTargetPlatform == TargetPlatform.iOS)) {
+      await AppInitializer.checkJailbreak(
+        detection: ref.read(flutterJailbreakDetectionProvider),
+      );
+    }
     await ref.read(authProvider.notifier).restoreSession();
     if (mounted) setState(() => _initialized = true);
   }
@@ -49,18 +52,20 @@ class _TudesarrolladorAppState extends ConsumerState<TudesarrolladorApp> {
     if (!_initialized) {
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: Scaffold(body: CustomWidgets.createLoadingIndicator),
+        home: Scaffold(body: LoadingIndicator()),
       );
     }
 
+    final router = ref.watch(goRouterProvider);
+
     return MaterialApp.router(
-      title: CustomConfigs.vars.appName,
+      title: AppEnvironment.current.appName,
       debugShowCheckedModeBanner: false,
-      theme: CustomConfigs.theme.material3,
-      routerConfig: CpGoRouter.create(
-        routes: CustomConfigs.routes.goRouter,
-        refreshListenable: ref.read(CustomProviders.goRouter),
-      ),
+      locale: AppEnvironment.current.defaultLocale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: AppTheme.material3,
+      routerConfig: router,
     );
   }
 }
