@@ -11,7 +11,6 @@ part of 'patient_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$PatientEntity {
 
@@ -22,8 +21,6 @@ mixin _$PatientEntity {
 @pragma('vm:prefer-inline')
 $PatientEntityCopyWith<PatientEntity> get copyWith => _$PatientEntityCopyWithImpl<PatientEntity>(this as PatientEntity, _$identity);
 
-  /// Serializes this PatientEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -31,7 +28,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is PatientEntity&&(identical(other.name, name) || other.name == name)&&(identical(other.id, id) || other.id == id));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,name,id);
 
@@ -207,11 +204,11 @@ return $default(_that.name,_that.id);case _:
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _PatientEntity extends PatientEntity {
   const _PatientEntity({required this.name, required this.id}): super._();
-  factory _PatientEntity.fromJson(Map<String, dynamic> json) => _$PatientEntityFromJson(json);
+  
 
 @override final  String name;
 @override final  String id;
@@ -222,17 +219,14 @@ class _PatientEntity extends PatientEntity {
 @pragma('vm:prefer-inline')
 _$PatientEntityCopyWith<_PatientEntity> get copyWith => __$PatientEntityCopyWithImpl<_PatientEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$PatientEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _PatientEntity&&(identical(other.name, name) || other.name == name)&&(identical(other.id, id) || other.id == id));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,name,id);
 

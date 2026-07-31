@@ -11,19 +11,16 @@ part of 'clinical_history_entity.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$ClinicalHistoryEntity {
 
- String get id;@JsonKey(name: 'encounter_number') String get encounterNumber; ClinicalHistoryServiceEntity get service; ClinicalHistoryFacilityEntity get facility; ClinicalHistoryProfessionalEntity? get professional;@JsonKey(name: 'encounter_date') String get encounterDate;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'updated_at') DateTime? get updatedAt;@JsonKey(name: 'published_at') DateTime? get publishedAt; String? get summary; String? get description; List<ClinicalHistoryDiagnosisEntity> get diagnosis; List<String> get observations; List<ClinicalHistoryAttachmentEntity> get attachments; ClinicalHistoryStateEntity? get state;
+ String get id; String get encounterNumber; ClinicalHistoryServiceEntity get service; ClinicalHistoryFacilityEntity get facility; ClinicalHistoryProfessionalEntity? get professional; String get encounterDate; DateTime? get createdAt; DateTime? get updatedAt; DateTime? get publishedAt; String? get summary; String? get description; List<ClinicalHistoryDiagnosisEntity> get diagnosis; List<String> get observations; List<ClinicalHistoryAttachmentEntity> get attachments; ClinicalHistoryStateEntity? get state;
 /// Create a copy of ClinicalHistoryEntity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
 $ClinicalHistoryEntityCopyWith<ClinicalHistoryEntity> get copyWith => _$ClinicalHistoryEntityCopyWithImpl<ClinicalHistoryEntity>(this as ClinicalHistoryEntity, _$identity);
 
-  /// Serializes this ClinicalHistoryEntity to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -31,7 +28,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is ClinicalHistoryEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.encounterNumber, encounterNumber) || other.encounterNumber == encounterNumber)&&(identical(other.service, service) || other.service == service)&&(identical(other.facility, facility) || other.facility == facility)&&(identical(other.professional, professional) || other.professional == professional)&&(identical(other.encounterDate, encounterDate) || other.encounterDate == encounterDate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.summary, summary) || other.summary == summary)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other.diagnosis, diagnosis)&&const DeepCollectionEquality().equals(other.observations, observations)&&const DeepCollectionEquality().equals(other.attachments, attachments)&&(identical(other.state, state) || other.state == state));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,id,encounterNumber,service,facility,professional,encounterDate,createdAt,updatedAt,publishedAt,summary,description,const DeepCollectionEquality().hash(diagnosis),const DeepCollectionEquality().hash(observations),const DeepCollectionEquality().hash(attachments),state);
 
@@ -48,7 +45,7 @@ abstract mixin class $ClinicalHistoryEntityCopyWith<$Res>  {
   factory $ClinicalHistoryEntityCopyWith(ClinicalHistoryEntity value, $Res Function(ClinicalHistoryEntity) _then) = _$ClinicalHistoryEntityCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'encounter_number') String encounterNumber, ClinicalHistoryServiceEntity service, ClinicalHistoryFacilityEntity facility, ClinicalHistoryProfessionalEntity? professional,@JsonKey(name: 'encounter_date') String encounterDate,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'published_at') DateTime? publishedAt, String? summary, String? description, List<ClinicalHistoryDiagnosisEntity> diagnosis, List<String> observations, List<ClinicalHistoryAttachmentEntity> attachments, ClinicalHistoryStateEntity? state
+ String id, String encounterNumber, ClinicalHistoryServiceEntity service, ClinicalHistoryFacilityEntity facility, ClinicalHistoryProfessionalEntity? professional, String encounterDate, DateTime? createdAt, DateTime? updatedAt, DateTime? publishedAt, String? summary, String? description, List<ClinicalHistoryDiagnosisEntity> diagnosis, List<String> observations, List<ClinicalHistoryAttachmentEntity> attachments, ClinicalHistoryStateEntity? state
 });
 
 
@@ -209,7 +206,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'encounter_number')  String encounterNumber,  ClinicalHistoryServiceEntity service,  ClinicalHistoryFacilityEntity facility,  ClinicalHistoryProfessionalEntity? professional, @JsonKey(name: 'encounter_date')  String encounterDate, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'published_at')  DateTime? publishedAt,  String? summary,  String? description,  List<ClinicalHistoryDiagnosisEntity> diagnosis,  List<String> observations,  List<ClinicalHistoryAttachmentEntity> attachments,  ClinicalHistoryStateEntity? state)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String encounterNumber,  ClinicalHistoryServiceEntity service,  ClinicalHistoryFacilityEntity facility,  ClinicalHistoryProfessionalEntity? professional,  String encounterDate,  DateTime? createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  String? summary,  String? description,  List<ClinicalHistoryDiagnosisEntity> diagnosis,  List<String> observations,  List<ClinicalHistoryAttachmentEntity> attachments,  ClinicalHistoryStateEntity? state)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryEntity() when $default != null:
 return $default(_that.id,_that.encounterNumber,_that.service,_that.facility,_that.professional,_that.encounterDate,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.summary,_that.description,_that.diagnosis,_that.observations,_that.attachments,_that.state);case _:
@@ -230,7 +227,7 @@ return $default(_that.id,_that.encounterNumber,_that.service,_that.facility,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'encounter_number')  String encounterNumber,  ClinicalHistoryServiceEntity service,  ClinicalHistoryFacilityEntity facility,  ClinicalHistoryProfessionalEntity? professional, @JsonKey(name: 'encounter_date')  String encounterDate, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'published_at')  DateTime? publishedAt,  String? summary,  String? description,  List<ClinicalHistoryDiagnosisEntity> diagnosis,  List<String> observations,  List<ClinicalHistoryAttachmentEntity> attachments,  ClinicalHistoryStateEntity? state)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String encounterNumber,  ClinicalHistoryServiceEntity service,  ClinicalHistoryFacilityEntity facility,  ClinicalHistoryProfessionalEntity? professional,  String encounterDate,  DateTime? createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  String? summary,  String? description,  List<ClinicalHistoryDiagnosisEntity> diagnosis,  List<String> observations,  List<ClinicalHistoryAttachmentEntity> attachments,  ClinicalHistoryStateEntity? state)  $default,) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryEntity():
 return $default(_that.id,_that.encounterNumber,_that.service,_that.facility,_that.professional,_that.encounterDate,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.summary,_that.description,_that.diagnosis,_that.observations,_that.attachments,_that.state);case _:
@@ -250,7 +247,7 @@ return $default(_that.id,_that.encounterNumber,_that.service,_that.facility,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'encounter_number')  String encounterNumber,  ClinicalHistoryServiceEntity service,  ClinicalHistoryFacilityEntity facility,  ClinicalHistoryProfessionalEntity? professional, @JsonKey(name: 'encounter_date')  String encounterDate, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'updated_at')  DateTime? updatedAt, @JsonKey(name: 'published_at')  DateTime? publishedAt,  String? summary,  String? description,  List<ClinicalHistoryDiagnosisEntity> diagnosis,  List<String> observations,  List<ClinicalHistoryAttachmentEntity> attachments,  ClinicalHistoryStateEntity? state)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String encounterNumber,  ClinicalHistoryServiceEntity service,  ClinicalHistoryFacilityEntity facility,  ClinicalHistoryProfessionalEntity? professional,  String encounterDate,  DateTime? createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  String? summary,  String? description,  List<ClinicalHistoryDiagnosisEntity> diagnosis,  List<String> observations,  List<ClinicalHistoryAttachmentEntity> attachments,  ClinicalHistoryStateEntity? state)?  $default,) {final _that = this;
 switch (_that) {
 case _ClinicalHistoryEntity() when $default != null:
 return $default(_that.id,_that.encounterNumber,_that.service,_that.facility,_that.professional,_that.encounterDate,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.summary,_that.description,_that.diagnosis,_that.observations,_that.attachments,_that.state);case _:
@@ -262,21 +259,21 @@ return $default(_that.id,_that.encounterNumber,_that.service,_that.facility,_tha
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _ClinicalHistoryEntity extends ClinicalHistoryEntity {
-  const _ClinicalHistoryEntity({required this.id, @JsonKey(name: 'encounter_number') required this.encounterNumber, required this.service, required this.facility, required this.professional, @JsonKey(name: 'encounter_date') required this.encounterDate, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt, @JsonKey(name: 'published_at') required this.publishedAt, required this.summary, required this.description, required final  List<ClinicalHistoryDiagnosisEntity> diagnosis, required final  List<String> observations, required final  List<ClinicalHistoryAttachmentEntity> attachments, required this.state}): _diagnosis = diagnosis,_observations = observations,_attachments = attachments,super._();
-  factory _ClinicalHistoryEntity.fromJson(Map<String, dynamic> json) => _$ClinicalHistoryEntityFromJson(json);
+  const _ClinicalHistoryEntity({required this.id, required this.encounterNumber, required this.service, required this.facility, required this.professional, required this.encounterDate, required this.createdAt, required this.updatedAt, required this.publishedAt, required this.summary, required this.description, required final  List<ClinicalHistoryDiagnosisEntity> diagnosis, required final  List<String> observations, required final  List<ClinicalHistoryAttachmentEntity> attachments, required this.state}): _diagnosis = diagnosis,_observations = observations,_attachments = attachments,super._();
+  
 
 @override final  String id;
-@override@JsonKey(name: 'encounter_number') final  String encounterNumber;
+@override final  String encounterNumber;
 @override final  ClinicalHistoryServiceEntity service;
 @override final  ClinicalHistoryFacilityEntity facility;
 @override final  ClinicalHistoryProfessionalEntity? professional;
-@override@JsonKey(name: 'encounter_date') final  String encounterDate;
-@override@JsonKey(name: 'created_at') final  DateTime? createdAt;
-@override@JsonKey(name: 'updated_at') final  DateTime? updatedAt;
-@override@JsonKey(name: 'published_at') final  DateTime? publishedAt;
+@override final  String encounterDate;
+@override final  DateTime? createdAt;
+@override final  DateTime? updatedAt;
+@override final  DateTime? publishedAt;
 @override final  String? summary;
 @override final  String? description;
  final  List<ClinicalHistoryDiagnosisEntity> _diagnosis;
@@ -308,17 +305,14 @@ class _ClinicalHistoryEntity extends ClinicalHistoryEntity {
 @pragma('vm:prefer-inline')
 _$ClinicalHistoryEntityCopyWith<_ClinicalHistoryEntity> get copyWith => __$ClinicalHistoryEntityCopyWithImpl<_ClinicalHistoryEntity>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$ClinicalHistoryEntityToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClinicalHistoryEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.encounterNumber, encounterNumber) || other.encounterNumber == encounterNumber)&&(identical(other.service, service) || other.service == service)&&(identical(other.facility, facility) || other.facility == facility)&&(identical(other.professional, professional) || other.professional == professional)&&(identical(other.encounterDate, encounterDate) || other.encounterDate == encounterDate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.summary, summary) || other.summary == summary)&&(identical(other.description, description) || other.description == description)&&const DeepCollectionEquality().equals(other._diagnosis, _diagnosis)&&const DeepCollectionEquality().equals(other._observations, _observations)&&const DeepCollectionEquality().equals(other._attachments, _attachments)&&(identical(other.state, state) || other.state == state));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,id,encounterNumber,service,facility,professional,encounterDate,createdAt,updatedAt,publishedAt,summary,description,const DeepCollectionEquality().hash(_diagnosis),const DeepCollectionEquality().hash(_observations),const DeepCollectionEquality().hash(_attachments),state);
 
@@ -335,7 +329,7 @@ abstract mixin class _$ClinicalHistoryEntityCopyWith<$Res> implements $ClinicalH
   factory _$ClinicalHistoryEntityCopyWith(_ClinicalHistoryEntity value, $Res Function(_ClinicalHistoryEntity) _then) = __$ClinicalHistoryEntityCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'encounter_number') String encounterNumber, ClinicalHistoryServiceEntity service, ClinicalHistoryFacilityEntity facility, ClinicalHistoryProfessionalEntity? professional,@JsonKey(name: 'encounter_date') String encounterDate,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'updated_at') DateTime? updatedAt,@JsonKey(name: 'published_at') DateTime? publishedAt, String? summary, String? description, List<ClinicalHistoryDiagnosisEntity> diagnosis, List<String> observations, List<ClinicalHistoryAttachmentEntity> attachments, ClinicalHistoryStateEntity? state
+ String id, String encounterNumber, ClinicalHistoryServiceEntity service, ClinicalHistoryFacilityEntity facility, ClinicalHistoryProfessionalEntity? professional, String encounterDate, DateTime? createdAt, DateTime? updatedAt, DateTime? publishedAt, String? summary, String? description, List<ClinicalHistoryDiagnosisEntity> diagnosis, List<String> observations, List<ClinicalHistoryAttachmentEntity> attachments, ClinicalHistoryStateEntity? state
 });
 
 
