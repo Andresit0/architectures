@@ -74,7 +74,7 @@ context.go('/[feature_name]'); // should be: ref.read(goRouterProvider).go('/[fe
 
 **Rule: when to create a Riverpod bridge?**
 
-Create a provider in `lib/app/di/services/<name>_provider.dart` when the wrapper needs to be injected into
+Create a provider co-located with the wrapper (e.g. `lib/core/services/<domain>/<name>_provider.dart`, `lib/core/database/<name>_provider.dart`, `lib/core/network/connectivity/<name>_provider.dart`) when the wrapper needs to be injected into
 feature providers via `ref.watch/read`. Not needed for pure functional utilities
 or for services that are only internal dependencies of other
 wrappers (`internetService`).

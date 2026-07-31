@@ -239,7 +239,7 @@ The flow is complete when:
 
 The project has two cross-cutting directories with distinct roles:
 
-- **`lib/shared/`** — Pure domain abstractions: error types (`error/` with `AppError`, `Result<T>`, `guard()`), domain interfaces (`interfaces/` with `IAppDatabase`, `ISembastDb`, `IConnectivityChecker`, `ITokenStore`, `ITokenVerifier`, `IAuthenticationObserver`, etc.), exception classes (`exceptions/`), models/entities (`models/`), pagination (`pagination/`), mock data (`jsons/`), offline-first mixin (`functions/offline_first_repository.dart`). Domain layer can import from `shared/`.
+- **`lib/shared/`** — Pure domain abstractions: error handling (`error/` with `AppError`, `Result<T>`, `guard()`), domain interfaces (`interfaces/` with `IAppDatabase`, `ISembastDb`, `IConnectivityChecker`, `ITokenStore`, `ITokenVerifier`, `IAuthenticationObserver`, etc.), exception classes (`exceptions/`), models/entities (`models/`), offline-first mixin (`functions/offline_first_repository.dart`). Domain layer can import from `shared/`.
 
 - **`lib/core/`** — Pure infrastructure: service wrappers (`services/`), database (`database/`), network (`network/`), router adapter (`router/`), utils (`utils/`). Domain layer must NEVER import from `core/`.
 
