@@ -17,12 +17,12 @@ class LoginButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: CustomConfigs.appColors.primary,
-          foregroundColor: CustomConfigs.appColors.white,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          disabledBackgroundColor: CustomConfigs.appColors.primary.withAlpha(100),
+          disabledBackgroundColor: AppColors.primary.withAlpha(100),
         ),
         onPressed: onPressed,
         child: Text(

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/configs/_configs.lib.dart';
-import '../../../../shared/widgets/_widgets.lib.dart' show LoadingIndicator;
+import '../notifiers/auth_notifier.dart';
+import '../../di/auth_provider.dart';
+import '../../di/remember_me_provider.dart';
+import 'package:clean_architecture_sdd_harness/design_system/theme/app_colors.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import '../../../../l10n/app_localizations.dart';
+import 'package:clean_architecture_sdd_harness/design_system/_design.lib.dart';
 
 import '../notifiers/auth_state.dart';
-import '../notifiers/auth_notifier.dart';
 import '../widgets/_widgets.lib.dart';
 
 class LoginScreen extends ConsumerWidget {
@@ -19,8 +23,8 @@ class LoginScreen extends ConsumerWidget {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
-              content: Text(next.message),
-              backgroundColor: CustomConfigs.appColors.red,
+              content: Text(localizeError(next.error, AppLocalizations.of(context)!)),
+              backgroundColor: AppColors.red,
               duration: const Duration(seconds: 4),
             ),
           );
@@ -53,7 +57,6 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
   final _passwordController = TextEditingController();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
-  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -69,7 +72,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
     ref.read(authProvider.notifier).login(
       _emailController.text.trim(),
       _passwordController.text,
-      rememberMe: _rememberMe,
+      rememberMe: ref.read(rememberMeProvider),
     );
   }
 
@@ -90,36 +93,36 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                 Icon(
                   Icons.account_circle,
                   size: 72,
-                  color: CustomConfigs.appColors.primary,
+                  color: AppColors.primary,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  CustomConfigs.vars.appName,
+                  ref.watch(appNameProvider),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: CustomConfigs.appColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Enter your credentials to continue',
+                  AppLocalizations.of(context)!.loginTitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: CustomConfigs.appColors.gray,
+                    color: AppColors.gray,
                   ),
                 ),
                 const SizedBox(height: 40),
                 CustomAuthWidgets.createEmailFormField(
                   controller: _emailController,
-                  hintText: 'Email',
+                  hintText: AppLocalizations.of(context)!.emailHint,
                   focusNode: _emailFocus,
                   onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
                 ),
                 const SizedBox(height: 16),
                 CustomAuthWidgets.createPasswordFormField(
                   controller: _passwordController,
-                  hintText: 'Password',
+                  hintText: AppLocalizations.of(context)!.passwordHint,
                   focusNode: _passwordFocus,
                   onFieldSubmitted: (_) => _submit(),
                 ),
@@ -127,17 +130,17 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                 Row(
                   children: [
                     Checkbox(
-                      value: _rememberMe,
+                      value: ref.watch(rememberMeProvider),
                       onChanged: isLoading
                           ? null
-                          : (v) => setState(() => _rememberMe = v ?? false),
+                          : (v) => ref.read(rememberMeProvider.notifier).set(v ?? false),
                     ),
-                    const Text('Remember me'),
+                    Text(AppLocalizations.of(context)!.rememberMe),
                   ],
                 ),
                 const SizedBox(height: 24),
                 CustomAuthWidgets.createLoginButton(
-                  text: 'Login',
+                  text: AppLocalizations.of(context)!.loginButton,
                   onPressed: isLoading ? null : _submit,
                 ),
               ],

@@ -16,42 +16,44 @@ class EmailFormField extends StatelessWidget {
     this.focusNode,
   });
 
-  String? _validate(String? value) {
+  String? _validate(String? value, AppLocalizations l10n) {
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return l10n.errorEmptyEmail;
     }
     if (!value.contains('@') || !value.contains('.')) {
-      return 'Enter a valid email';
+      return l10n.errorInvalidEmail;
     }
     return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return TextFormField(
       controller: controller,
       focusNode: focusNode,
       keyboardType: TextInputType.emailAddress,
       onChanged: onChanged,
       onFieldSubmitted: onFieldSubmitted,
-      validator: _validate,
+      validator: (value) => _validate(value, l10n),
       decoration: InputDecoration(
-        hintText: hintText ?? 'Email',
+        labelText: l10n.emailLabel,
+        hintText: hintText ?? l10n.emailHint,
         prefixIcon: const Icon(Icons.email_outlined),
         filled: true,
-        fillColor: CustomConfigs.appColors.grayBackground,
+        fillColor: AppColors.grayBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: CustomConfigs.appColors.red),
+          borderSide: BorderSide(color: AppColors.red),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(
-            color: CustomConfigs.appColors.red,
+            color: AppColors.red,
             width: 1.5,
           ),
         ),

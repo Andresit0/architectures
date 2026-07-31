@@ -1,5 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
+// ignore_for_file: type=lint, implicit_dynamic_parameter, implicit_dynamic_type, implicit_dynamic_method, implicit_dynamic_variable
+
 part of 'auth_notifier.dart';
 
 // **************************************************************************
@@ -41,7 +43,7 @@ final class AuthNotifierProvider
   }
 }
 
-String _$authNotifierHash() => r'7ada12f963417a158f7191647530b999af92eaba';
+String _$authNotifierHash() => r'affb5a375258126c9ee51fb1477072dabc38ef1f';
 
 abstract class _$AuthNotifier extends $Notifier<AuthState> {
   AuthState build();
