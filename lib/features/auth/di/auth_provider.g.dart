@@ -238,6 +238,54 @@ final class ClearSessionUseCaseProvider
 String _$clearSessionUseCaseHash() =>
     r'02ef21e6ad3de9a84d8d2fdfe262f52f7158d8c4';
 
+@ProviderFor(refreshTokenUseCase)
+final refreshTokenUseCaseProvider = RefreshTokenUseCaseProvider._();
+
+final class RefreshTokenUseCaseProvider
+    extends
+        $FunctionalProvider<
+          RefreshTokenUseCase,
+          RefreshTokenUseCase,
+          RefreshTokenUseCase
+        >
+    with $Provider<RefreshTokenUseCase> {
+  RefreshTokenUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'refreshTokenUseCaseProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$refreshTokenUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<RefreshTokenUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RefreshTokenUseCase create(Ref ref) {
+    return refreshTokenUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RefreshTokenUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RefreshTokenUseCase>(value),
+    );
+  }
+}
+
+String _$refreshTokenUseCaseHash() =>
+    r'f5fe01f1e28b2fa76a69250276d8850dc1393941';
+
 @ProviderFor(restoreSessionUseCase)
 final restoreSessionUseCaseProvider = RestoreSessionUseCaseProvider._();
 
@@ -330,4 +378,4 @@ final class Handle401UseCaseProvider
   }
 }
 
-String _$handle401UseCaseHash() => r'0d31d60b83e9d4e09dbee29a28928d2341660899';
+String _$handle401UseCaseHash() => r'88d0f98168546205435a111fa508af34e96a5e96';

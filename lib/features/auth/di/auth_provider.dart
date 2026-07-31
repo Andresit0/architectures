@@ -8,6 +8,7 @@ import '../domain/repositories/i_auth_repository.dart';
 import '../domain/usecases/login_usecase.dart';
 import '../domain/usecases/clear_session_usecase.dart';
 import '../domain/usecases/restore_session_usecase.dart';
+import '../domain/usecases/refresh_token_usecase.dart';
 import '../domain/usecases/handle_401_usecase.dart';
 import '../infrastructure/datasources/auth_datasource_impl.dart';
 import '../infrastructure/datasources/local_auth_datasource_impl.dart';
@@ -52,6 +53,11 @@ ClearSessionUseCase clearSessionUseCase(Ref ref) => ClearSessionUseCase(
     );
 
 @riverpod
+RefreshTokenUseCase refreshTokenUseCase(Ref ref) => RefreshTokenUseCase(
+  repository: ref.watch(authRepositoryProvider),
+);
+
+@riverpod
 RestoreSessionUseCase restoreSessionUseCase(Ref ref) => RestoreSessionUseCase(
   repository: ref.watch(authRepositoryProvider),
   connectivityChecker: ref.watch(connectivityCheckerProvider),
@@ -65,4 +71,5 @@ Handle401UseCase handle401UseCase(Ref ref) => Handle401UseCase(
   connectivityChecker: ref.watch(connectivityCheckerProvider),
   credentialStore: ref.watch(credentialStoreProvider),
   repository: ref.watch(authRepositoryProvider),
+  refreshTokenUseCase: ref.watch(refreshTokenUseCaseProvider),
 );
