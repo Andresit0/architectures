@@ -103,7 +103,7 @@ For each PR, evaluate all 6 gates:
 
 Compare the PR `body` (description) against the files changed and the actual diff.
 
-- If description mentions "database migration" and all changes are in `lib/shared/database/` + `test/shared/database/` → **PASS**
+- If description mentions "database migration" and all changes are in `lib/core/database/` + `test/core/database/` → **PASS**
 - If description mentions "auth" and changes include unrelated files (e.g., `MD/`, `pubspec.yaml`) → flag them
 - If description is empty or too vague → **WARN** (partial pass)
 
@@ -144,7 +144,7 @@ For each modified file in `lib/`, check if the corresponding test file exists in
 | Modified file | Expected test file |
 |---------------|-------------------|
 | `lib/shared/models/patient_entity.dart` | `test/shared/models/patient_entity_test.dart` |
-| `lib/shared/database/clinical_history_store.dart` | `test/shared/database/clinical_history_store_test.dart` |
+| `lib/core/database/tables/clinical_history.dart` | `test/core/database/tables/clinical_history_test.dart` |
 | `lib/features/auth/domain/login_usecase.dart` | `test/features/auth/domain/login_usecase_test.dart` |
 | `lib/features/auth/infrastructure/auth_repository.dart` | `test/features/auth/infrastructure/auth_repository_test.dart` |
 | `lib/features/auth/presentation/login_notifier.dart` | `test/features/auth/presentation/login_notifier_test.dart` |
@@ -232,7 +232,7 @@ Also apply **content-based heuristics** to decide if auto-approve is safe:
 | `lib/features/*/spec/**`, `MD/**`, `AGENTS.md`, `.ai/**`, docs only | ✅ Yes — documentation |
 | `lib/shared/models/**` + corresponding tests passing | ✅ Yes — model changes with test coverage |
 | `lib/**/domain/**` (entities, interfaces, use cases) + tests passing | ✅ Yes — domain layer with test coverage |
-| `lib/shared/exceptions/**`, `lib/shared/configs/**` + tests | ✅ Yes — simple config/exception changes |
+| `lib/shared/exceptions/**` + tests | ✅ Yes — simple exception changes |
 | `lib/**/infrastructure/**` (implementations, datasources, repositories) | ❌ Needs human review — implementation logic |
 | `lib/**/presentation/**` (notifiers, screens, widgets) | ❌ Needs human review — UI/state logic |
 | Database migrations, engine changes | ❌ Needs human review — critical infra |

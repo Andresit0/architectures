@@ -16,11 +16,11 @@ You are called at Phase D.0 of spec-dev — before any infrastructure code exist
 Before starting, load these resources in order:
 
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
-   - fpdart pattern: `Either<Failure, T>` return types
-   - `CustomFunction.fpdart.guard()` boundary rule
-   - `CustomProviders.dio` access rule (NEVER `CustomFunction.dio` directly in features)
+    - `Result<T>` return types
+    - `guard()` from `shared/error/result_guard.dart` boundary rule
+   - Injectable service access rule (use `ref.watch(httpServiceProvider)` — never static locator)
 
-2. **`MD/APP_DARTZ.md`** — Either/Failure/fpdart pattern. Required to:
+2. **`MD/APP_DARTZ.md`** — Result/guard/fold pattern. Required to:
    - Write correct repository method signatures in tests
    - Use correct Failure types in test assertions
 
@@ -77,7 +77,7 @@ Create infrastructure test files that:
 1. Import datasource and repository implementations using the paths they WILL have once spec-dev creates them
 2. Mock HTTP client (Dio) using mocktail
 3. Test datasource: that it calls the right endpoint and returns the right data
-4. Test repository: that it wraps datasource calls with fpdart guard and returns Either
+4. Test repository: that it wraps datasource calls with guard() and returns Result
 5. Are written purely from `generated_api_contract.md` and `domain.md` — no production files exist yet
 
 **IMPORTANT: Do NOT check if production files exist. They don't. Derive all signatures from `generated_api_contract.md`.**
@@ -89,7 +89,7 @@ Create infrastructure test files that:
 ```
 test/features/<feature_name>/infrastructure/
   <feature_name>_datasource_impl_test.dart  ← tests for datasource HTTP calls
-  <feature_name>_repository_impl_test.dart  ← tests for repository Either wrapping
+  <feature_name>_repository_impl_test.dart  ← tests for repository guard() wrapping
 ```
 
 ---
@@ -101,27 +101,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:app/features/<feature_name>/infrastructure/datasources/<feature_name>_datasource_impl.dart';
-import 'package:app/shared/functions/_functions.lib.dart';
+// Note: wrappers are standalone files in lib/core/services/<domain>/ (no barrel).
+// Import only the specific wrapper files needed, e.g.:
+// import 'package:app/core/services/auth/token_providers.dart';
 
-// ALWAYS mock ICpDio (the wrapper interface) — never mock Dio directly.
-// The real datasource receives ICpDio injected via CustomProviders.dio.
-class _MockDio extends Mock implements ICpDio {}
-class _MockTokenService extends Mock implements ITokenService {}
+// ALWAYS mock IDioWrapper (the wrapper interface) — never mock Dio directly.
+// The real datasource receives IDioWrapper injected via httpServiceProvider.
+class _MockDio extends Mock implements IDioWrapper {}
+class _MockCredentialStore extends Mock implements ICredentialStore {}
 
 void main() {
   late _MockDio mockDio;
-  late _MockTokenService mockTokenService;
+  late _MockCredentialStore mockCredentialStore;
   late <Name>DatasourceImpl datasource;
 
   setUp(() {
     mockDio = _MockDio();
-    mockTokenService = _MockTokenService();
-    datasource = <Name>DatasourceImpl(dio: mockDio, tokenService: mockTokenService);
+    mockCredentialStore = _MockCredentialStore();
+    datasource = <Name>DatasourceImpl(dio: mockDio, credentialStore: mockCredentialStore);
   });
 
   group('<Name>DatasourceImpl', () {
     test('get<Name>() calls correct endpoint and returns entity list', () async {
-      when(() => mockTokenService.read()).thenAnswer((_) async => 'token');
+      when(() => mockCredentialStore.read()).thenAnswer((_) async => 'token');
       when(() => mockDio.get(any(), headers: any(named: 'headers'))).thenAnswer(
         (_) async => [/* fixture JSON matching contracts.md */],
       );
@@ -140,7 +142,7 @@ void main() {
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:fpdart/fpdart.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 
 import 'package:app/features/<feature_name>/domain/datasources/i_<feature_name>_datasource.dart';
 import 'package:app/features/<feature_name>/domain/repositories/i_<feature_name>_repository.dart';
@@ -232,7 +234,7 @@ Report:
 | Wrong | Correct |
 |-------|---------|
 | Check if production files exist before writing | Write tests from generated_api_contract.md — no production files exist |
-| Use CustomFunction.dio directly | Mock Dio via mocktail; production code uses CustomProviders.dio |
+| Use static locator directly | Mock Dio via mocktail; production code uses ref.watch(httpServiceProvider) |
 | Skip repository test | Always create both datasource AND repository tests |
-| Raw try/catch in repository | Repository uses CustomFunction.fpdart.guard() — test both Right and Left |
+| Raw try/catch in repository | Repository uses guard() — test both Success and Failure |
 | Run tests before stubs exist | Report files created; tests run RED in Phase D.4 once stubs are written |

@@ -55,45 +55,25 @@ Generate all six artifacts from the confirmed and refined spec:
 | Domain Models | `domain.md` | YAML inside markdown fenced block |
 | Task Checklist | `tasks.md` | Markdown checkbox list |
 
-### Phase 3.5 — JSON mock file (only when `_json_sample` was provided)
+### Phase 3.5 — FakeDatasource (only when `_json_sample` was provided)
 
 When the user supplied a JSON payload during Phase 1, perform these steps **before** writing the spec files:
 
 1. **Derive names** from the feature name:
-   - Class name: `<FeatureName>Json` (PascalCase, e.g. `AppointmentsJson`)
-   - File name: `<feature_name>_json.dart` (snake_case, e.g. `appointments_json.dart`)
-   - Facade member: `<featureName>Json` (camelCase, e.g. `appointmentsJson`)
-   - Getter name: derive from the API call or feature purpose (e.g. `getAppointmentsResponse200`)
+   - Datasource name: `<FeatureName>Datasource` (PascalCase, e.g. `AppointmentsDatasource`)
+   - File name: `fake_<feature_name>_datasource.dart` (snake_case, e.g. `fake_appointments_datasource.dart`)
 
-2. **Read** `lib/shared/jsons/_jsons.dart` and `lib/shared/jsons/_jsons.lib.dart` to understand the existing pattern before writing.
+2. **Create a FakeDatasource** — no mock data in barrel files.
+   The project no longer uses `CustomJsons` / `_jsons.lib.dart` for mock data.
+   Instead, create a separate FakeDatasource class that implements the datasource interface
+   with hardcoded entity constructors (no raw Maps).
+   Create `lib/features/<feature_name>/infrastructure/datasources/fake_<feature_name>_datasource.dart`.
+   See `lib/features/auth/infrastructure/datasources/auth_datasource_impl.dart` as a reference implementation of a real datasource.
 
-3. **Create** `lib/shared/jsons/<feature_name>_json.dart`:
-   ```dart
-   part of '_jsons.lib.dart';
-
-   class <FeatureName>Json {
-     Map<String, dynamic> get <getterName> => <paste the JSON payload as a Dart map literal>;
-   }
+3. After writing the FakeDatasource confirm:
    ```
-
-4. **Update** `lib/shared/jsons/_jsons.lib.dart` — add the new part directive in alphabetical order:
-   ```dart
-   part '<feature_name>_json.dart';
-   ```
-
-5. **Update** `lib/shared/jsons/_jsons.dart` — add a new static final member to `CustomJsons` in alphabetical order:
-   ```dart
-   static final <FeatureName>Json <featureName>Json = <FeatureName>Json();
-   ```
-
-6. After writing these three files confirm:
-   ```
-   JSON mock data written to:
-     lib/shared/jsons/<feature_name>_json.dart
-
-   Barrel files updated:
-     lib/shared/jsons/_jsons.lib.dart   (added: part '<feature_name>_json.dart')
-     lib/shared/jsons/_jsons.dart       (added: CustomJsons.<featureName>Json)
+   FakeDatasource written to:
+     lib/features/<feature_name>/infrastructure/datasources/fake_<feature_name>_datasource.dart
    ```
 
 ### Phase 4 — Write files
@@ -110,15 +90,11 @@ Specification written to lib/features/<feature_name>/spec/
   tasks.md         Implementation task checklist
 ```
 
-If a JSON mock file was created in Phase 3.5, include it in the confirmation:
+If a FakeDatasource was created in Phase 3.5, include it in the confirmation:
 
 ```
-JSON mock data written to:
-  lib/shared/jsons/<feature_name>_json.dart
-
-Barrel files updated:
-  lib/shared/jsons/_jsons.lib.dart
-  lib/shared/jsons/_jsons.dart
+FakeDatasource written to:
+  lib/features/<feature_name>/infrastructure/datasources/fake_<feature_name>_datasource.dart
 ```
 
 ---
@@ -273,7 +249,7 @@ interfaces:
   - name: I<Name>Repository
     file: features/<name>/domain/repositories/i_<name>_repository.dart
     methods:
-      - signature: "Future<Either<Failure, T>> <method>(<args>)"
+      - signature: "Future<Result<T>> <method>(<args>)"
         description: <description>
 
 usecases:
@@ -310,7 +286,7 @@ usecases:
 - [ ] Create feature widgets
 
 ### Shared dependencies used
-- [ ] Document each CustomProviders.xxx and CustomFunction.xxx dependency used
+- [ ] Document each provider dependency used
 
 ### Tests
 - [ ] Unit: <Name>UseCase
@@ -345,9 +321,9 @@ Key conventions:
 - Layer paths: `domain/`, `infrastructure/`, `presentation/`
 - Interface prefix: `I<Name>Datasource`, `I<Name>Repository`
 - State sealed class variants: `<Name>Initial`, `<Name>Loading`, `<Name>Success`, `<Name>Failure` or domain-specific names like `<Name>Idle`, `<Name>Downloading`
-- Shared providers access: `CustomProviders.dio`, `CustomProviders.token`, `CustomProviders.sharePlus`, `CustomProviders.user`
-- Failure conversion: `CustomFunction.fpdart.guard()` at repository boundary
-- Error mapping: `CustomFunction.failure.launch()` in notifier fold
+- Shared providers access: `httpServiceProvider`, `tokenStoreProvider`, `credentialStoreProvider`
+- Failure conversion: `guard()` from `shared/error/result_guard.dart` at repository boundary
+- Error mapping: state passes `AppError` via `AuthState.failure(error)` in notifier fold; UI localizes via `localizeError(error, AppLocalizations.of(context)!)`
 
 ---
 

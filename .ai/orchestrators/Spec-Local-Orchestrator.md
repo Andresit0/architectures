@@ -106,10 +106,10 @@ Phase C   → task(general, "Run app-agent-phase-gate for feature <name>. Read S
 Phase C repair → task(general, "Repair <failed audit> for feature <name>. Failed items: <list>. Read relevant SKILL.md and fix.")
 Phase D.0 (All Tests First) → Run ALL 5 test writers in sequence BEFORE any implementation code:
   D.0.5  → task(general, "Run app-agent-api-extractor for feature <name>. Read SKILL.md at .ai/skills/app-agent-api-extractor/SKILL.md and execute fully. Feature name: <name>. Spec folder: lib/features/<name>/spec/. Return: STATUS, file path, and confirmation all 6 sections present (Section 1–5 + Required Files).")
-  D.0.6  → (orchestrator inline bash: grep spec for packages, check cp_* wrappers, launch one task per MISSING wrapper — see Phase D.0.6 below)
+  D.0.6  → (orchestrator inline bash: grep spec for packages, check *_wrapper.dart files, launch one task per MISSING wrapper — see Phase D.0.6 below)
   D.0.1 → task(general, "Run app-agent-domain-test-writer for feature <name>. Read SKILL.md at .ai/skills/app-agent-domain-test-writer/SKILL.md. Spec folder: lib/features/<name>/spec/. IMPORTANT: No domain stubs exist yet — derive method signatures from domain.md, write the test files, do NOT run tests yet (stubs don't exist). Return: list of test files created.")
   D.0.2 → task(general, "Run app-agent-infrastructure-test-writer for feature <name>. Read SKILL.md at .ai/skills/app-agent-infrastructure-test-writer/SKILL.md. Spec folder: lib/features/<name>/spec/. IMPORTANT: No infrastructure stubs exist yet — derive datasource and repository method signatures from domain.md and contracts.md, write the 2 test files, do NOT run tests yet. Return: list of test files created.")
-  D.0.3 → task(general, "Run app-agent-presentation-test-writer for feature <name>. Read SKILL.md at .ai/skills/app-agent-presentation-test-writer/SKILL.md. Spec folder: lib/features/<name>/spec/. Read generated_api_contract.md first (state variants, provider names, '## Wrapper API'). WRAPPER RULE: for ANY external package the feature uses, mock its wrapper INTERFACE (ICpXxx from ## Wrapper API) — NEVER the raw package class. This applies to ALL packages. IMPORTANT: No notifier/state files exist yet — do NOT run tests. Return: list of test files created.")
+  D.0.3 → task(general, "Run app-agent-presentation-test-writer for feature <name>. Read SKILL.md at .ai/skills/app-agent-presentation-test-writer/SKILL.md. Spec folder: lib/features/<name>/spec/. Read generated_api_contract.md first (state variants, provider names, '## Wrapper API'). WRAPPER RULE: for ANY external package the feature uses, mock its wrapper INTERFACE (I<Xxx>Wrapper from ## Wrapper API) — NEVER the raw package class. This applies to ALL packages. IMPORTANT: No notifier/state files exist yet — do NOT run tests. Return: list of test files created.")
   D.0.4 → task(general, "Run app-agent-integration-test-writer for feature <name>. Read SKILL.md at .ai/skills/app-agent-integration-test-writer/SKILL.md. Spec folder: lib/features/<name>/spec/. IMPORTANT: No repository interface file exists yet — derive method signatures from domain.md, write the integration test file, do NOT run analyze yet. Return: integration test file created.")
   D.0.5b → task(general, "Run app-agent-bdd-writer for feature <name>. Read SKILL.md at .ai/skills/app-agent-bdd-writer/SKILL.md. Spec folder: lib/features/<name>/spec/. IMPORTANT: No notifier/state files exist yet — derive state variants from domain.md and bdd.feature, write the BDD test file with fake notifiers based on spec only, do NOT run tests yet. Return: BDD test file created.")
 Phase D.10 → task(general, "Run app-agent-nav-wirer for feature <name>. Read SKILL.md at .ai/skills/app-agent-nav-wirer/SKILL.md. Feature name: <name>. Spec folder: lib/features/<name>/spec/. Return: list of files modified + flutter analyze output.")
@@ -160,7 +160,7 @@ mem_save(
 Mandatory save triggers:
 - Phase-Gate verdict received (PASS or FAIL)
 - Each CRITICAL rule violation repaired
-- Each new cp_<package> wrapper created
+- Each new <package>_wrapper.dart wrapper created
 - Analyzer or test fix completed
 - Architecture decision made during spec-definer
 - Navigation wiring completed
@@ -189,7 +189,7 @@ mem_session_summary({
 | **Before Phase C** | **Did app-agent-phase-gate return PASS? If NO → STOP.** |
 | **Before Phase D.0.5** | **Has Phase C returned PASS? If NO → STOP.** |
 | **Before Phase D.0.6** | **Did D.0.5 produce generated_api_contract.md with all 5 sections including ## Required Files? If NO → STOP → re-run D.0.5.** |
-| **Before Phase D.0.1** | **Did D.0.6 run? Did all new cp_* wrappers pass GREEN tests and flutter analyze = 0? Did ## Wrapper API section get appended to generated_api_contract.md? If ANY is NO → STOP → repair D.0.6 first.** |
+| **Before Phase D.0.1** | **Did D.0.6 run? Did all new *_wrapper.dart pass GREEN tests and flutter analyze = 0? Did ## Wrapper API section get appended to generated_api_contract.md? If ANY is NO → STOP → repair D.0.6 first.** |
 | **Before D.1** | **Did bash verify ALL 5 test file paths exist? (`ls` on domain/, infrastructure/, presentation/, integration_test file, bdd file). If ANY ls fails → STOP — re-run missing writer first. No exceptions.** |
 | **NO-SKIP RULE** | **No agent may skip D.0.1–D.0.5b by claiming "tests can be written after implementation." This is the pattern that caused clinical_history to fail. Violating this rule is a CRITICAL violation.** |
 | Phase D.7 | Did presentation tests run RED? |
@@ -304,8 +304,8 @@ mem_save(
 This is the gate that prevents:
 - Incomplete spec (missing artifacts, empty bdd.feature, missing state variants)
 
-**What Phase-Gate does NOT check** (CpPackage moves to D.10.5 — post-implementation):
-- CpPackage wrappers → audited at D.10.5 after all imports are known
+**What Phase-Gate does NOT check** (Wrapper audit moves to D.10.5 — post-implementation):
+- Wrappers → audited at D.10.5 after all imports are known
 - Test stubs → created at D.0.1–D.0.4 (All Tests First)
 - Infrastructure stubs → created at D.4
 - Barrel files → created at D.10
@@ -319,7 +319,7 @@ This is the gate that prevents:
 
 ## Phase C — Pre-Code Audit (Phase-Gate)
 
-> **Scope:** Phase-Gate is a **Spec-Auditor only**. It verifies the 6 spec files are complete and well-formed. CpPackage wrappers are audited at D.10.5, after navigation is wired. This separation is intentional: wrappers cannot be fully validated until the feature's package usage is known.
+> **Scope:** Phase-Gate is a **Spec-Auditor only**. It verifies the 6 spec files are complete and well-formed. Wrappers are audited at D.10.5, after navigation is wired. This separation is intentional: wrappers cannot be fully validated until the feature's package usage is known.
 
 ### C.1 Delegate to sub-agent
 
@@ -407,13 +407,13 @@ The following sequence is MANDATORY and NON-NEGOTIABLE. No phase may be skipped,
 ```
 D.0    → Context Gathering (read all specs + MD files)
 D.0.5  → Canonical API Extraction (generate spec/generated_api_contract.md)
-D.0.6  → Package Audit + TDD de wrappers cp_*   [MANDATORY — BEFORE feature tests]
+D.0.6  → Package Audit + Wrapper TDD   [MANDATORY — BEFORE feature tests]
            ├─ Detect pub packages needed by the feature (presentation + infra)
            ├─ For each MISSING wrapper:
            │    D.0.6a → pub add <package>
-           │    D.0.6b → Write cp_<package>_test.dart  → RED
-           │    D.0.6c → Write cp_<package>.dart wrapper → GREEN
-           │    D.0.6d → flutter analyze lib/shared/functions/ = 0
+           │    D.0.6b → Write <package>_wrapper_test.dart  → RED
+           │    D.0.6c → Write <package>_wrapper.dart → GREEN
+           │    D.0.6d → flutter analyze lib/core/services/ = 0
            └─ generated_api_contract.md updated with wrapper API surface
 D.0.1  → Domain Test Writer        [MANDATORY — ALL TESTS FIRST]
 D.0.2  → Infrastructure Test Writer [MANDATORY — ALL TESTS FIRST]
@@ -436,7 +436,7 @@ D.8   → Presentation Implementation → GREEN
 D.9   → Integration Test → RED
 D.9.5 → BDD Step Definitions
 D.10  → Barrels + Navigation → GREEN
-D.10.5 → CpPackage-Auditor + DirectImport-Auditor (final verification — no new wrappers should be needed here)
+D.10.5 → Wrapper-Auditor + DirectImport-Auditor (final verification — no new wrappers should be needed here)
 D.10.6 → Integration Test Execution on Device (MANDATORY — no deferral allowed)
 D.11  → Final Verification
 ```
@@ -488,7 +488,7 @@ If missing → re-run extraction task. Do NOT proceed to D.0.6.
 
 ### D.0.6 — Package Audit + Wrapper TDD (MANDATORY before D.0.1)
 
-**Purpose:** Detect every pub package the feature will need (presentation + infrastructure), resolve missing `cp_*` wrappers using strict TDD, and record the wrapper API surface in `generated_api_contract.md` so the feature test writers (D.0.1–D.0.5b) can mock correctly.
+**Purpose:** Detect every pub package the feature will need (presentation + infrastructure), resolve missing `*_wrapper.dart` wrappers using strict TDD, and record the wrapper API surface in `generated_api_contract.md` so the feature test writers (D.0.1–D.0.5b) can mock correctly.
 
 **Why this comes before D.0.1:** Presentation and integration test writers need to know `CustomFunction.flChart.lineChart(data)` — not `LineChart(data)` — to write correct mocks. If the wrapper doesn't exist yet when tests are written, the tests will mock the raw package and become invalid the moment the wrapper is introduced.
 
@@ -501,7 +501,7 @@ task(subagent_type="general", prompt="Detect all pub.dev packages required by fe
 #### D.0.6 Step 2 — Check which wrappers already exist (fully delegated)
 
 ```
-task(subagent_type="general", prompt="For each package in this list: <paste list from Step 1>, check if a cp_* wrapper already exists. For each package, run: ls lib/shared/functions/cp_<package_name>.dart 2>/dev/null && echo 'EXISTS' || echo 'MISSING'. Return: a table with columns Package | Status (EXISTS or MISSING). If ALL are EXISTS, explicitly state 'All wrappers exist — proceed to Step 4 only'.")
+task(subagent_type="general", prompt="For each package in this list: <paste list from Step 1>, check if a wrapper already exists. For each package, run: find lib/core/services/ -name '<package_name>_wrapper.dart' 2>/dev/null && echo 'EXISTS' || echo 'MISSING'. Return: a table with columns Package | Status (EXISTS or MISSING). If ALL are EXISTS, explicitly state 'All wrappers exist — proceed to Step 4 only'.")
 ```
 
 If the Step 2 agent returns "All wrappers exist" → skip to Step 4 (existing wrappers enumeration). No new wrappers needed, but `## Wrapper API` must still document GROUP 2.
@@ -511,49 +511,45 @@ If the Step 2 agent returns "All wrappers exist" → skip to Step 4 (existing wr
 Each wrapper gets its own isolated `task()`. Do NOT bundle multiple packages in one task.
 
 ```
-task(subagent_type="general", prompt="Create cp_<package_name>.dart wrapper for <feature_name> feature using strict TDD. Read SKILL.md at .ai/skills/app-cp-package/SKILL.md. Package: <package_name>. Used for: <what the feature needs it for, e.g. 'displaying charts in the screen', 'picking images from gallery', 'generating PDF reports'>. TDD STEPS — execute in this exact order:
+task(subagent_type="general", prompt="Create <package_name>_wrapper.dart for <feature_name> feature using strict TDD. Read SKILL.md at .ai/skills/app-cp-package/SKILL.md. Package: <package_name>. Used for: <what the feature needs it for, e.g. 'displaying charts in the screen', 'picking images from gallery', 'generating PDF reports'>. TDD STEPS — execute in this exact order:
 
 STEP 1 — pub add:
   Run 'dart pub add <package_name>' directory. Confirm it appears in pubspec.yaml.
 
 STEP 2 — Write wrapper test FIRST (RED):
-  Create test/shared/functions/cp_<package_name>_test.dart.
-  Test only the wrapper's public API surface (the methods CpPackageName exposes).
+  Create test/core/services/<domain>/<package_name>_wrapper_test.dart.
+  Test only the wrapper's public API surface (the methods PackageNameWrapper exposes).
   For UI-only packages: test that the factory method returns a Widget given valid input.
   For service packages: test that the method returns the expected type given a mock input.
   Do NOT test business logic — the wrapper is a thin facade.
-  Run 'flutter test test/shared/functions/cp_<package_name>_test.dart'.
+  Run 'flutter test test/core/services/<domain>/<package_name>_wrapper_test.dart'.
   EXPECTED: compile error or test failure (wrapper does not exist yet) — this is RED. Confirm RED before proceeding.
 
 STEP 3 — Write the wrapper (GREEN):
-  Create lib/shared/functions/cp_<package_name>.dart as 'part of _function.lib.dart'.
+  Create lib/core/services/<domain>/<package_name>_wrapper.dart (standalone file).
+  Pattern reference: see `.ai/skills/app-agent-cp-package/SKILL.md`.
   Rules:
     - Thin facade only — expose the package's public API with NO business logic.
     - NEVER invent types. Only use types from the package's exported API.
     - NEVER add feature-specific logic to the wrapper (no data building, color mapping, etc.).
-    - For UI-only packages (widget factories): expose methods accepting the package's own data types and returning Widget.
+    - For UI-only packages (widget factories): expose methods accepting simple types and returning Widget.
     - For service packages (async operations): expose methods that delegate directly to the package.
-  Add import and part declaration to lib/shared/functions/_function.lib.dart.
-  Add 'static final CpPackageName <camelName> = CpPackageName();' to lib/shared/functions/_function.dart.
 
 STEP 4 — GREEN verification:
-  Run 'flutter test test/shared/functions/cp_<package_name>_test.dart'.
+  Run 'flutter test test/core/services/<domain>/<package_name>_wrapper_test.dart'.
   MUST PASS GREEN.
-  Run 'flutter analyze lib/shared/functions/'.
+  Run 'flutter analyze lib/core/services/'.
   MUST return 0 issues. Fix any issues before returning.
 
 STEP 5 — Apply SOLID interface pattern to the wrapper:
-  Read .ai/skills/app-class-to-solid-min/SKILL.md and follow it exactly for cp_<package_name>.dart.
+  Read .ai/skills/app-class-to-solid-min/SKILL.md and follow it exactly for <package_name>_wrapper.dart.
   Concretely:
-    a) In cp_<package_name>.dart, add 'abstract class ICp<PkgName>' above 'class Cp<PkgName>'.
+    a) In <package_name>_wrapper.dart, add 'abstract interface class I<PkgName>Wrapper' above 'class <PkgName>Wrapper'.
        The interface declares ONLY the public methods the wrapper exposes — no bodies.
-       Cp<PkgName> adds 'implements ICp<PkgName>' and '@override' on every method.
-    b) In _function.dart, change 'static final Cp<PkgName> <camelName> = Cp<PkgName>();'
-       to 'static final ICp<PkgName> <camelName> = Cp<PkgName>();'
-       (type is now the interface, not the concrete class)
-    c) Run 'flutter analyze lib/shared/functions/'. MUST return 0 issues.
+       <PkgName>Wrapper adds 'implements I<PkgName>Wrapper' and '@override' on every method.
+    c) Run 'flutter analyze lib/core/services/'. MUST return 0 issues.
        Fix any issues before returning.
-  Do NOT create a Riverpod provider for pure utility/UI packages — they are pure utility wrappers accessed via CustomFunction.<camelName>. Only injectable services (dio, token, sharePlus) get a provider (see MD/APP_PACKAGE_WRAPPER.md access categories).
+  Do NOT create a Riverpod provider for pure utility/UI packages — they are pure utility wrappers accessed via CustomFunction.<camelName>. Only injectable services (dio, token) get a provider (see MD/APP_PACKAGE_WRAPPER.md access categories).
 
 Return: (a) test file path, (b) wrapper file path, (c) test output GREEN, (d) analyze output 0 issues, (e) the exact method signatures exposed by the wrapper (for D.0.1–D.0.5b to use in mocks).")
 ```
@@ -562,28 +558,28 @@ Wait for the task to return before launching the next package's task. Each wrapp
 
 #### D.0.6 Step 4 — Update generated_api_contract.md with wrapper API surface (new + existing)
 
-After ALL new wrappers are GREEN, launch one task to append a `## Wrapper API` section. This section MUST document BOTH new wrappers created in D.0.6 AND existing wrappers in `shared/functions/` that the feature uses (e.g. `ICpDio`, `ITokenService`):
+After ALL new wrappers are GREEN, launch one task to append a `## Wrapper API` section. This section MUST document BOTH new wrappers created in D.0.6 AND existing wrappers in `core/services/` that the feature uses (e.g. `IDioWrapper`, `ICredentialStore`):
 
 ```
 task(subagent_type="general", prompt="Append a '## Wrapper API' section to lib/features/<feature_name>/spec/generated_api_contract.md. This section must include TWO groups:
 
-GROUP 1 — New wrappers created in D.0.6: For each cp_* wrapper just created, document: wrapper class name, interface name (I<Name>), CustomFunction accessor (e.g. CustomFunction.flChart), and each public method signature with parameter and return types.
+GROUP 1 — New wrappers created in D.0.6: For each *_wrapper.dart just created, document: wrapper class name, interface name (I<Name>), provider accessor, and each public method signature with parameter and return types.
 
-GROUP 2 — Existing wrappers used by this feature: Read lib/shared/functions/ and the spec files to identify which existing wrappers the feature needs (e.g. ICpDio for HTTP calls, ITokenService for auth, ICpSharePlus for sharing). For each, document the same fields (class, interface, accessor, method signatures).
+GROUP 2 — Existing wrappers used by this feature: Read lib/core/services/ and the spec files to identify which existing wrappers the feature needs (e.g. IDioWrapper for HTTP calls, ICredentialStore for auth, ISharePlusWrapper for sharing). For each, document the same fields (class, interface, accessor, method signatures).
 
 This combined section will be used by ALL test writers (D.0.1–D.0.5b) to write correct mocks. Test writers must mock interfaces from this section — never raw package classes.
 
 Example entry format (use for EVERY wrapper, whatever the package):
-### CustomFunction.<camelName> (Cp<PkgName> / ICp<PkgName>)
+### <WrapperName> — accessed via ref.watch(<name>Provider)
 - <methodName>(<params>) → <returnType>
 
 Concrete examples:
-### CustomFunction.flChart (CpFlChart / IFlChart)
+### FlChartWrapper — accessed via ref.watch(flChartProvider)
 - lineChart({required List<double> values, List<String>? labels, Color? lineColor, Color? fillColor}) → Widget
 - pieChart({required Map<String, double> segments, List<Color>? colors}) → Widget
-### CustomFunction.dio (CpDio / ICpDio)
+### DioWrapper (IDioWrapper) — accessed via ref.watch(httpServiceProvider)
 - get(String path, {Map<String, String>? headers}) → Future<dynamic>
-### CustomFunction.imagePicker (CpImagePicker / ICpImagePicker)
+### ImagePickerWrapper — accessed via ref.watch(imagePickerProvider)
 - pickImage(ImageSource source) → Future<XFile?>
 
 Return: confirmation that ## Wrapper API section is present and lists both new and existing wrappers used by <feature_name>.")
@@ -599,19 +595,19 @@ If missing → re-run the wrapper API documentation task.
 
 **Step 2 — Wrapper tests (delegate to sub-agent):**
 ```
-task(subagent_type="general", prompt="Run wrapper tests to verify D.0.6 is complete for feature <feature_name>. Execute: run 'flutter test test/shared/functions/' and report the result. Return: PASS (0 failures) or FAIL with the list of failing tests.")
+task(subagent_type="general", prompt="Run wrapper tests to verify D.0.6 is complete for feature <feature_name>. Execute: run 'flutter test test/core/services/' and report the result. Return: PASS (0 failures) or FAIL with the list of failing tests.")
 ```
 If FAIL → re-run the wrapper TDD task for the failing package.
 
 **Step 3 — Analyze (delegate to sub-agent):**
 ```
-task(subagent_type="general", prompt="Run flutter analyze to verify D.0.6 wrappers are clean for feature <feature_name>. Execute: run 'flutter analyze lib/shared/functions/ --fatal-infos' and report the result. Return: PASS (0 issues) or FAIL with issue list.")
+task(subagent_type="general", prompt="Run flutter analyze to verify D.0.6 wrappers are clean for feature <feature_name>. Execute: run 'flutter analyze lib/core/services/ --fatal-infos' and report the result. Return: PASS (0 issues) or FAIL with issue list.")
 ```
-If FAIL → launch fix-analyzer-issues sub-agent on `lib/shared/functions/`.
+If FAIL → launch fix-analyzer-issues sub-agent on `lib/core/services/`.
 
 All 3 steps must pass. Do NOT proceed to D.0.1 until all pass.
 
-> **⛔ HARD RULE: If D.0.6 fails after 2 repair attempts → STOP ALL WORK → report to user. A broken wrapper in shared/functions/ will corrupt ALL subsequent phases.**
+> **⛔ HARD RULE: If D.0.6 fails after 2 repair attempts → STOP ALL WORK → report to user. A broken wrapper in core/services/ will corrupt ALL subsequent phases.**
 
 ---
 
@@ -644,7 +640,7 @@ Wait for completion before launching D.0.3.
 ### D.0.3 — Presentation Test Writer (MANDATORY before D.1)
 
 ```
-task(subagent_type="general", prompt="Run app-agent-presentation-test-writer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-presentation-test-writer/SKILL.md and follow it exactly. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md first — your primary source for state variants, provider names, AND the '## Wrapper API' section that lists every cp_* wrapper the feature uses. Also read domain.md and tests.md. CRITICAL: No notifier, state, or screen files exist yet — do NOT run tests (they will fail to compile). WRAPPER RULE: For ANY external package used by the feature, mock its wrapper INTERFACE (ICpXxx from ## Wrapper API) — NEVER the raw package class directly. This rule applies to ALL packages without exception (charts, PDF, camera, maps, audio, share, HTTP, etc.). Write test files to test/features/<feature_name>/presentation/ (notifier tests, screen tests, widget tests as defined in tests.md). Return: list of test files created with their full paths.")
+task(subagent_type="general", prompt="Run app-agent-presentation-test-writer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-presentation-test-writer/SKILL.md and follow it exactly. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md first — your primary source for state variants, provider names, AND the '## Wrapper API' section that lists every wrapper interface the feature uses. Also read domain.md and tests.md. CRITICAL: No notifier, state, or screen files exist yet — do NOT run tests (they will fail to compile). WRAPPER RULE: For ANY external package used by the feature, mock its wrapper INTERFACE (I<Xxx>Wrapper from ## Wrapper API) — NEVER the raw package class directly. This rule applies to ALL packages without exception (charts, PDF, camera, maps, audio, share, HTTP, etc.). Write test files to test/features/<feature_name>/presentation/ (notifier tests, screen tests, widget tests as defined in tests.md). Return: list of test files created with their full paths.")
 ```
 
 Wait for completion before launching D.0.4.
@@ -708,7 +704,7 @@ task(subagent_type="general", prompt="Verify spec-dev Phase D.2 for feature <fea
 ### D.3 — Domain Implementation → GREEN
 
 ```
-task(subagent_type="general", prompt="Run spec-dev Phase D.3 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.3 only. Also read MD/APP_DARTZ.md and MD/APP_EXCEPTION.md. Spec folder: lib/features/<feature_name>/spec/. Actions: (1) Implement <feature_name>_usecase.dart — replace UnimplementedError with real logic using Either from fpdart (CustomFunction.fpdart). (2) Run 'flutter test test/features/<feature_name>/domain/' — tests MUST ALL PASS GREEN. Return: implemented file + test output showing GREEN.")
+task(subagent_type="general", prompt="Run spec-dev Phase D.3 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.3 only. Also read MD/APP_DARTZ.md and MD/APP_EXCEPTION.md. Spec folder: lib/features/<feature_name>/spec/. Actions: (1) Implement <feature_name>_usecase.dart — replace UnimplementedError with real logic using Result<T> (guard from shared/error/result_guard.dart). (2) Run 'flutter test test/features/<feature_name>/domain/' — tests MUST ALL PASS GREEN. Return: implemented file + test output showing GREEN.")
 ```
 
 **Supervisor check after D.3:**
@@ -730,12 +726,12 @@ task(subagent_type="general", prompt="Verify spec-dev Phase D.4 for feature <fea
 ### D.5 — Infrastructure Implementation → GREEN
 
 ```
-task(subagent_type="general", prompt="Run spec-dev Phase D.5 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.5 only. Also read MD/APP_DARTZ.md, MD/APP_PACKAGE_WRAPPER.md, MD/APP_PROVIDERS.md, MD/APP_EXCEPTION.md. Spec folder: lib/features/<feature_name>/spec/. Also read lib/features/[feature_name]/infrastructure/ as a reference implementation. Actions: (1) Implement DatasourceImpl: mock mode via CustomConfigs.vars.useMockRepository, real HTTP via ref.watch(CustomProviders.dio). (2) Implement Mapper: delegates to entity.fromJson. (3) Implement RepositoryImpl: uses CustomFunction.fpdart.guard() — NEVER raw try/catch. CRITICAL: CustomFunction.dio NEVER used directly — always via ref.watch(CustomProviders.dio). (4) Run 'flutter test test/features/<feature_name>/infrastructure/' — MUST ALL PASS GREEN. Return: implemented files + test output showing GREEN.")
+task(subagent_type="general", prompt="Run spec-dev Phase D.5 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.5 only. Also read MD/APP_DARTZ.md, MD/APP_PACKAGE_WRAPPER.md, MD/APP_PROVIDERS.md, MD/APP_EXCEPTION.md. Spec folder: lib/features/<feature_name>/spec/. Also read lib/features/[feature_name]/infrastructure/ as a reference implementation. Actions: (1) Implement DatasourceImpl: pure HTTP (no mock conditional inside datasource). Create FakeDatasource at infrastructure/datasources/fake_*_datasource.dart if mock data is needed. The provider returns DatasourceImpl directly (useMock removed): @riverpod IDatasource datasource(Ref ref) => DatasourceImpl(dio: ref.watch(httpServiceProvider)). For testing, override the datasourceProvider with FakeDatasource. (2) Implement Mapper: uses Dto.fromJson + Mapper.fromDto() with named constructors (VGV-standard — NEVER Entity.fromJson). (3) Implement RepositoryImpl: uses guard() from shared/error/result_guard.dart — NEVER raw try/catch. CRITICAL: httpServiceProvider NEVER used as CustomFunction.dio directly — always via ref.watch(httpServiceProvider). (4) Run 'flutter test test/features/<feature_name>/infrastructure/' — MUST ALL PASS GREEN. Return: implemented files + test output showing GREEN.")
 ```
 
 **Supervisor check after D.5:**
 ```
-task(subagent_type="general", prompt="Verify spec-dev Phase D.5 for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) No raw try/catch in repository. (2) No direct CustomFunction.dio usage (must be CustomProviders.dio). (3) Infra tests GREEN. Return: PASS or VIOLATION.")
+task(subagent_type="general", prompt="Verify spec-dev Phase D.5 for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) No raw try/catch in repository. (2) Injectable services use ref.watch(providerName) — never direct CustomFunction or static locator. (3) Infra tests GREEN. Return: PASS or VIOLATION.")
 ```
 
 ### D.6 — State + Notifier + Providers + codegen
@@ -763,12 +759,12 @@ task(subagent_type="general", prompt="Verify spec-dev Phase D.7 for feature <fea
 ### D.8 — Presentation Implementation → GREEN
 
 ```
-task(subagent_type="general", prompt="Run spec-dev Phase D.8 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.8 only. Also read MD/APP_STATE_MANAGMENT.md, MD/APP_PROVIDERS.md, MD/APP_EXCEPTION.md, MD/APP_PACKAGE_WRAPPER.md. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md — specifically the '## Wrapper API' section which lists all cp_* wrappers created at D.0.6 and their method signatures. Also read lib/features/[feature_name]/presentation/ as reference. WRAPPER RULE: All pub packages must be used via CustomFunction.<wrapper> (from ## Wrapper API in generated_api_contract.md) — NEVER import the raw package directly in feature files. Actions: (1) Implement notifier load(): state=Loading → call usecase → on Right: state=Loaded(data) → on Left: CustomFunction.failure.launch(failure) then state=Failure(...). (2) Implement screen as ConsumerStatefulWidget: ref.watch for state, ref.listen for failure → show snackbar + ref.read(notifier.notifier).reset(). (3) Implement feature widgets using wrapper API (e.g. CustomFunction.flChart.lineChart(data)). (4) Run 'dart run build_runner build --delete-conflicting-outputs'. (5) Run 'flutter test test/features/<feature_name>/presentation/' — MUST ALL PASS GREEN. CRITICAL RULES: CustomFunction.failure.launch() NEVER failure.message directly. ref.listen + snackbar + reset() are MANDATORY. Feature-specific logic (ChartDataBuilder, color mapping, etc.) stays in the widget/notifier — NEVER in cp_* wrapper. Return: files written + test output showing GREEN.")
+task(subagent_type="general", prompt="Run spec-dev Phase D.8 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.8 only. Also read MD/APP_STATE_MANAGMENT.md, MD/APP_PROVIDERS.md, MD/APP_EXCEPTION.md, MD/APP_PACKAGE_WRAPPER.md. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md — specifically the '## Wrapper API' section which lists all wrappers created at D.0.6 and their method signatures. Also read lib/features/[feature_name]/presentation/ as reference. WRAPPER RULE: All pub packages must be used via ref.watch(<wrapper>Provider) or via the wrapper's own provider — NEVER import the raw package directly in feature files. For goRouter, use ref.read(goRouterProvider).go(...). Actions: (1) Implement notifier load(): state=Loading → call usecase → on Right: state=Loaded(data) → on Left: state = Failure(error) (pass AppError to state). (2) Implement screen as ConsumerStatefulWidget: ref.watch for state, ref.listen for failure → localizeError(error, AppLocalizations.of(context)!) to get message → show snackbar + ref.read(notifier.notifier).reset(). (3) Implement feature widgets using wrapper providers (e.g. ref.watch(flChartProvider) or a chart notifier). (4) Run 'dart run build_runner build --delete-conflicting-outputs'. (5) Run 'flutter test test/features/<feature_name>/presentation/' — MUST ALL PASS GREEN. CRITICAL RULES: localizeError() at UI layer, NEVER failure.message directly. ref.listen + snackbar + reset() are MANDATORY. Feature-specific logic (ChartDataBuilder, color mapping, etc.) stays in the widget/notifier — NEVER in a wrapper. Return: files written + test output showing GREEN.")
 ```
 
 **Supervisor check after D.8:**
 ```
-task(subagent_type="general", prompt="Verify spec-dev Phase D.8 for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) failure.launch() present (not failure.message). (2) ref.listen for failure state present. (3) reset() called after failure. (4) No direct package imports in presentation files — all pub packages accessed via CustomFunction.<wrapper>. (5) Presentation tests GREEN. Return: PASS or VIOLATION with details.")
+task(subagent_type="general", prompt="Verify spec-dev Phase D.8 for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) Notifier passes AppError to state via Failure(error) (not failure.message). (2) ref.listen for failure state present with localizeError(). (3) reset() called after failure. (4) No direct package imports in presentation files — all packages accessed via ref.watch(<wrapper>Provider) or their own provider. (5) Presentation tests GREEN. Return: PASS or VIOLATION with details.")
 ```
 
 ### D.9 — Integration Test → RED
@@ -813,7 +809,7 @@ Wait for D.10a to return PASS before launching D.10b.
 **D.10b — Navigation wiring:**
 
 ```
-task(subagent_type="general", prompt="Run app-agent-nav-wirer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-nav-wirer/SKILL.md and execute fully. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Also read tasks.md to identify the parent screen and navigation trigger. Actions: (1) Add URI to lib/shared/configs/uries.dart. (2) Add route name to lib/shared/functions/cp_go_router.dart. (3) Add GoRoute to lib/shared/configs/app_routes.dart. (4) Add screen import to lib/shared/configs/_configs.lib.dart. (5) Add navigation trigger to parent screen if required by tasks.md. (6) Run 'flutter analyze' — MUST return 0 issues GREEN. Return: list of files modified + analyze output showing 0 issues.")
+task(subagent_type="general", prompt="Run app-agent-nav-wirer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-nav-wirer/SKILL.md and execute fully. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Also read tasks.md to identify the parent screen and navigation trigger. Actions: (1) Add AppRoute entry to lib/app/router/app_route.dart. (2) Add GoRoute + screen import to lib/app/router/app_router.dart. (3) Add navigation trigger to parent screen if required by tasks.md. (4) Run 'flutter analyze' — MUST return 0 issues GREEN. Return: list of files modified + analyze output showing 0 issues.")
 
 ```
 **Supervisor check after D.10a (barrels):**
@@ -825,12 +821,12 @@ If VIOLATION → re-run D.10a task. Do NOT proceed to D.10b until supervisor ret
 
 **Supervisor check after D.10b (navigation):**
 ```
-task(subagent_type="general", prompt="Verify spec-dev Phase D.10b (navigation wiring) for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) URI added to uries.dart. (2) Route name added to cp_go_router.dart. (3) GoRoute added to app_routes.dart. (4) Screen import added to _configs.lib.dart. (5) flutter analyze returns 0 issues. Return: PASS or VIOLATION with details.")
+task(subagent_type="general", prompt="Verify spec-dev Phase D.10b (navigation wiring) for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) URI added to uries.dart. (2) AppRoute enum entry added to app_route.dart. (3) GoRoute added to app_router.dart. (4) Screen import added to _configs.lib.dart. (5) flutter analyze returns 0 issues. Return: PASS or VIOLATION with details.")
 ```
 
 If VIOLATION → re-run D.10b task. Do NOT proceed to D.10.5 until supervisor returns PASS.
 
-### D.10.5 — CpPackage-Auditor + DirectImport-Auditor (post-navigation)
+### D.10.5 — Wrapper-Auditor + DirectImport-Auditor (post-navigation)
 
 **Purpose:** Now that the full feature is implemented, audit all package usage. This is intentionally post-implementation — wrappers cannot be validated until actual imports are known.
 
@@ -840,7 +836,7 @@ If VIOLATION → re-run D.10b task. Do NOT proceed to D.10.5 until supervisor re
 grep -rn "import 'package:" lib/features/<name>/ \
   | grep -v "package:flutter" \
   | grep -v "package:flutter_riverpod" \
-  | grep -v "package:fpdart" \
+  | grep -v "package:clean_architecture_sdd_harness" \
   | grep -v "package:freezed_annotation" \
   | grep -v "package:json_annotation" \
   | grep -v "package:riverpod_annotation" \
@@ -848,17 +844,17 @@ grep -rn "import 'package:" lib/features/<name>/ \
   | grep -v "package:clean_architecture_sdd_harness/"
 ```
 
-If any direct package import is found → launch CpPackage repair for that package.
+If any direct package import is found → create a wrapper for that package.
 
-**Step 2 — CpPackage repair (on FAIL):**
+**Step 2 — Wrapper repair (on FAIL):**
 
 ```
-task(subagent_type="general", prompt="Create cp_<package>.dart wrapper. Read SKILL.md at .ai/skills/app-cp-package/SKILL.md. Package: <name>. Feature: <feature_name>. MANDATORY: thin facade only — no business logic, no widget-building, no invented types. Return ONLY when flutter analyze lib/shared/functions/ outputs 0 issues.")
+task(subagent_type="general", prompt="Create <package>_wrapper.dart. Read SKILL.md at .ai/skills/app-cp-package/SKILL.md. Package: <name>. Feature: <feature_name>. MANDATORY: thin facade only — no business logic, no widget-building, no invented types. Return ONLY when flutter analyze lib/core/services/ outputs 0 issues.")
 ```
 
 **Step 3 — Re-run DirectImport-Auditor** after each repair. Repeat until 0 direct package imports remain.
 
-**Supervisor check:** grep returns 0 direct package imports. All packages used via `CustomFunction.<wrapper>` or `ref.watch(CustomProviders.<x>)`.
+**Supervisor check:** grep returns 0 direct package imports. All packages used via `ref.watch(<x>Provider)`.
 
 ### D.10.6 — Integration Test Execution on Device (MANDATORY)
 
@@ -994,10 +990,11 @@ mem_session_summary({
 
 | Rule | Correct | Wrong |
 |------|---------|-------|
-| Package import | `CustomFunction.<wrapper>` | direct `package:fl_chart/...` |
-| Injectable services | `ref.watch(CustomProviders.dio)` | `CustomFunction.dio` directly |
-| Repository error | `CustomFunction.fpdart.guard()` | raw try/catch |
-| Notifier error | `CustomFunction.failure.launch()` | `failure.message` directly |
+| Package import | `ref.watch(<name>Provider)` or wrapper's provider | direct `package:fl_chart/...` |
+| Injectable services | `ref.watch(httpServiceProvider)` | direct `CustomFunction` / static locator |
+| Repository error | `guard()` from `shared/error/result_guard.dart` | raw try/catch |
+| Notifier error | `state = State.failure(error)` passes `AppError`; UI uses `localizeError()` | `failure.message` directly |
+| GoRouter | `ref.read(goRouterProvider).go(...)` | direct `package:go_router/...` |
 | Freezed entity | `@freezed abstract class` + `const Foo._()` | missing `._()` |
 | Freezed state | `@freezed sealed class` (NO `._()`) | sealed state with `._()` |
 | Entity barrel | import entities directly (no barrel for @freezed) | `library`+`part` barrel |
@@ -1020,7 +1017,7 @@ mem_session_summary({
 | 7 | Integration test written and analyze-only RED before nav wiring (D.9) | app-agent-spec-dev-supervisor |
 | 8 | BDD tests pass (gherkart) | flutter test |
 | 9 | D.10.5 DirectImport-Auditor returns 0 direct package imports | Orchestrator grep |
-| 10 | cp_<package> wrapper for every pub package used | CpPackage-Auditor D.10.5 |
+| 10 | <package>_wrapper.dart for every pub package used | Wrapper-Auditor D.10.5 |
 | 11 | D.10.6 Integration test EXECUTED on device — ALL GREEN (no deferral) | bash `flutter test ... -d <device>` |
 | 12 | flutter analyze = 0 issues | flutter analyze |
 | 13 | flutter test = 0 failures | flutter test |
@@ -1036,7 +1033,7 @@ mem_session_summary({
 | Agent | Skill file | Phase | Returns |
 |-------|-----------|-------|---------|
 | app-agent-spec-definer | `.ai/skills/app-agent-spec-definer/SKILL.md` | B | 6 spec files |
-| app-agent-phase-gate | `.ai/skills/app-agent-phase-gate/SKILL.md` | C | PASS / FAIL / BLOCKED (Spec-Auditor only — CpPackage is D.10.5) |
+| app-agent-phase-gate | `.ai/skills/app-agent-phase-gate/SKILL.md` | C | PASS / FAIL / BLOCKED (Spec-Auditor only — Wrapper audit is D.10.5) |
 | **app-agent-api-extractor** | **`.ai/skills/app-agent-api-extractor/SKILL.md`** | **D.0.5** | **generated_api_contract.md with 6 sections** |
 | app-agent-domain-test-writer | `.ai/skills/app-agent-domain-test-writer/SKILL.md` | D.0.1 (All Tests First) | Domain test stubs |
 | app-agent-infrastructure-test-writer | `.ai/skills/app-agent-infrastructure-test-writer/SKILL.md` | D.0.2 (All Tests First) | Infrastructure test stubs |
@@ -1049,7 +1046,7 @@ mem_session_summary({
 | app-agent-fix-tests | `.ai/skills/app-agent-fix-tests/SKILL.md` | On test failure | Fixed tests |
 | app-agent-update-md | `.ai/skills/app-agent-update-md/SKILL.md` | F | Updated MD files |
 | *(inline grep)* | D.10.5 DirectImport-Auditor | D.10.5 | 0 direct package imports |
-| app-agent-cp-package | `.ai/skills/app-agent-cp-package/SKILL.md` | D.0.6 + D.10.5 repair | cp_<pkg>.dart + analyze clean |
+| app-agent-cp-package | `.ai/skills/app-agent-cp-package/SKILL.md` | D.0.6 + D.10.5 repair | <pkg>_wrapper.dart + analyze clean |
 | *(task delegate)* | Integration test execution on device | D.10.6 | ALL GREEN or BLOCKED |
 
 
@@ -1070,7 +1067,7 @@ The corrected pattern (vaccines, lab_results): every production file has at leas
 grep -rn "import 'package:" lib/features/<name>/ \
   | grep -v "package:flutter" \
   | grep -v "package:flutter_riverpod" \
-  | grep -v "package:fpdart" \
+  | grep -v "package:clean_architecture_sdd_harness" \
   | grep -v "package:freezed_annotation" \
   | grep -v "package:json_annotation" \
   | grep -v "package:riverpod_annotation" \
@@ -1090,8 +1087,8 @@ ls integration_test/<name>_integration_test.dart
 grep -rn "throw UnimplementedError" lib/features/<name>/
 
 # 5. Navigation wired
-grep "<name>" lib/shared/configs/app_routes.dart
-grep "<name>" lib/shared/configs/uries.dart
+grep "<name>" lib/app/router/app_router.dart
+grep "<name>" lib/app/router/app_route.dart
 
 # 6. Analyze clean
 # Run commands

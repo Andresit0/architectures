@@ -1,13 +1,13 @@
 ---
 name: app-agent-cp-package
-description: Creates a cp_<package>.dart wrapper in lib/shared/functions/ for a new pub package. Invoked by Spec-Local-Orchestrator Phase C repair when CpPackage audit fails. Never call directly — use via orchestrator task().
+description: Creates a <package>_wrapper.dart wrapper in lib/core/services/<domain>/ for a new pub package. Invoked by Spec-Local-Orchestrator when a missing wrapper is detected. Never call directly — use via orchestrator task().
 ---
 
-# App Agent: CP Package Wrapper Creator
+# App Agent: Package Wrapper Creator
 
 ## Purpose
 
-Sub-agent delegated by the Spec-Local-Orchestrator when Phase-Gate detects a missing `cp_<package>.dart` wrapper. The orchestrator MUST NOT create wrappers inline — it delegates via `task()` to this agent.
+Sub-agent delegated by the Spec-Local-Orchestrator when a missing `<package>_wrapper.dart` is detected. The orchestrator MUST NOT create wrappers inline — it delegates via `task()` to this agent.
 
 ## Input
 
@@ -18,18 +18,17 @@ The orchestrator passes:
 
 ## Rules (non-negotiable)
 
-1. **NEVER** add `import 'package:<pkg>/...'` inside `cp_<pkg>.dart`. The `part of` directive means the wrapper shares the scope of `_function.lib.dart` — the import goes there, not in the part file.
+1. **NEVER** add `import 'package:<pkg>/...'` inside `<pkg>_wrapper.dart`. The wrapper is the SINGLE file that may import the package — no other file in the project imports it directly.
 2. **Default values in constructors MUST be `const`** when the type supports it (e.g. `const Color(0xFF...)`, `const EdgeInsets.all(0)`).
-3. **Run `flutter analyze lib/shared/functions/`** before returning. Zero issues required. **If analyze fails, fix all issues before proceeding — NEVER return with analyze errors.**
+3. **Run `flutter analyze lib/core/services/`** before returning. Zero issues required. **If analyze fails, fix all issues before proceeding — NEVER return with analyze errors.**
 4. **STOP** if the wrapper already exists — do not overwrite. Report back to the orchestrator.
 5. Apply SOLID interface pattern — **delegate to `app-class-to-solid-min`**:
-   Read `.ai/skills/app-class-to-solid-min/SKILL.md` and follow it exactly for `cp_<package_name>.dart`.
+   Read `.ai/skills/app-class-to-solid-min/SKILL.md` and follow it exactly for `<package_name>_wrapper.dart`.
    Concretely (sourced from that SKILL.md):
-   a) In `cp_<pkg>.dart`, add `abstract class ICp<PkgName>` ABOVE `class Cp<PkgName>`. The interface declares only the public method signatures — no bodies.
-   b) Add `implements ICp<PkgName>` to `Cp<PkgName>` and `@override` on every method.
-   c) In `_function.dart`, change the static field type from `Cp<PkgName>` to `ICp<PkgName>`.
-   d) Run `flutter analyze lib/shared/functions/` → 0 issues required before returning. Fix any issues before proceeding.
-   Do NOT create a Riverpod provider for UI-only / pure-utility wrappers (fl_chart, lottie, logger, etc.). Only injectable services (dio, token, sharePlus) get a provider — check `MD/APP_PACKAGE_WRAPPER.md`.
+   a) In `<pkg>_wrapper.dart`, add `abstract interface class I<PkgName>Wrapper` ABOVE `class <PkgName>Wrapper`. The interface declares only the public method signatures — no bodies.
+   b) Add `implements I<PkgName>Wrapper` to `<PkgName>Wrapper` and `@override` on every method.
+   d) Run `flutter analyze lib/core/services/` → 0 issues required before returning. Fix any issues before proceeding.
+   Do NOT create a Riverpod provider for UI-only / pure-utility wrappers (fl_chart, lottie, logger, etc.). Only injectable services (dio, token) get a provider — check `MD/APP_PACKAGE_WRAPPER.md`.
 6. **THE WRAPPER IS A THIN FACADE — NOT BUSINESS LOGIC.** The wrapper must only re-expose the package's own public API (types, constructors, methods). It MUST NOT contain any domain logic, widget-building code, chart configuration, layout, styling, or data transformation. All of that belongs in the feature's presentation layer (widgets). If you find yourself writing `LineChart(...)`, `HorizontalLine(...)`, or any feature-specific rendering code inside the wrapper, you are violating this rule. Stop and delete that code.
 7. **NEVER invent types.** Only use types that actually exist in the package. Before writing any type name, verify it exists in the package's exported API. Common failure mode: inventing `ChartDataPoint`, `LineChartBarSpot` as a constructor method, etc.
 
@@ -39,13 +38,13 @@ The orchestrator passes:
 
 ### Step 1 — Guard: wrapper already exists?
 
-Check `lib/shared/functions/cp_<package>.dart`.
+Check for `<package>_wrapper.dart` in the appropriate domain folder.
 
 ```
-glob: lib/shared/functions/cp_<package>.dart
+bash: find lib/core/services/ -name "<package>_wrapper.dart" 2>/dev/null
 ```
 
-- **EXISTS** → Stop. Return: `ALREADY_EXISTS: cp_<package>.dart found at <path>. No changes made.`
+- **EXISTS** → Stop. Return: `ALREADY_EXISTS: <package>_wrapper.dart found at <path>. No changes made.`
 - **MISSING** → Continue to Step 2.
 
 ---
@@ -69,7 +68,7 @@ Verify exit code 0. If it fails, abort and report the error to the orchestrator.
 
 ---
 
-### Step 4 — Create cp_<package>.dart
+### Step 4 — Create <package>_wrapper.dart
 
 #### What goes in the wrapper (STRICT)
 
@@ -91,21 +90,18 @@ The wrapper is a **thin facade** that re-exposes the package's own public API.
 
 #### Template
 
-Create `lib/shared/functions/cp_<package>.dart`:
+Create `<package>_wrapper.dart` in the appropriate `lib/core/services/<domain>/` folder:
 
 ```dart
-part of '_function.lib.dart';
-
-abstract class ICp<Pkg> {
+abstract interface class I<PkgName>Wrapper {
   // Only methods the feature actually calls.
   // Each method delegates to the package — no logic here.
   // Example for url_launcher:
   //   Future<void> launch(String url);
 }
 
-class Cp<Pkg> implements ICp<Pkg> {
+class <PkgName>Wrapper implements I<PkgName>Wrapper {
   // One-liner implementations that call the real package API.
-  // Do NOT import the package here — it's already in _function.lib.dart.
   // Example:
   //   @override
   //   Future<void> launch(String url) => launchUrl(Uri.parse(url));
@@ -113,28 +109,21 @@ class Cp<Pkg> implements ICp<Pkg> {
 ```
 
 **Naming rules:**
-- File: `cp_<package_name>.dart` (snake_case, matching pub package name)
-- Abstract class: `ICp` + PascalCase of package (e.g. `ICpUrlLauncher`)
-- Concrete class: `Cp` + PascalCase (e.g. `CpUrlLauncher`)
+- File: `<package_name>_wrapper.dart` (snake_case, matching pub package name)
+- Abstract class: `I` + PascalCase of package + `Wrapper` (e.g. `IUrlLauncherWrapper`)
+- Concrete class: PascalCase of package + `Wrapper` (e.g. `UrlLauncherWrapper`)
 
-**Pattern reference** (`cp_go_router.dart`):
+**Pattern reference** (example for url_launcher as `lib/core/services/device/url_launcher_wrapper.dart`):
 ```dart
-part of '_function.lib.dart';
-
-abstract class ICpGoRouter {
-  void go(String location, {Object? extra});
-  void push(String location, {Object? extra});
+abstract interface class IUrlLauncherWrapper {
+  Future<void> launch(String url);
 }
 
-class CpGoRouter implements ICpGoRouter {
-  final GoRouter _router;
-  CpGoRouter(this._router);
-
+class UrlLauncherWrapper implements IUrlLauncherWrapper {
   @override
-  void go(String location, {Object? extra}) => _router.go(location, extra: extra);
-
-  @override
-  void push(String location, {Object? extra}) => _router.push(location, extra: extra);
+  Future<void> launch(String url) async {
+    await launchUrl(Uri.parse(url));
+  }
 }
 ```
 
@@ -146,7 +135,7 @@ The wrapper must accept only simple types (`double`, `int`, `String`, `bool`, `C
 
 ```dart
 // CORRECT — wrapper is self-contained, feature never imports the package
-abstract class ICpFlChart {
+abstract interface class IFlChartWrapper {
   Widget lineChart({
     required List<double> values,
     List<String>? labels,
@@ -155,7 +144,7 @@ abstract class ICpFlChart {
   });
 }
 
-class CpFlChart implements ICpFlChart {
+class FlChartWrapper implements IFlChartWrapper {
   @override
   Widget lineChart({
     required List<double> values,
@@ -176,7 +165,7 @@ class CpFlChart implements ICpFlChart {
 }
 
 // WRONG — leaks package type into feature, forcing direct imports
-class CpFlChart implements ICpFlChart {
+class FlChartWrapper implements IFlChartWrapper {
   @override
   Widget lineChart(LineChartData data) => LineChart(data); // ← Feature must construct LineChartData → imports fl_chart
 }
@@ -193,52 +182,21 @@ class CpFlChart implements ICpFlChart {
 
 ---
 
-### Step 5 — Register import in _function.lib.dart
+### Step 5 — Verify wrapper access pattern
 
-Read `lib/shared/functions/_function.lib.dart`.
+The wrapper file (`<package>_wrapper.dart`) is a standalone file. It has its own `import` statements for the package it wraps.
 
-Add two lines in the correct locations:
-
-**a) Import line** — add with the other `package:` imports:
+Wrappers are accessed via Riverpod providers. Register the provider in `_providers.lib.dart` barrel if the service needs injection (category "Injectable service"). Consumer files access via:
 ```dart
-import 'package:<package_name>/<package_name>.dart';
+ref.watch(<pkg>Provider)
 ```
-If the package uses a different main entry file, use the correct one (check pub.dev or package docs).
-
-**b) Part directive** — add at the end of the `part` block:
-```dart
-part 'cp_<package>.dart';
-```
-
-**Do not reorder existing lines.** Append the import after the last `package:` import; append the part after the last `part` line.
-
----
-
-### Step 6 — Expose in _function.dart
-
-Read `lib/shared/functions/_function.dart`.
-
-Add a static member inside `CustomFunction`:
-
-```dart
-static final I<CpPkg> <camelName> = Cp<Pkg>();
-```
-
-Example for `url_launcher`:
-```dart
-static final ICpUrlLauncher urlLauncher = CpUrlLauncher();
-```
-
-**Placement:** add after the last `static final` line before the closing `}`.
-
-Consumer access: `CustomFunction.<camelName>.<method>()` — no import changes needed in feature files.
 
 ---
 
 ### Step 7 — Run flutter analyze (BLOCKING)
 
 ```bash
-flutter analyze lib/shared/functions/
+flutter analyze lib/core/services/
 ```
 
 - **0 issues** → proceed to Step 8.
@@ -255,7 +213,7 @@ Common causes and fixes:
 | `withOpacity is deprecated` | Replace `.withOpacity(x)` with `.withValues(alpha: x)`. |
 | Method signature mismatch | Interface and impl must have identical signatures. |
 
-Re-run `flutter analyze lib/shared/functions/` after each fix.
+Re-run `flutter analyze lib/core/services/` after each fix.
 **Do NOT proceed to Step 8 until the output is exactly: `No issues found!`**
 
 ---
@@ -264,12 +222,12 @@ Re-run `flutter analyze lib/shared/functions/` after each fix.
 
 ```
 mem_save(
-  title: "Wrapper creado: cp_<package>",
+  title: "Wrapper creado: <package>_wrapper",
   type: "decision",
   content: """
-    **What**: Created cp_<package>.dart wrapper in shared/functions
-    **Why**: Required by feature '<feature_name>' — detected missing by Phase-Gate
-    **Where**: lib/shared/functions/cp_<package>.dart, _function.lib.dart, _function.dart
+    **What**: Created <package>_wrapper.dart wrapper
+    **Why**: Required by feature '<feature_name>' — detected missing
+    **Where**: lib/core/services/<domain>/<package>_wrapper.dart
     **Learned**: <any gotchas found during creation, or omit if none>
   """
 )
@@ -282,19 +240,17 @@ mem_save(
 Return a structured summary to the orchestrator:
 
 ```
-CP_PACKAGE_DONE
+WRAPPER_DONE
 
 Package   : <package_name>
 Feature   : <feature_name>
 Files modified:
   - pubspec.yaml                                                  (dart pub add)
-  - lib/shared/functions/cp_<package>.dart                       (created)
-  - lib/shared/functions/_function.lib.dart                      (import + part added)
-  - lib/shared/functions/_function.dart                          (static member added)
-  - test/shared/functions/cp_<package>_test.dart                 (created — TDD RED→GREEN)
-flutter test: PASS (cp_<package>_test.dart — all tests GREEN)
+  - lib/core/services/<domain>/<package>_wrapper.dart            (created)
+  - test/core/services/<domain>/<package>_wrapper_test.dart      (created — TDD RED→GREEN)
+flutter test: PASS (<package>_wrapper_test.dart — all tests GREEN)
 flutter analyze: 0 issues
-Access: CustomFunction.<camelName>.<method>()
+Access: ref.watch(<pkg>Provider)
 Wrapper method signatures (for D.0.1–D.0.5b test mocks):
   - <returnType> <methodName>(<params>)
 ```
@@ -308,7 +264,7 @@ Wrapper method signatures (for D.0.1–D.0.5b test mocks):
 | Wrapper already exists | Return `ALREADY_EXISTS`, no changes |
 | `dart pub add` fails | Abort, return error to orchestrator |
 | analyze still failing after fixes | Return `ANALYZE_FAILED: <issues>` — do not proceed |
-| Package has no single entry-point file | Check pub.dev docs, use correct import path, document in Engram |
+| No suitable domain folder found | Use `lib/core/services/general/` or create an appropriate domain folder |
 
 ---
 

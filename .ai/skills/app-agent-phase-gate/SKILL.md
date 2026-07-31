@@ -1,6 +1,6 @@
 ---
 name: app-agent-phase-gate
-description: Verifies spec pre-conditions before spec-dev begins. Returns PASS only when the spec folder has all 6 required artifacts (spec.md, domain.md, contracts.md, bdd.feature, tests.md, tasks.md) and bdd.feature is non-empty. CpPackage wrappers are NOT checked here — that audit runs at D.10.5 after navigation is wired. Use BEFORE any code is written for a new feature.
+description: Verifies spec pre-conditions before spec-dev begins. Returns PASS only when the spec folder has all 6 required artifacts (spec.md, domain.md, contracts.md, bdd.feature, tests.md, tasks.md) and bdd.feature is non-empty. Wrappers are NOT checked here — that audit runs at D.10.5 after navigation is wired. Use BEFORE any code is written for a new feature.
 ---
 
 # Phase-Gate Agent
@@ -20,7 +20,7 @@ Phase-Gate only audits things that **must exist BEFORE spec-dev writes the first
 | Spec-Auditor | All 6 spec files must be present and valid before implementation can begin |
 
 The following are intentionally **NOT checked here**:
-- CpPackage wrappers → audited at **Phase D.10.5** (after nav wiring, before D.11). At Phase C no imports exist yet, so checking for wrappers that may be needed is premature and produces false FAILs.
+- Wrappers → audited at **Phase D.10.5** (after nav wiring, before D.11). At Phase C no imports exist yet, so checking for wrappers that may be needed is premature and produces false FAILs.
 - Test stubs → created at D.0.1–D.0.4
 - Infrastructure files → created at D.4
 - Barrel files → created at D.10
@@ -111,7 +111,7 @@ Spec-Auditor : PASS (6 files, bdd.feature valid, usecases present)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 VERDICT: PASS | FAIL | BLOCKED
 
-NOTE: CpPackage wrappers are audited at Phase D.10.5 — AFTER all
+NOTE: Wrappers are audited at Phase D.10.5 — AFTER all
 code is written and navigation is wired. Checking wrappers before
 code exists causes premature FAILs and does not prevent violations
 (feature code can still import packages directly even if wrappers
@@ -144,7 +144,7 @@ ORCHESTRATOR NEXT STEP: Launch repair task. After repair completes, re-run Phase
 
 ## Anti-Pattern: Premature package wrapper audit
 
-Phase-Gate must NOT check for cp_* wrappers at Phase C. Rationale:
+Phase-Gate must NOT check for wrappers (*_wrapper.dart) at Phase C. Rationale:
 
 1. At Phase C, no feature code has been written yet — there are no imports to audit.
 2. Checking wrappers before code exists forces the user to know EVERY package up front, breaking natural discovery.

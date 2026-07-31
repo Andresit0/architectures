@@ -20,9 +20,9 @@ Before starting, load these resources in order:
 
 2. **`MD/APP_STATE_MANAGMENT.md`** — Riverpod v2 state management patterns. Required to fix notifier test failures.
 
-3. **`MD/APP_DARTZ.md`** — Either/Failure/fpdart pattern. Required to fix repository and usecase test failures.
+3. **`MD/APP_DARTZ.md`** — Result/guard/fold pattern. Required to fix repository and usecase test failures.
 
-4. **`MD/APP_IMPORTANT_INFO.md`** — test-related conventions (mock mode, useMockRepository).
+4. **`MD/APP_IMPORTANT_INFO.md`** — test-related conventions (FakeDatasource via Riverpod overrides).
 
 5. **`.opencode/skills/app-test-driven-development/SKILL.md`** — load for full TDD patterns, mock setup, and test structure for this project.
 
@@ -141,8 +141,8 @@ Fix:    Register fallback: `registerFallbackValue(...)` in setUp
 
 ```
 Failure: Provider ProviderException / wrong value
-Cause:  Code uses CustomFunction.dio directly instead of ref.watch(CustomProviders.dio)
-Fix:    Replace with ref.watch/read(CustomProviders.dio) — see AGENTS.md access categories
+Cause:  Code uses static locator directly instead of ref.watch(httpServiceProvider)
+Fix:    Replace with ref.watch/read(httpServiceProvider) — see AGENTS.md access categories
 ```
 
 ---

@@ -46,7 +46,7 @@ read: lib/features/<feature_name>/spec/tasks.md
 From `domain.md`, extract every entity:
 - Entity class name (PascalCase)
 - Each field: name, Dart type, nullable or required
-- `fromJson` needed? (yes if contracts.md shows HTTP response with this entity)
+- `DTO needed?` (yes if contracts.md shows HTTP response with this entity) — entities NEVER have fromJson, use DTOs instead
 
 Format:
 ```
@@ -61,8 +61,8 @@ Format:
 
 From `domain.md` (usecases, repository interfaces, datasource interfaces), extract:
 - Interface name
-- Each method: name, parameters with types, return type (always `Future<Either<Failure, T>>` for repo/usecase)
-- Exception: datasource methods return `Future<T>` (no Either — failure is at repository level)
+- Each method: name, parameters with types, return type (always `Future<Result<T>>` for repo/usecase)
+- Exception: datasource methods return `Future<T>` (no Result — failure is at repository level)
 
 Format:
 ```
@@ -71,10 +71,10 @@ Format:
 - fetchChartData(String patientId) → Future<ChartDataModel>
 
 ### ILabResultsChartRepository
-- getChartData(String patientId) → Future<Either<Failure, ChartData>>
+- getChartData(String patientId) → Future<Result<ChartData>>
 
 ### LabResultsChartUsecase
-- call(String patientId) → Future<Either<Failure, ChartData>>
+- call(String patientId) → Future<Result<ChartData>>
 ```
 
 ### Step 4 — Extract Section 3: State Variants

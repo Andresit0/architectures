@@ -70,7 +70,7 @@ mem_save(
 **Primary source (read first):** `lib/features/<feature_name>/spec/generated_api_contract.md`
 - Section 3: State variants — use these exact names for fake notifiers and state assertions
 - Section 4: Provider names — use these exact names for provider overrides
-- `## Wrapper API` section — **CRITICAL**: lists every `cp_*` wrapper the feature uses (both new and existing). For **every** external package used by the feature, mock its wrapper INTERFACE (e.g. `ICpXxx`), NEVER the raw package class directly. This rule applies to ALL packages without exception — chart libraries, PDF, camera, maps, audio, share, HTTP, etc.
+- `## Wrapper API` section — **CRITICAL**: lists every wrapper interface the feature uses (both new and existing). For **every** external package used by the feature, mock its wrapper INTERFACE (e.g. `I<PkgName>Wrapper`), NEVER the raw package class directly. This rule applies to ALL packages without exception — chart libraries, PDF, camera, maps, audio, share, HTTP, etc.
 
 Read `domain.md` and `tests.md` as complementary context only. If `generated_api_contract.md` and `domain.md` conflict on state variant names or provider names, `generated_api_contract.md` wins.
 
@@ -105,13 +105,13 @@ test/features/<feature_name>/presentation/
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:fpdart/fpdart.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 
 import 'package:app/features/<feature_name>/domain/repositories/i_<feature_name>_repository.dart';
 import 'package:app/features/<feature_name>/domain/usecases/<feature_name>_usecase.dart';
 import 'package:app/features/<feature_name>/presentation/notifiers/<feature_name>_notifier.dart';
 import 'package:app/features/<feature_name>/presentation/notifiers/<feature_name>_state.dart';
-import 'package:app/features/<feature_name>/presentation/providers/<feature_name>_provider.dart';
+import 'package:app/features/<feature_name>/di/<feature_name>_provider.dart';
 import 'package:app/shared/exceptions/_exceptions.lib.dart';
 
 class _MockUseCase extends Mock implements <Name>UseCase {}
@@ -193,9 +193,9 @@ when(() => mockFlChart.lineChart(any())).thenReturn(const SizedBox.shrink());
 ```
 
 **Rules:**
-- NEVER instantiate the real wrapper (`CpFlChart()`) in tests — it will try to render real chart widgets
+- NEVER instantiate the real wrapper (`FlChartWrapper()`) in tests — it will try to render real chart widgets
 - ALWAYS return `SizedBox.shrink()` or another trivial widget for UI-only wrappers
-- For service wrappers (ICpDio, ITokenService), stub only the methods called by the code under test
+- For service wrappers (IDioWrapper, ICredentialStore), stub only the methods called by the code under test
 - Register all fallback values in `setUp` with `registerFallbackValue()`
 
 ---
@@ -210,7 +210,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app/features/<feature_name>/presentation/notifiers/<feature_name>_notifier.dart';
 import 'package:app/features/<feature_name>/presentation/notifiers/<feature_name>_state.dart';
 import 'package:app/features/<feature_name>/presentation/screens/<feature_name>_screen.dart';
-import 'package:app/features/<feature_name>/presentation/providers/<feature_name>_provider.dart';
+import 'package:app/features/<feature_name>/di/<feature_name>_provider.dart';
 
 class _Fake<Name>Notifier extends <Name>Notifier {
   _Fake<Name>Notifier(this._initial);
@@ -294,7 +294,7 @@ This is informational only. Whether or not files exist, proceed to write the tes
 Read `generated_api_contract.md` FIRST:
 - Extract state variants from Section 3 (exact names for fake notifiers and assertions)
 - Extract provider names from Section 4 (exact names for ProviderContainer overrides)
-  - Read `## Wrapper API` section — for each wrapper listed, note the interface name (`ICpXxx`) and what its methods return, so tests can stub them correctly (e.g. UI wrappers return `SizedBox.shrink()` in tests)
+  - Read `## Wrapper API` section — for each wrapper listed, note the interface name (`I<Xxx>Wrapper`) and what its methods return, so tests can stub them correctly (e.g. UI wrappers return `SizedBox.shrink()` in tests)
 
 Then read `domain.md` and `tests.md` as complementary context:
 - Confirm notifier method signatures (`load`, `reset`, etc.)
@@ -310,7 +310,7 @@ Import the paths the production files WILL have — even though those files don'
 import 'package:app/features/<feature_name>/presentation/notifiers/<feature_name>_notifier.dart';
 import 'package:app/features/<feature_name>/presentation/notifiers/<feature_name>_state.dart';
 import 'package:app/features/<feature_name>/presentation/screens/<feature_name>_screen.dart';
-import 'package:app/features/<feature_name>/presentation/providers/<feature_name>_provider.dart';
+import 'package:app/features/<feature_name>/di/<feature_name>_provider.dart';
 ```
 
 The files will have compile errors until Phase D.6 creates the notifier/state/provider. That is expected and correct.
@@ -340,4 +340,4 @@ Report:
 | Skip widget tests | Create all 3 tiers: notifier, screen, widget |
 | Override usecase in screen test | Override notifier provider with fake |
 | Run tests before production code exists | Report files created; tests will run RED in Phase D.7 once stubs are written |
-| Mock raw package class directly (e.g. `LineChart`, `PdfDocument`, `ImagePicker`) | Mock the wrapper INTERFACE from `## Wrapper API` (e.g. `ICpFlChart`, `ICpPdf`, `ICpImagePicker`) — applies to ALL external packages without exception |
+| Mock raw package class directly (e.g. `LineChart`, `PdfDocument`, `ImagePicker`) | Mock the wrapper INTERFACE from `## Wrapper API` (e.g. `IFlChartWrapper`, `IPdfWrapper`, `IImagePickerWrapper`) — applies to ALL external packages without exception |

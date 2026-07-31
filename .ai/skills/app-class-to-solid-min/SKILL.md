@@ -1,19 +1,19 @@
 ---
 name: app-class-to-solid-min
-description: Applies the pattern 5c (DI + Riverpod + Interface) to a plain Dart service class inside lib/shared/functions. Produces abstract interface → concrete implementation → CustomFunction entry → Riverpod Provider. Enforces SOLID fully. Use whenever the user passes a shared service class and asks to apply SOLID, DI, Riverpod, interface, refactor, "option 5c", "apply interface", "transform this service", or any similar request targeting a class in shared/functions.
+description: Applies DI + Riverpod + Interface pattern to a Dart service class inside lib/core/services/. Produces abstract interface → concrete implementation → barrel entry → Riverpod Provider → _providers.lib.dart export. Enforces SOLID fully. Use whenever the user passes a service class and asks to apply SOLID, DI, Riverpod, interface, refactor, "apply interface", "transform this service", or any similar request targeting a class in core/services/.
 ---
 
 # class_to_solid_min
 
 ## Goal
 
-Transform one **service class** from `lib/shared/functions/` into the **5c pattern**:
+Transform one **service class** from `lib/core/services/` into the DI + Riverpod pattern:
 
 ```
-abstract class I<Name>Service          ← contract (domain)
+abstract interface class I<Name>Service          ← contract
 class <Name>Service implements I<Name>  ← concrete implementation
-CustomFunction.<name>Service: I<Name>   ← singleton managed by the barrel
-<name>ServiceProvider = Provider<I<Name>>  ← exposed via Riverpod
+<name>ServiceProvider = Provider<I<Name>>  ← Riverpod provider
+<name>Provider ← export in _providers.lib.dart
 ```
 
 ---
@@ -22,33 +22,40 @@ CustomFunction.<name>Service: I<Name>   ← singleton managed by the barrel
 
 Identify from the user input or from reading the file:
 
-- **Service name** — e.g. `TokenService` → name token = `token`, interface = `ITokenService`.
+- **Service name** — e.g. `SecureCredentialStore` → name credentialStore = `credentialStore`, interface = `ICredentialStore`.
+- **Domain** — subdirectory under `core/services/` (e.g. `auth`, `crypto`, `device`, `logging`, `storage`).
 - **Methods** — all public methods become the interface contract.
+- **Access category** — `MD/APP_PACKAGE_WRAPPER.md` → "Access categories": injectable service, pure utility, or internal dependency.
 
 Read these files before touching anything:
 
 ```
-lib/shared/functions/_function.lib.dart
-lib/shared/functions/_function.dart
-lib/shared/functions/<name>_service.dart
-lib/shared/providers/           ← check if a provider already exists
+lib/core/services/<domain>/<name>_service.dart
+lib/core/services/_services.lib.dart
+lib/app/di/_providers.lib.dart   ← check if a provider already exists
 ```
 
 ---
 
 ## Step 1 — Modify `<name>_service.dart`
 
-**Pattern** (mirror of `internet_service.dart`):
+Rename the existing file to `i_<name>_service.dart` for the interface and create or keep `<name>_service.dart` for the implementation. The interface and impl may also live in the same file (convention: `<domain>/<name>_wrapper.dart`).
+
+**Pattern**:
 
 ```dart
-part of '_function.lib.dart';
-
-abstract class I<Name>Service {
+// i_<name>_service.dart — standalone library (not part of any barrel)
+abstract interface class I<Name>Service {
   // one line per public method — return type + signature only, no body
 }
 
+```
+
+```dart
+// <name>_service.dart (or <name>_wrapper.dart)
+import 'i_<name>_service.dart';
+
 class <Name>Service implements I<Name>Service {
-  // no private constructor, no static instance field
   // keep all original method bodies intact
   // @override every method declared in the interface
 }
@@ -59,39 +66,23 @@ Rules:
 - Keep all `static const` fields that are internal implementation details (e.g. `_storage`, `_key`).
 - `@override` annotation on **every** method declared in the interface — without exception.
 - No comments of any kind (`//`, `/* */`, `///`).
+- Files are standalone libraries in `lib/core/services/<domain>/` — they are NOT `part of` any barrel.
 
-**Real example — `token_service.dart` before:**
-
-```dart
-part of '_function.lib.dart';
-
-class TokenService {
-  TokenService._internal();
-  static final TokenService instance = TokenService._internal();
-
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
-  static const String _key = 'tudesarrollador_auth_token';
-
-  Future<void> save(String token) => _storage.write(key: _key, value: token);
-  Future<String?> read() => _storage.read(key: _key);
-  Future<void> delete() => _storage.delete(key: _key);
-}
-```
-
-**After:**
+**Real example — `auth/secure_credential_store.dart`:**
 
 ```dart
-part of '_function.lib.dart';
+// lib/core/services/auth/secure_credential_store.dart
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-abstract class ITokenService {
+abstract interface class ICredentialStore {
   Future<void> save(String token);
   Future<String?> read();
   Future<void> delete();
 }
 
-class TokenService implements ITokenService {
+class SecureCredentialStore implements ICredentialStore {
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
-  static const String _key = 'tudesarrollador_auth_token';
+  static const String _key = 'myapp_auth_token';
 
   @override
   Future<void> save(String token) => _storage.write(key: _key, value: token);
@@ -104,154 +95,122 @@ class TokenService implements ITokenService {
 
 ---
 
-## Step 2 — Update `_function.dart`
+## Step 2 — Create Riverpod provider
 
-Change the static field type from the concrete class to the abstract interface and the initializer from `<Name>.instance` (or any singleton pattern) to a plain constructor call:
+Create a provider file in `lib/app/di/services/` (or the appropriate subdirectory):
 
-```dart
-// before
-static final TokenService tokenService = TokenService.instance;
-
-// after
-static final I<Name>Service <name>Service = <Name>Service();
-```
-
-**Real example after change:**
+**For injectable services** (must be mockable in tests):
 
 ```dart
-part of '_function.lib.dart';
-
-class CustomFunction {
-  static final ICpPathProvider pathProvider = CpPathProvider();
-  static final ICpSharePlus sharePlus = CpSharePlus();
-  static final IInternetService internetService = InternetService();
-  static final ITokenService tokenService = TokenService();
-  static final ICpDio dio = CpDio(internetService, tokenService);
-  static final ICpLogger logger = CpLogger();
-  static final ICpDartz dartz = CpDartz();
-  static final IFailurePropagation failure = FailurePropagation();
-  static final ICpDrift drift = CpDrift(AppDatabase());
-}
-```
-
-Rules:
-- Declared type must be the **abstract interface** (`I<Name>Service`), not the concrete class.
-- Initializer is a plain `<Name>Service()` — no `.instance`, no factory trick.
-- No comments.
-
----
-
-## Step 3 — Create the Riverpod provider
-
-> **Only apply this step if the service belongs to the "Injectable service" category** (see `MD/APP_PACKAGE_WRAPPER.md` → "Access categories"). Injectable services: `cp_dio`, `cp_share_plus`, `token_service`. Pure utilities (`cp_dartz`, `failure_propagation`, `cp_logger`) do NOT need a Riverpod provider — skip Steps 3–4 for them.
-
-File: `lib/shared/providers/<name>_provider.dart`
-
-```dart
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+// lib/app/di/services/<name>_provider.dart
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../functions/_function.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/services/<domain>/i_<name>_service.dart';
+import 'package:clean_architecture_sdd_harness/core/services/<domain>/<name>_service.dart';
 
 part '<name>_provider.g.dart';
 
 @Riverpod(keepAlive: true)
-I<Name>Service <name>Service(Ref ref) => CustomFunction.<name>Service;
+I<Name>Service <name>Service(Ref ref) => <Name>Service();
 ```
 
-- `@Riverpod(keepAlive: true)` generates `<name>ServiceProvider`.
-- Type returned is the **abstract interface**.
-- The body returns `CustomFunction.<name>Service` (the static singleton in the barrel).
-- No comments.
+After creating the file, run:
 
-**Real example — `token_provider.dart`:**
-
-```dart
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../functions/_function.lib.dart';
-
-part 'token_provider.g.dart';
-
-@Riverpod(keepAlive: true)
-ITokenService tokenService(Ref ref) => CustomFunction.tokenService;
-```
-
-After creating the file, run from the project root:
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-Then register the new provider in `_providers.lib.dart` (add `import '<name>_provider.dart';` alongside the other `import` declarations — provider files use `@riverpod` and cannot be `part`) and expose it in `CustomProviders` (`_providers.dart`) as a `static final` alias.
+Register the provider in `lib/app/di/_providers.lib.dart` (add `export '<name>_provider.dart';`).
+
+Export the provider through `lib/app/di/_providers.lib.dart`:
+
+```dart
+export 'services/<name>_provider.dart';
+```
+
+For pure utilities, create a simple provider without a dedicated facade:
+
+```dart
+// lib/app/di/services/<name>_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clean_architecture_sdd_harness/core/services/<domain>/i_<name>_service.dart';
+import 'package:clean_architecture_sdd_harness/core/services/<domain>/<name>_service.dart';
+
+final <name>ServiceProvider = Provider<I<Name>Service>((ref) => <Name>Service());
+```
+
+---
+
+## Step 3 — Update barrel file
+
+Add the interface file and implementation file to `lib/core/services/_services.lib.dart`:
+
+```dart
+export '<domain>/i_<name>_service.dart';
+export '<domain>/<name>_service.dart';
+```
+
+(If both are in the same file, only one `export` line is needed.)
 
 ---
 
 ## Step 4 — Update consumers
 
-Run both searches to find every consumer:
+Find every consumer by searching for direct usage of the concrete class:
 
 ```bash
 grep -r "<Name>Service" lib/ --include="*.dart" -l
-grep -r "CustomFunction\.<name>Service" lib/ --include="*.dart" -l
 ```
 
-For each file found (excluding `<name>_service.dart`, `_function.dart`, `_function.lib.dart`, and `<name>_provider.dart`):
+For each file found (excluding the service files themselves and the provider file):
 
-### 4a — Riverpod Notifiers (extend `_$<Notifier>` or `AsyncNotifier` — have `ref`)
+### 4a — Riverpod Notifiers (have `ref`)
 
-Replace every `CustomFunction.<name>Service` call with `ref.read(CustomProviders.<alias>)`, where `<alias>` is the static member defined in `CustomProviders` during Step 3:
+Replace direct constructor calls with `ref.watch(<name>ServiceProvider)`:
 
 ```dart
 // before
-await CustomFunction.tokenService.save(user.token);
+final service = <Name>Service();
+await service.someMethod();
 
 // after
-await ref.read(CustomProviders.token).save(user.token);
+await ref.read(<name>ServiceProvider).someMethod();
 ```
 
-Add the providers barrel import if not present (never import the individual provider file directly from feature code):
+Add the app/di barrel import if not present:
 
 ```dart
-import '../../../../shared/providers/_providers.lib.dart';
+import 'package:clean_architecture_sdd_harness/app/di/_providers.lib.dart';
 ```
-
-Remove the import of `_function.lib.dart` if `CustomFunction` is no longer referenced in that file after the change. An unused import is a warning that fails `flutter analyze`.
 
 ### 4b — Infrastructure classes (datasources, repositories — no `ref`)
 
-These classes must **never** call `CustomFunction` directly for injectable services — that is a service-locator anti-pattern that violates **D** (Dependency Inversion). They must receive `I<Name>Service` via constructor injection, exactly as `ICpDio` is injected into datasources via Riverpod.
-
-> Note: `IInternetService` is an **internal dependency of `CpDio` only** — it must never appear as a constructor parameter in feature datasources or repositories. Feature datasources use `ICpDio` for HTTP calls.
+These classes must **never** call concrete constructors directly — that is a service-locator anti-pattern that violates **D** (Dependency Inversion). They must receive the abstract interface via constructor injection:
 
 ```dart
 // before — anti-pattern
-class EncounterDatasourceImpl implements IEncounterDatasource {
-  final ICpDio _dio;
-  const EncounterDatasourceImpl(this._dio);
-
-  Future<List<int>> downloadPdf(String id) async {
-    final token = await CustomFunction.tokenService.read();
+class MyDatasourceImpl implements IMyDatasource {
+  Future<Data> fetch() async {
+    final service = <Name>Service();
+    return service.getData();
   }
 }
 
 // after — constructor injection
-class EncounterDatasourceImpl implements IEncounterDatasource {
-  final ICpDio _dio;
-  final ITokenService _tokenService;
-  const EncounterDatasourceImpl(this._dio, this._tokenService);
+class MyDatasourceImpl implements IMyDatasource {
+  final I<Name>Service _service;
+  const MyDatasourceImpl(this._service);
 
-  Future<List<int>> downloadPdf(String id) async {
-    final token = await _tokenService.read();
+  Future<Data> fetch() async {
+    return _service.getData();
   }
 }
 ```
 
-Then update the provider or factory that constructs the datasource to pass `ref.watch(<name>ServiceProvider)` as the additional argument.
+Then update the provider/factory that constructs the datasource to pass `ref.watch(<name>ServiceProvider)` as the argument.
 
-**Rule — boundary for `CustomFunction`**: `CustomFunction` is the singleton registry. Pure utilities (`dartz`, `failure`, `logger`) may be accessed directly via `CustomFunction.xxx` from any layer — they do not need a Riverpod bridge. Injectable services (`dio`, `token`, `sharePlus`) must always be consumed via `ref.watch/read(CustomProviders.xxx)` — never via `CustomFunction.xxx` directly — so they can be mocked in widget and integration tests through `ProviderScope` overrides. No feature or infrastructure file may import `CustomFunction` for an injectable service.
+**Rule — provider access**: No feature or infrastructure file may use static locators for services — they must use `ref.watch(<name>Provider)`. See `MD/APP_PACKAGE_WRAPPER.md` for the access category table.
 
-**Why this matters**: after the provider type changes to `Provider<I<Name>Service>`, any consumer whose constructor still declares `final <Name>Service` (concrete) will fail with `argument_type_not_assignable` because `I<Name>Service` is not assignable to `<Name>Service`. The fix is always to widen the field type to the interface.
+**Why this matters**: after the provider type changes to `Provider<I<Name>Service>`, any consumer whose constructor still declares `final <Name>Service` (concrete) will fail with `argument_type_not_assignable`. The fix is always to widen the field type to the interface.
 
 ---
 
@@ -272,9 +231,9 @@ Common issues and fixes:
 
 | Error | Fix |
 |---|---|
-| `The type 'I<Name>Service' isn't a class` | Confirm `_function.lib.dart` imports the file containing the interface via `part`. |
-| `Undefined name 'I<Name>Service'` | Add the `part` directive in `_function.lib.dart` if the interface is in the same file as the impl. |
-| `'<Name>Service.instance' can't be used` | The static member was removed — use `CustomFunction.<name>Service` or the provider instead. |
+| `The type 'I<Name>Service' isn't a class` | Confirm the import to the interface file is correct. |
+| `Undefined name 'I<Name>Service'` | Add the import for the interface. |
+| `'<Name>Service.instance' can't be used` | The static member was removed — use `ref.watch(<name>ServiceProvider)` instead. |
 | `Missing concrete implementation of 'I<Name>Service.<method>'` | Add `@override` + body for the missing method in `<Name>Service`. |
 | `argument_type_not_assignable`: `Provider<I<Name>Service>` can't be assigned to `ProviderListenable<<Name>Service>` | A datasource or repository impl still declares its field as `final <Name>Service`. Change the field type to `final I<Name>Service`. This is the Dependency Inversion fix — consumers must depend on the abstraction, not the concrete class. |
 
@@ -286,7 +245,7 @@ After `flutter analyze` returns clean, output this table:
 
 | Principle | ✓/✗ | Justification |
 |---|---|---|
-| **S** Single Responsibility | ✅ | `I<Name>Service` defines the contract; `<Name>Service` implements it; `CustomFunction` manages lifecycle; the provider exposes it. |
+| **S** Single Responsibility | ✅ | `I<Name>Service` defines the contract; `<Name>Service` implements it; `_providers.lib.dart` exports it. |
 | **O** Open/Closed | ✅ | You can create `Mock<Name>Service implements I<Name>Service` without touching existing code. |
 | **L** Liskov Substitution | ✅ | Any implementation of `I<Name>Service` is interchangeable where the provider is used. |
 | **I** Interface Segregation | ✅ | The interface declares only the methods its consumers actually need. |
@@ -301,8 +260,9 @@ Fill each row with actual evidence from the generated code, not generic text.
 - **No comments** in any generated or modified file (`//`, `/* */`, `///` all forbidden).
 - **No `.bak` files** — never create backup copies.
 - **No new packages** — the pattern uses only `flutter_riverpod`, which is already a dependency.
-- `_function.lib.dart` is updated by `cp_package` when the service file is first created; do not add a duplicate `part` directive. If applying this skill to a manually created service file (not via `cp_package`), first add `part '<name>_service.dart';` to `_function.lib.dart` before running this skill.
-- The provider file goes in `lib/shared/providers/`, matching the naming of `token_provider.dart`.
+- `_services.lib.dart` in `lib/core/services/` may need to be updated with new exports.
+- The provider file goes in `lib/app/di/services/` for services or the appropriate subdirectory.
+- Injectable services must be exported through `lib/app/di/_providers.lib.dart`.
 
 ---
 
@@ -314,6 +274,6 @@ Fill each row with actual evidence from the generated code, not generic text.
 mem_save(
   title: "SOLID-min applied: <ClassName>",
   type: "decision",
-  content: "**What**: Applied pattern 5c (DI + Riverpod + Interface) to <ClassName> in shared/functions. **Why**: <motivation>. **Where**: lib/shared/functions/<name>_service.dart, lib/shared/functions/_function.dart, lib/shared/providers/<name>_provider.dart. **Learned**: <any consumer update gotchas or analyze errors fixed>"
+  content: "**What**: Applied DI + Riverpod + Interface to <ClassName> in core/services. **Why**: <motivation>. **Where**: lib/core/services/<domain>/<name>_service.dart, lib/app/di/services/<name>_provider.dart. **Learned**: <any consumer update gotchas or analyze errors fixed>"
 )
 ```

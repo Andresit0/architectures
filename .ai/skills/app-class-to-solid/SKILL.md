@@ -59,24 +59,24 @@ lib/features/<feature>/
 ```dart
 import '../entities/<feature>_entity.dart';
 
-abstract class I<Feature>Datasource {
+abstract interface class I<Feature>Datasource {
   Future<<Feature>Entity> <primaryMethod>({required String param});
 }
 ```
 
 #### `domain/repositories/i_<feature>_repository.dart`
 ```dart
-import '../../../../shared/exceptions/_exceptions.lib.dart';
+import '../../../../shared/error/_error.lib.dart';
 import '../entities/<feature>_entity.dart';
 
-abstract class I<Feature>Repository {
-  Future<Either<Failure, <Feature>Entity>> <primaryMethod>({required String param});
+abstract interface class I<Feature>Repository {
+  Future<Result<<Feature>Entity>> <primaryMethod>({required String param});
 }
 ```
 
 #### `domain/usecases/<feature>_usecase.dart`
 ```dart
-import '../../../../shared/exceptions/_exceptions.lib.dart';
+import '../../../../shared/error/_error.lib.dart';
 import '../entities/<feature>_entity.dart';
 import '../repositories/i_<feature>_repository.dart';
 
@@ -85,7 +85,7 @@ class <Feature>UseCase {
 
   const <Feature>UseCase(this.repository);
 
-  Future<Either<Failure, <Feature>Entity>> call({required String param}) =>
+  Future<Result<<Feature>Entity>> call({required String param}) =>
       repository.<primaryMethod>(param: param);
 }
 ```
@@ -107,8 +107,7 @@ class <Feature>DatasourceImpl implements I<Feature>Datasource {
 
 #### `infrastructure/repositories/<feature>_repository_impl.dart`
 ```dart
-import '../../../../shared/exceptions/_exceptions.lib.dart';
-import '../../../../shared/functions/_function.lib.dart';
+import '../../../../shared/error/_error.lib.dart';
 import '../../domain/datasources/i_<feature>_datasource.dart';
 import '../../domain/entities/<feature>_entity.dart';
 import '../../domain/repositories/i_<feature>_repository.dart';
@@ -119,12 +118,12 @@ class <Feature>RepositoryImpl implements I<Feature>Repository {
   const <Feature>RepositoryImpl(this._datasource);
 
   @override
-  Future<Either<Failure, <Feature>Entity>> <primaryMethod>({required String param}) =>
-      CustomFunction.dartz.guard(() => _datasource.<primaryMethod>(param: param));
+  Future<Result<<Feature>Entity>> <primaryMethod>({required String param}) =>
+      guard(() => _datasource.<primaryMethod>(param: param));
 }
 ```
 
-#### `presentation/providers/<feature>_providers.dart`
+#### `di/<feature>_providers.dart` (moved from `presentation/providers/`)
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -173,7 +172,6 @@ After creating this file run `build_runner` (Step 4) to generate `<feature>_stat
 ```dart
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../shared/functions/_function.lib.dart';
 import '../providers/<feature>_providers.dart';
 import '<feature>_state.dart';
 
@@ -189,10 +187,7 @@ class <Feature>Notifier extends _$<Feature>Notifier {
     final result = await ref.read(<feature>UseCaseProvider).call(param: param);
     await result.fold<Future<void>>(
       (failure) async {
-        state = CustomFunction.failure.launch<<Feature>State>(
-          failure,
-          onFailure: (msg) => <Feature>Failure(msg),
-        );
+        state = <Feature>Failure(failure);
       },
       (data) async {
         state = <Feature>Success(data);
