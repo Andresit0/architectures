@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/di/remember_me_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_state.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/screens/login_screen.dart';
+import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(this._initial) : super();
@@ -32,7 +35,11 @@ Widget _buildScreen(AuthState state) {
   );
   return UncontrolledProviderScope(
     container: _lastContainer!,
-    child: const MaterialApp(home: LoginScreen()),
+    child: const MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: LoginScreen(),
+    ),
   );
 }
 
@@ -56,6 +63,36 @@ void main() {
 
     expect(find.byType(Checkbox), findsOneWidget);
     expect(find.text('Remember me'), findsOneWidget);
+  });
+
+  testWidgets('login_screen_checkbox_toggles_remember_me_via_riverpod', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        authProvider.overrideWith(() => _FakeAuthNotifier(const AuthInitial())),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: LoginScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(container.read(rememberMeProvider), isFalse);
+
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+
+    expect(container.read(rememberMeProvider), isTrue);
   });
 
   testWidgets('login_screen_shows_login_button', (tester) async {
@@ -88,7 +125,7 @@ void main() {
 
   testWidgets('login_screen_shows_form_when_not_loading', (tester) async {
     await tester.pumpWidget(
-      _buildScreen(const AuthFailure('Invalid credentials')),
+      _buildScreen(const AuthFailure(NetworkError(''))),
     );
     await tester.pump();
 
@@ -129,7 +166,11 @@ void main() {
             authProvider.overrideWith(() => notifier),
           ],
         ),
-        child: const MaterialApp(home: LoginScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: LoginScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -155,15 +196,19 @@ void main() {
             authProvider.overrideWith(() => notifier),
           ],
         ),
-        child: const MaterialApp(home: LoginScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: LoginScreen(),
+        ),
       ),
     );
     await tester.pump();
 
-    notifier.state = const AuthFailure('Invalid credentials');
+    notifier.state = const AuthFailure(NetworkError(''));
     await tester.pump();
 
-    expect(find.text('Invalid credentials'), findsOneWidget);
+    expect(find.text('No internet connection'), findsOneWidget);
     expect(find.byType(SnackBar), findsOneWidget);
   });
 }

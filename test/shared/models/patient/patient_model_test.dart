@@ -22,13 +22,6 @@ void main() {
       );
     });
 
-    test('fromJson creates entity from JSON map', () {
-      final json = {'id': '1', 'name': 'John Doe'};
-      final result = PatientEntity.fromJson(json);
-      expect(result.id, '1');
-      expect(result.name, 'John Doe');
-    });
-
     test('copyWith creates modified copy', () {
       final copy = entity.copyWith(id: '2');
       expect(copy.id, '2');

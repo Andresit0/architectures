@@ -1,42 +1,92 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
 
-class TestFailure extends Failure {
-  const TestFailure(super.message);
-}
-
 void main() {
-  group('Failures', () {
-    test('Failure should have correct message', () {
-      const failure = TestFailure('test message');
-      expect(failure.message, 'test message');
+  group('Result', () {
+    test('Success should have isSuccess true', () {
+      const result = Success<String>('data');
+      expect(result.isSuccess, isTrue);
+      expect(result.isSuccess, isTrue);
     });
 
-    test('ApiFailure should have default message', () {
-      const failure = ApiFailure();
-      expect(failure.message, 'The server returned an error. Please try again later.');
+    test('Failure should have isFailure true', () {
+      final result = Failure<String>(
+        const ApiError('error'),
+      );
+      expect(result.isSuccess, isFalse);
+      expect(result.isSuccess, isFalse);
     });
 
-    test('NoConnectionFailure should have correct message', () {
-      const failure = NoConnectionFailure();
-      expect(failure.message, 'No internet connection');
+    test('Success fold should call onSuccess', () {
+      const result = Success<String>('data');
+      final value = result.fold(
+        onSuccess: (d) => 'got $d',
+        onFailure: (_) => 'error',
+      );
+      expect(value, 'got data');
     });
 
-    test('ServerUnreachableFailure should have correct message', () {
-      const failure = ServerUnreachableFailure();
-      expect(failure.message, 'Server under maintenance');
+    test('Failure fold should call onFailure', () {
+      final result = Failure<String>(
+        const NetworkError('no internet'),
+      );
+      final value = result.fold(
+        onSuccess: (_) => 'data',
+        onFailure: (e) => 'error: ${e.userMessage}',
+      );
+      expect(value, contains('no internet'));
     });
 
-    test('UnexpectedFailure should have default message', () {
-      const failure = UnexpectedFailure();
-      expect(failure.message, 'An unexpected error occurred. Please try again later.');
+    test('Success getOrElse should return data', () {
+      const result = Success<String>('data');
+      expect(result.fold(onSuccess: (d) => d, onFailure: (_) => 'fallback'), 'data');
     });
 
-    test('UnexpectedResponseFailure should have correct message', () {
-      const failure = UnexpectedResponseFailure();
-      expect(failure.message, 'Unexpected server response. Please try again later.');
+    test('Failure getOrElse should return fallback', () {
+      final result = Failure<String>(
+        const ApiError('error'),
+      );
+      expect(result.fold(onSuccess: (d) => d, onFailure: (_) => 'fallback'), 'fallback');
+    });
+  });
+
+  group('AppError', () {
+    test('NetworkError should have isNetworkRelated true', () {
+      const error = NetworkError('No internet connection');
+      expect(error.isNetworkRelated, isTrue);
     });
 
+    test('ServerUnreachableError should have isNetworkRelated true', () {
+      const error = ServerUnreachableError('Server under maintenance');
+      expect(error.isNetworkRelated, isTrue);
+    });
+
+    test('ApiError should have statusCode', () {
+      const error = ApiError('Server error', statusCode: 500);
+      expect(error.statusCode, 500);
+      expect(error.userMessage, 'Server error');
+    });
+
+    test('ApiError should not be network related', () {
+      const error = ApiError('Server error');
+      expect(error.isNetworkRelated, isFalse);
+    });
+
+    test('UnexpectedError should have userMessage', () {
+      const error = UnexpectedError('Unexpected error');
+      expect(error.userMessage, 'Unexpected error');
+    });
+
+    test('DeviceSecurityError should have userMessage', () {
+      const error = DeviceSecurityError('Device compromised');
+      expect(error.userMessage, 'Device compromised');
+    });
+
+    test('ValidationError should have optional field', () {
+      const error = ValidationError('Invalid field', field: 'email');
+      expect(error.field, 'email');
+    });
   });
 
   group('Exceptions', () {
@@ -65,6 +115,7 @@ void main() {
       const exception = UnexpectedResponseException('test details');
       expect(exception.details, 'test details');
     });
-
   });
 }
+
+

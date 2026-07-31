@@ -5,9 +5,11 @@ import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/log
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/token_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/infrastructure/datasources/auth_datasource_impl.dart';
 import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/functions/_function.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/network/dio/dio_wrapper.dart';
+import 'package:clean_architecture_sdd_harness/core/network/dio/http_response.dart';
+import 'package:clean_architecture_sdd_harness/core/network/timeouts/_timeouts.lib.dart';
 
-class _MockDio extends Mock implements ICpDio {}
+class _MockDio extends Mock implements IDioWrapper {}
 
 void main() {
   late _MockDio mockDio;
@@ -15,6 +17,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(Uri());
+    registerFallbackValue(EndpointSla.unknown);
   });
 
   setUp(() {
@@ -29,8 +32,6 @@ void main() {
         'token': <String, dynamic>{
           'type': 'Bearer',
           'key': 'jwt_token',
-          'expires_in_hours': 24,
-          'expiration_date': '2026-06-26T00:00:00.000',
         },
         'clinical_history': <Map<String, dynamic>>[
           <String, dynamic>{
@@ -60,8 +61,9 @@ void main() {
           any(),
           body: any(named: 'body'),
           headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
         ),
-      ).thenAnswer((_) async => responseJson);
+      ).thenAnswer((_) async => HttpResponse(data: responseJson));
 
       final result = await datasource.login(
         email: 'test@example.com',
@@ -77,6 +79,40 @@ void main() {
           any(),
           body: any(named: 'body'),
           headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
+        ),
+      ).called(1);
+    });
+
+    test('login_calls_dio', () async {
+      final responseJson = <String, dynamic>{
+        'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
+        'token': <String, dynamic>{
+          'type': 'Bearer',
+          'key': 'jwt_token',
+        },
+        'clinical_history': <Map<String, dynamic>>[],
+      };
+      when(
+        () => mockDio.post(
+          any(),
+          body: any(named: 'body'),
+          headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
+        ),
+      ).thenAnswer((_) async => HttpResponse(data: responseJson));
+
+      await datasource.login(
+        email: 'test@example.com',
+        passwordHash: 'hash',
+      );
+
+      verify(
+        () => mockDio.post(
+          any(),
+          body: any(named: 'body'),
+          headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
         ),
       ).called(1);
     });
@@ -87,6 +123,7 @@ void main() {
           any(),
           body: any(named: 'body'),
           headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
         ),
       ).thenThrow(const ApiException(401));
 
@@ -104,16 +141,15 @@ void main() {
         'token': <String, dynamic>{
           'type': 'Bearer',
           'key': 'new_jwt_token',
-          'expires_in_hours': 24,
-          'expiration_date': '2026-06-27T00:00:00.000',
         },
       };
       when(
         () => mockDio.post(
           any(),
           headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
         ),
-      ).thenAnswer((_) async => responseJson);
+      ).thenAnswer((_) async => HttpResponse(data: responseJson));
 
       final result = await datasource.refreshToken(token: 'old_token');
 
@@ -123,6 +159,7 @@ void main() {
         () => mockDio.post(
           any(),
           headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
         ),
       ).called(1);
     });
@@ -132,6 +169,7 @@ void main() {
         () => mockDio.post(
           any(),
           headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
         ),
       ).thenThrow(const ApiException(401));
 
@@ -139,6 +177,39 @@ void main() {
         () => datasource.refreshToken(token: 'old_token'),
         throwsA(isA<ApiException>()),
       );
+    });
+
+    test('login_passes_EndpointSla_login', () async {
+      final responseJson = <String, dynamic>{
+        'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
+        'token': <String, dynamic>{
+          'type': 'Bearer',
+          'key': 'jwt_token',
+        },
+        'clinical_history': <Map<String, dynamic>>[],
+      };
+      when(
+        () => mockDio.post(
+          any(),
+          body: any(named: 'body'),
+          headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
+        ),
+      ).thenAnswer((_) async => HttpResponse(data: responseJson));
+
+      await datasource.login(
+        email: 'test@example.com',
+        passwordHash: 'hash',
+      );
+
+      verify(
+        () => mockDio.post(
+          any(),
+          body: any(named: 'body'),
+          headers: any(named: 'headers'),
+          sla: EndpointSla.login,
+        ),
+      ).called(1);
     });
   });
 }
