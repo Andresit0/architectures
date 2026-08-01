@@ -11,6 +11,7 @@ import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golden_toolkit/golden_toolkit.dart';
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(this._initial) : super();
@@ -50,7 +51,7 @@ Widget _buildScreen(AuthState state) {
 
 void main() {
 
-  testWidgets('LoginScreen golden test — initial state', (tester) async {
+  testGoldens('LoginScreen golden test — initial state', (tester) async {
     await tester.pumpWidget(_buildScreen(const AuthInitial()));
     await tester.pump();
 
@@ -60,7 +61,7 @@ void main() {
     );
   });
 
-  testWidgets('LoginScreen golden test — loading state', (tester) async {
+  testGoldens('LoginScreen golden test — loading state', (tester) async {
     await tester.pumpWidget(_buildScreen(const AuthLoading()));
     await tester.pump();
 
