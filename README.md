@@ -87,7 +87,7 @@ pixel tolerance, so they pass identically on macOS local and Linux CI.
 |----------|------------------------------|------------------------------|--------|
 | macOS (local dev) | ✅ | ✅ (with local fonts) | — |
 | Linux (CI) | ✅ | ✅ (deterministic) | `Test` / `Test Goldens` |
-| Windows (CI) | ✅ | ✅ | — |
+| Windows (local dev) | ✅ | ✅ | — |
 
 Pre-PR rules:
 - Run `flutter analyze` — 0 issues required.
