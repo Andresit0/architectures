@@ -2860,27 +2860,35 @@ The CI pipeline lives in `.github/workflows/ci.yml`. It runs on every `push` to 
 | Job | `runs-on` | What it does |
 |-----|-----------|--------------|
 | `Analyze` | `ubuntu-latest` | `flutter pub get` + `flutter analyze` (0 issues) |
-| `Test` | `ubuntu-latest` | `flutter test --coverage --exclude-tags golden` (unit/widget) + Codecov upload |
-| `Test Goldens` | `macos-latest` | `flutter test --tags golden` (golden image tests only) |
+| `Test` | `ubuntu-latest` | `flutter test --coverage --exclude-tags golden` (unit/widget) + Codecov upload + anti-masking workflow gates |
+| `Test Goldens` | `ubuntu-latest` | `flutter test --tags golden` (cross-platform golden image tests) |
 | `Build iOS` | `macos-latest` | `flutter build ios --no-codesign` |
 | `Build Android` | `ubuntu-latest` | `flutter build apk --debug` |
 
 Key design decisions:
 
-- **Runners by real need:** Only `Build iOS` and `Test Goldens` require macOS (Xcode / deterministic golden rendering). Analyze, Test and Build Android run on Linux, cutting macOS usage.
-- **Builds decoupled from tests:** `Build iOS` and `Build Android` depend only on `Analyze` (`needs: [analyze]`), not on `Test`. This guarantees that a build/compile regression is never masked by a failing test job.
+- **Runners by real need:** Only `Build iOS` requires macOS (Xcode). Analyze, Test, Test Goldens and Build Android run on Linux, cutting macOS usage to a single job.
+- **Builds decoupled from tests:** `Build iOS` and `Build Android` depend only on `Analyze` (`needs: [analyze]`), not on `Test`. This guarantees that a build/compile regression is never masked by a failing test job. Enforced structurally by `test/architecture/workflow_gates_test.dart`.
+- **Anti-masking gates:** `test/architecture/workflow_gates_test.dart` (runs inside `Test`, no `golden` tag) blocks the merge if CI regresses: Analyze/Test/Test Goldens not on Linux, golden tests without `@Tags(['golden'])`, builds depending on `Test`, or more than 2 macOS jobs.
+- **Caching:** all jobs enable `cache: true` on `subosito/flutter-action@v2`; `Build iOS` additionally caches CocoaPods (`actions/cache@v4`, `ios/Pods`).
 - **Least privilege:** `permissions: contents: read` on the whole workflow.
 - **Concurrency:** `concurrency: ci-${{ github.ref }}` with `cancel-in-progress: true` cancels superseded runs, saving minutes and avoiding races.
 - **Pinned Flutter version:** All jobs pin `flutter-version: '3.44.0'`.
 
 ### Golden tests
 
-Golden tests are tagged with `@Tags(['golden'])` (declared via `@Tags(['golden']) library;` at the top of each golden test file). They run on macOS in the dedicated `Test Goldens` job because the images are rendered with an embedded font (`test/flutter_test_config.dart` loads `test/assets/Roboto-Regular.ttf` via `FontLoader`), which keeps rendering deterministic on macOS. The main `Test` job excludes them with `--exclude-tags golden`.
+Golden tests are tagged with `@Tags(['golden'])` (declared via `@Tags(['golden']) library;` at the top of each golden test file). They are **cross-platform**: `test/flutter_test_config.dart` loads the embedded fonts (`test/assets/` — Roboto Regular/Medium/Bold + MaterialIcons) via `FontLoader` and installs a tolerant `GoldenFileComparator` (0.2% pixel threshold). Determinism comes from the fonts; the tolerance absorbs subtle anti-aliasing differences between Linux CI and macOS local. They run on **Linux** in the dedicated `Test Goldens` job. The main `Test` job excludes them with `--exclude-tags golden`.
+
+Golden files are committed under `test/**/goldens/`. Regenerate after visual changes with:
+
+```bash
+flutter test --tags golden --update-goldens
+```
 
 ### Coverage
 
 - `flutter test --coverage` produces `coverage/lcov.info`.
-- `codecov/codecov-action@v5` uploads it to Codecov with `fail_ci_if_error: false` (a Codecov outage must not break the pipeline).
+- `codecov/codecov-action@v7` uploads it to Codecov with `fail_ci_if_error: false` (a Codecov outage must not break the pipeline).
 - The repo is **public**, so Codecov uploads are unlimited and GitHub Actions minutes are free.
 - `codecov.yml` configures the status checks:
   - `project` — overall coverage vs base, `target: auto`, `threshold: 1%`.
@@ -2892,7 +2900,14 @@ Golden tests are tagged with `@Tags(['golden'])` (declared via `@Tags(['golden']
 - `pub` (Dart/Flutter dependencies)
 - `github-actions` (GitHub Actions versions)
 
-Up to 5 open PRs per ecosystem at a time.
+Updates are **grouped** to reduce PR churn and cross-dependency conflicts:
+`riverpod`, `flutter-plugins`, `test-tooling`, `codegen`, `actions`.
+Semver-major of `flutter_jailbreak_detection_plus` is ignored (no iOS Swift
+Package Manager support yet — only minor/patch via auto-merge).
+
+`.github/workflows/auto-merge.yml` **auto-merges dependabot patch/minor PRs**
+(`gh pr merge --auto --squash`) via `dependabot/fetch-metadata@v2`; major
+updates require review.
 
 ### Branch protection (`develop`)
 
@@ -2901,6 +2916,17 @@ Up to 5 open PRs per ecosystem at a time.
 `Analyze`, `Test`, `Test Goldens`, `Build iOS`, `Build Android`
 
 No required reviewers are configured (single-account repo — PRs are self-approved after passing the 6 quality gates of the `super-pull-request-reviewer` command).
+
+### Merge strategy
+
+GitHub **merge queue is not available on personal accounts** (organization feature), so the repo uses the documented fallback:
+- **Auto-merge** (`allow_auto_merge: true`) — PRs merge as soon as CI passes.
+- **Squash** on merge (`squash_merge_commit_title: PR_TITLE`, `squash_merge_commit_message: PR_BODY`) — one clean commit per PR.
+- **Delete branch on merge** (`delete_branch_on_merge: true`).
+- **Allow update branch** (`allow_update_branch: true`).
+- Dependabot patch/minor auto-merge via `auto-merge.yml`.
+
+This yields the same outcome a merge queue would (clean history, no `Merge branch` noise, branches auto-removed) without the queue.
 
 ### Security features
 
@@ -2919,7 +2945,8 @@ Since the repo is public:
 
 | Aspect | Before | After |
 |--------|--------|-------|
-| macOS jobs | 3 (`Analyze`, `Test`, `Build iOS`) | 2 (`Test Goldens`, `Build iOS`) |
+| macOS jobs | 3 (`Analyze`, `Test`, `Build iOS`) | 1 (`Build iOS`) |
 | Cost/min macOS | $0.062 | $0.062 (only where required) |
-| Cost/min Linux | — | $0.006 (Analyze, Test, Build Android) |
+| Cost/min Linux | — | $0.006 (Analyze, Test, Test Goldens, Build Android) |
+| Runner caching | — | `flutter-action` cache + CocoaPods cache |
 | Public repo | — | GitHub Actions free, Codecov unlimited |
