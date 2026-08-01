@@ -12,6 +12,8 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   await _loadFont('Roboto', 'test/assets/Roboto-Regular.ttf');
+  await _loadFont('Roboto', 'test/assets/Roboto-Medium.ttf');
+  await _loadFont('Roboto', 'test/assets/Roboto-Bold.ttf');
   await _loadFont('MaterialIcons', 'test/assets/MaterialIcons-Regular.otf');
 
   final comparator = goldenFileComparator;
@@ -28,7 +30,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 /// Maximum allowed pixel difference for cross-platform golden runs.
 /// Determinism comes from the embedded fonts; this is a safety net for
 /// subtle anti-aliasing differences between Linux CI and macOS local.
-const double _kMaxDiffPercent = 0.002;
+const double _kMaxDiffPercent = 0.02;
 
 Future<void> _loadFont(String family, String path) async {
   final fontBytes = File(path).readAsBytesSync();

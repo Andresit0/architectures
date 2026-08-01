@@ -8,6 +8,8 @@ shipped with the application.
 |------|--------|---------|
 | `MaterialIcons-Regular.otf` | Flutter SDK `bin/cache/artifacts/material_fonts/` | Material Icons font — **CC-BY-4.0** (Attribution 4.0 International) |
 | `Roboto-Regular.ttf` | Flutter SDK `bin/cache/artifacts/material_fonts/` | Roboto font — **Apache License 2.0** |
+| `Roboto-Medium.ttf` | Flutter SDK `bin/cache/artifacts/material_fonts/` | Roboto font — **Apache License 2.0** |
+| `Roboto-Bold.ttf` | Flutter SDK `bin/cache/artifacts/material_fonts/` | Roboto font — **Apache License 2.0** |
 
 ## Material Icons — CC-BY-4.0
 
@@ -27,3 +29,6 @@ Roboto is licensed under the Apache License, Version 2.0.
 - Copyright: Roboto (c) Google LLC.
 - Full license text: `Roboto_LICENSE.txt` in the Flutter SDK
   (`bin/cache/artifacts/material_fonts/`).
+
+All Roboto weights loaded for golden tests (`Regular`, `Medium`, `Bold`)
+come from the same SDK artifact directory and share the same license.
