@@ -2936,6 +2936,7 @@ Since the repo is public:
 - **Secret scanning** enabled.
 - **Secret scanning push protection** enabled.
 - The full git history was scanned with `gitleaks` (no real secrets found — only an expired test JWT fixture that was later removed).
+- **Gitleaks CI gate**: `gitleaks/gitleaks-action@v3` in the `Gitleaks` job (ubuntu-latest, full history scan with `fetch-depth: 0`, fails on findings) — blocks merges that leak secrets. The workflow gates assert this job always exists.
 
 ### Plugins
 

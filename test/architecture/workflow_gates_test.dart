@@ -67,5 +67,14 @@ void main() {
           reason: 'Only essential jobs may run on macOS (Build iOS). '
               'Currently: ${macJobs.map((e) => e.key).toList()}');
     });
+
+    test('A secret-scanning job exists (gitleaks)', () {
+      final job = workflow['jobs']['gitleaks'] as Map?;
+      expect(job, isNotNull,
+          reason: 'a gitleaks job must exist — removing the secret scan '
+              'gate would silently disable leak detection');
+      expect(job?['runs-on'], 'ubuntu-latest',
+          reason: 'gitleaks must run on Linux (free runner)');
+    });
   });
 }
