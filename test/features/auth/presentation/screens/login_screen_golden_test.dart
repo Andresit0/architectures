@@ -1,3 +1,6 @@
+@Tags(['golden'])
+library;
+
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/di/remember_me_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/config/environment_provider.dart';
@@ -36,7 +39,8 @@ Widget _buildScreen(AuthState state) {
       rememberMeProvider.overrideWith(_FakeRememberMeNotifier.new),
       environmentProvider.overrideWith((ref) => const ProductionEnvironment()),
     ],
-    child: const MaterialApp(
+    child: MaterialApp(
+      theme: ThemeData(fontFamily: 'Roboto'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: LoginScreen(),

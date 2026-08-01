@@ -1,3 +1,6 @@
+@Tags(['golden'])
+library;
+
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_state.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/screens/clinical_history_placeholder_screen.dart';
@@ -25,7 +28,8 @@ Widget _buildScreen(AuthState state) {
     overrides: [
       authProvider.overrideWith(() => _ControllableAuthNotifier(state)),
     ],
-    child: const MaterialApp(
+    child: MaterialApp(
+      theme: ThemeData(fontFamily: 'Roboto'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: ClinicalHistoryPlaceholderScreen(),
