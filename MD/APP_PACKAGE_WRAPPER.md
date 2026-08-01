@@ -154,3 +154,21 @@ abstract class UserEntity with _$UserEntity {
   const factory UserEntity({...}) = _UserEntity;
 }
 ```
+
+---
+
+### Plugin maintenance policy
+
+Before adopting any new pub package / plugin, verify it is **maintained**:
+
+1. **Check recency**: last release within ~12 months, and compatible with the project's
+   AGP / Kotlin / Flutter versions (the 2026-08-01 incident: `flutter_jailbreak_detection`
+   was unmaintained for AGP 8+ and required a fragile reflection hack).
+2. **Prefer a maintained fork** if the original package does not evolve:
+   `flutter_jailbreak_detection_plus` (maintained fork) is the project's choice —
+   it declares `namespace`, `compileSdk 34` and JVM 17 natively, removing the hack.
+3. **Keep the wrapper layer intact**: even with a fork, all calls go through the
+   `<package>_wrapper.dart` (see `lib/core/services/device/jailbreak_detection_wrapper.dart`).
+   The fork swap is then a one-file change, invisible to features.
+4. **Audit majors**: dependabot ignores semver-major of
+   `flutter_jailbreak_detection_plus`; major bumps require explicit review.
