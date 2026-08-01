@@ -1,3 +1,6 @@
+@Tags(['golden'])
+library;
+
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/di/remember_me_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/config/environment_provider.dart';
