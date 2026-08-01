@@ -25,7 +25,8 @@ Widget _buildScreen(AuthState state) {
     overrides: [
       authProvider.overrideWith(() => _ControllableAuthNotifier(state)),
     ],
-    child: const MaterialApp(
+    child: MaterialApp(
+      theme: ThemeData(fontFamily: 'Roboto'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: ClinicalHistoryPlaceholderScreen(),

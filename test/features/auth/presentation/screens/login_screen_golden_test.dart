@@ -36,7 +36,8 @@ Widget _buildScreen(AuthState state) {
       rememberMeProvider.overrideWith(_FakeRememberMeNotifier.new),
       environmentProvider.overrideWith((ref) => const ProductionEnvironment()),
     ],
-    child: const MaterialApp(
+    child: MaterialApp(
+      theme: ThemeData(fontFamily: 'Roboto'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: LoginScreen(),
