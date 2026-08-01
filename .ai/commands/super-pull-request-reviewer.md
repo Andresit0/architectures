@@ -203,6 +203,18 @@ flutter test
 
 Record result (`PASS` / `FAIL`). If `flutter test` fails → log the failure output.
 
+### 5.3.5 — Build smoke check (Android APK)
+
+If the PR diff touches `lib/**`, `pubspec.*` or `android/**`, also run a build smoke check:
+
+```bash
+flutter build apk --debug
+```
+
+Record result (`PASS` / `FAIL`). This catches compile/build regressions that
+`flutter test` does not (e.g. plugin/namespace issues). If it fails → log the
+failure output and mark Gate 5 as FAIL. Skip this step for docs-only PRs.
+
 ### 5.4 — Return to original branch
 
 ```bash

@@ -331,14 +331,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_jailbreak_detection:
+  flutter_jailbreak_detection_plus:
     dependency: "direct main"
     description:
-      name: flutter_jailbreak_detection
-      sha256: "67ff11ea41965152d24db7104da1f9b343f94ada64c2a9e309ec4d753a12d281"
+      name: flutter_jailbreak_detection_plus
+      sha256: b1b7787c83197d187f6bcba8167bc876340124861308396d5667169048a452ac
       url: "https://pub.dev"
     source: hosted
-    version: "1.10.0"
+    version: "1.10.7"
   flutter_lints:
     dependency: "direct dev"
     description:
