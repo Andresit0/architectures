@@ -77,6 +77,25 @@ The project includes **unit tests** covering:
 flutter test
 ```
 
+### Platform × behavior
+
+Tests run **cross-platform**: goldens are rendered deterministically with embedded
+fonts (`test/assets/` — Roboto family + MaterialIcons) and compared with a 0.2%
+pixel tolerance, so they pass identically on macOS local and Linux CI.
+
+| Platform | `flutter test` (unit/widget) | `flutter test --tags golden` | CI job |
+|----------|------------------------------|------------------------------|--------|
+| macOS (local dev) | ✅ | ✅ (with local fonts) | — |
+| Linux (CI) | ✅ | ✅ (deterministic) | `Test` / `Test Goldens` |
+| Windows (CI) | ✅ | ✅ | — |
+
+Pre-PR rules:
+- Run `flutter analyze` — 0 issues required.
+- Run `flutter test` — 0 failures required.
+- After changing a widget that renders, regenerate goldens:
+  `flutter test --tags golden --update-goldens` and commit the new PNGs.
+  Goldens must stay cross-platform (never platform-specific).
+
 ### Run tests with coverage report
 
 ```bash
