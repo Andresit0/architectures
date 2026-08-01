@@ -4,10 +4,48 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
+    groups:
+      riverpod:
+        patterns:
+          - "flutter_riverpod"
+          - "riverpod_annotation"
+          - "riverpod_generator"
+          - "riverpod_lint"
+      flutter-plugins:
+        patterns:
+          - "flutter_secure_storage"
+          - "path_provider"
+          - "path_provider_platform_interface"
+          - "internet_connection_checker_plus"
+          - "flutter_jailbreak_detection_plus"
+      test-tooling:
+        patterns:
+          - "mocktail"
+          - "test"
+          - "gherkart"
+          - "golden_toolkit"
+          - "yaml"
+      codegen:
+        patterns:
+          - "freezed"
+          - "freezed_annotation"
+          - "json_serializable"
+          - "json_annotation"
+          - "build_runner"
+    ignore:
+      # flutter_jailbreak_detection_plus has no iOS Swift Package Manager
+      # support yet (Flutter warns it will become an error). Only accept
+      # minor/patch via the auto-merge workflow.
+      - dependency-name: "flutter_jailbreak_detection_plus"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"
