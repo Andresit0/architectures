@@ -10,6 +10,7 @@ import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/tok
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golden_toolkit/golden_toolkit.dart';
 
 class _ControllableAuthNotifier extends AuthNotifier {
   _ControllableAuthNotifier(this._initialState);
@@ -38,7 +39,7 @@ Widget _buildScreen(AuthState state) {
 }
 
 void main() {
-  testWidgets('ClinicalHistoryPlaceholderScreen golden test — initial state', (
+  testGoldens('ClinicalHistoryPlaceholderScreen golden test — initial state', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -52,7 +53,7 @@ void main() {
     );
   });
 
-  testWidgets('ClinicalHistoryPlaceholderScreen golden test — loaded state', (
+  testGoldens('ClinicalHistoryPlaceholderScreen golden test — loaded state', (
     tester,
   ) async {
     const patient = PatientEntity(id: '1', name: 'John Doe');
