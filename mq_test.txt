@@ -1,1 +1,0 @@
-P1.4 test PR — merge queue fallback validation (auto-merge + squash + delete branch)
