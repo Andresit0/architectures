@@ -29,3 +29,15 @@ flutter test integration_test/[feature_name]_integration_test.dart -d <device-id
 ```
 
 Integration tests use fake repositories (`_FakeAuthRepository`, `_FakeTokenStore`, `_FakeCredentialStore`, `_FakeTokenVerifier`) — no live HTTP calls needed.
+
+---
+
+### Environment variables
+
+All variables are passed via `--dart-define` (or `--dart-define-from-file=.env`) at run/build time. Never hardcode them in code — use `String.fromEnvironment` with a safe default.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ENVIRONMENT` | `dev` | Selects `AppEnvironment` variant: `dev` / `staging` / `production` |
+| `API_HOST` | `localhost` | Overrides the API host (used by `DevEnvironment`). Android emulator: `10.0.2.2` |
+| `PINNED_CERT_1`, `PINNED_CERT_2` | — (unset) | SHA-256 hashes for certificate pinning (staging/production) |
