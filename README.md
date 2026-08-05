@@ -1,7 +1,7 @@
 # Clean Architecture SDD Harness
 
 [![CI](https://github.com/Andresit0/architectures/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Andresit0/architectures/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Andresit0/architectures/branch/main/graph/badge.svg)](https://codecov.io/gh/Andresit0/architectures)
+[![codecov](https://codecov.io/gh/Andresit0/architectures/branch/develop/graph/badge.svg)](https://codecov.io/gh/Andresit0/architectures)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Dart](https://img.shields.io/badge/Dart-3.12-blue.svg)](https://dart.dev)
 
