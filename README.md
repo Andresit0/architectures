@@ -348,4 +348,19 @@ main
 ↓
 develop
 ```
+
+## 6. Branch Protection (enforced)
+
+Default branch: `main`. Both branches are protected (no direct pushes, even for admins):
+
+| Branch | PR required | Required checks | Approvals |
+|---|---|---|---|
+| `develop` | Yes | Analyze, Test, Test Goldens, Build iOS, Build Android, Gitleaks | 0 (dependabot auto-merges patch/minor) |
+| `main` | Yes | same + Branch Source Gate | 1 |
+
+* `Branch Source Gate` rejects any PR to `main` whose head is not `release/*` or `hotfix/*`
+* Dependabot targets `develop`; auto-merge only for patch/minor PRs based on `develop`
+* Feature branches are auto-deleted after merge
+* Releases: PR `release/*` → `main`, merge, tag `vX.Y.Z`, back-merge `release/*` → `develop`
+* Hotfixes: PR `hotfix/*` → `main`, then back-merge → `develop`
 ---

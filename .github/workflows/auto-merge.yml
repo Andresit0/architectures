@@ -12,7 +12,7 @@ jobs:
   auto-merge:
     name: Auto-merge patch/minor dependabot PRs
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.base.ref == 'develop'
     steps:
       - name: Dependabot metadata
         id: metadata

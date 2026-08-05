@@ -48,6 +48,16 @@ MD/AI_ARTIFACTS.md          ← How to create skills, agents, commands, orchestr
 ## GIT
 Before executing any git command, write the exact command and ask the user to confirm before running it.
 
+### Git Flow (enforced)
+
+Default branch: `main` (production). Integration branch: `develop`. See README §3 for the full model.
+
+* `feature/*` → PR → `develop` (checks) → merge
+* Dependabot (patch/minor) → PR → `develop` → checks → auto-merge
+* `release/*` → PR → `main` (gate + checks + 1 approval) → tag `vX.Y.Z` → back-merge → `develop`
+* `hotfix/*` → PR → `main`, then back-merge → `develop`
+* Direct pushes to `main`/`develop` are blocked (branch protection, `enforce_admins`). All changes go through PRs.
+
 
 ---
 

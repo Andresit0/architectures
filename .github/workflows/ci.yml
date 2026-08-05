@@ -100,3 +100,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  branch-source-gate:
+    name: Branch Source Gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'
+    steps:
+      - run: |
+          head="${{ github.event.pull_request.head.ref }}"
+          case "$head" in
+            release/*|hotfix/*) echo "OK: $head" ;;
+            *) echo "::error::PRs to main must come from release/* or hotfix/* (got $head)"; exit 1 ;;
+          esac
