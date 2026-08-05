@@ -1,366 +1,156 @@
-# 1. Launch the app
+# Clean Architecture SDD Harness
 
-## 1.1 Prerequisites
+[![CI](https://github.com/Andresit0/architectures/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Andresit0/architectures/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Andresit0/architectures/branch/main/graph/badge.svg)](https://codecov.io/gh/Andresit0/architectures)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Dart](https://img.shields.io/badge/Dart-3.12-blue.svg)](https://dart.dev)
 
-[Opencode:](https://opencode.ai/) is a popular, open-source AI-powered coding assistant and agent built specifically for software developers. It lets you interact with advanced AI models directly from your terminal, desktop app, or code editor to write, refactor, debug, and plan code in your actual repositories.
+Feature-first Flutter clean architecture template with Riverpod 3 codegen, a Result-based domain layer, and an AI-assisted SDD/TDD/BDD harness backed by enterprise CI/CD.
+
+## Overview
+
+A production-oriented Flutter starter that enforces clean architecture conventions by design and by CI:
+
+- **Feature-first layout** — each feature owns its domain, infrastructure and presentation layers.
+- **Riverpod 3 with codegen** — typed providers, composition root in `lib/app/di/`.
+- **Result-based error handling** — `Result<T>` / `AppError` / `guard()` in `lib/shared/error/`; repositories never throw.
+- **Package wrapper pattern** — every external package is wrapped (`<name>_wrapper.dart`); features never import packages directly.
+- **AI-assisted workflow** — Spec-Local Orchestrator: spec definition, all-tests-first TDD, BDD scenarios, phase gates.
+- **Enterprise CI/CD** — analyze, unit/widget, goldens, iOS/Android builds, gitleaks secret scan, codecov, dependabot auto-merge.
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| Runtime | Flutter / Dart | 3.44.0 / 3.12.0 |
+| State management | flutter_riverpod + riverpod_annotation (codegen) | ^3.3.1 / ^4.0.3 |
+| Models | freezed + json_serializable | ^3.1.0 / ^6.9.0 |
+| Networking | dio | ^5.11.0 |
+| Routing | go_router | ^17.2.2 |
+| Local storage | sembast (+ sembast_web) | ^3.7.5+2 |
+| Secure storage | flutter_secure_storage | ^10.0.0 |
+| Auth/crypto | dart_jsonwebtoken, bcrypt, encrypt | ^3.1.1 / ^1.2.0 / ^5.0.3 |
+| Device security | flutter_jailbreak_detection_plus | ^1.10.7 |
+| Testing | mocktail, golden_toolkit, gherkart (BDD) | ^1.0.4 / ^0.15.0 / ^0.2.1 |
+
+## Screenshots
+
+> Screenshots are generated from the committed golden fixtures (`test/features/auth/presentation/screens/goldens/`).
+
+| Login | Clinical History placeholder |
+|---|---|
+| ![Login](screenshots/login_screen.png) | ![Clinical History](screenshots/clinical_history_placeholder.png) |
+
+## Architecture
+
+```
+lib/
+├── app/            Composition root: providers barrel (_providers.lib.dart), GoRouter, guards, initializer
+├── core/           Infrastructure: network (dio wrapper, interceptors, retry), database (sembast), services (auth, crypto, device, storage), config
+├── shared/         Domain abstractions: error (Result/AppError/guard), interfaces, models/entities, exceptions, offline-first mixin
+├── features/       Feature-first modules: <name>/domain|infrastructure|presentation|di|spec
+├── design_system/  Theme + reusable UI
+└── l10n/           AppLocalizations (en/es)
+```
+
+Dependency rules (enforced by `test/architecture/dependency_rules_test.dart`):
+
+- `domain/` imports only `shared/` — never `core/`, `app/`, or Flutter.
+- `core/` is pure infrastructure; domain never depends on it.
+- Features never import external packages directly — only wrappers from `core/services/`.
+
+Full details: [MD/APP_ARCHITECTURE.md](MD/APP_ARCHITECTURE.md)
+
+## Repository Structure
+
+- `lib/` — application source. Full tree: [MD/APP_TREE.md](MD/APP_TREE.md)
+- `test/` — unit, widget, golden, architecture and BDD tests
+- `integration_test/` — device integration tests
+- `.ai/` — AI harness (skills, commands, orchestrators). See [AI Harness](#ai-harness)
+- `MD/` — reference documentation (architecture, patterns, providers, commands, skills)
+- `.github/workflows/` — CI/CD pipelines
+
+## Quickstart
+
+Prerequisites: Flutter 3.44 stable ([install](https://docs.flutter.dev/get-started/install)).
 
 ```bash
-$ brew install anomalyco/tap/opencode
-```
-
-[Engram:](https://github.com/Gentleman-Programming/engram) It gives Pi persistent project memory, compaction recovery, and shared memory with other MCP agents through the same local-or-cloud Engram brain
-
-```bash
-$ brew install gentleman-programming/tap/engram
-$ engram setup opencode
-```
-
-[Dart MCP:](https://docs.flutter.dev/ai/mcp-server)
-
-```
-{
-  "mcpServers": {
-    "dart-mcp-server": {
-      "command": "dart",
-      "args": [
-        "mcp-server"
-      ],
-      "env": {}
-    }
-  }
-}
-```
-
-[/super-commit`:](.opencode/commands/super-commit.md)
-
-This command was used throughout the project, but it is not automatically executed by the `orchestrator`. Therefore, it is recommended to run this command after implementing a feature to ensure that all related changes are properly documented in Git.
-
-Note: tested on macOS with:
-
-```bash
-Flutter 3.44.0 • channel stable • https://github.com/flutter/flutter.git
-Framework • revision 559ffa3f75 (4 weeks ago) • 2026-05-15 14:13:13 -0700
-Engine • hash fcf463a2242790d1fdcd9d044f533080f5022e18 (revision 4c525dac5e) (26 days ago) •
-2026-05-15 19:00:04.000Z
-Tools • Dart 3.12.0 • DevTools 2.57.0
-```
-
-## 1.2 Install dependencies and generate code
-
-```bash
+# 1. Install dependencies
 flutter pub get
+
+# 2. Generate localization code (after cloning or modifying .arb files)
 flutter gen-l10n
+
+# 3. Generate Riverpod/freezed code (after modifying @riverpod or @freezed files)
 dart run build_runner build --delete-conflicting-outputs
-```
 
-> `flutter gen-l10n` regenerates the `.dart` localization files from `.arb` sources.
-> It is required after modifying `app_en.arb` or `app_es.arb`, or after cloning the project.
-> `dart run build_runner` regenerates the `.g.dart` files required by Riverpod.
-> It is only needed after modifying providers or notifiers annotated with `@riverpod`.
-
-## 1.3 Run the app
-
-```bash
+# 4. Run the app (macOS example; env vars come from .env — see .env.example)
 flutter run -d mac --dart-define-from-file=.env
 ```
 
-## 1.4 Unit tests (`test/`)
+## Testing
 
-The project includes **unit tests** covering:
-- Entities, use cases, mappers, repositories, datasources
-- Providers, notifiers, states
-- Functions, interceptors, exceptions, configs, jsons
+| Type | Command | Notes |
+|---|---|---|
+| Unit / widget | `flutter test` | entities, use cases, mappers, repos, datasources, providers, notifiers |
+| Golden | `flutter test --tags golden` | deterministic: embedded fonts + 0.2% tolerance |
+| Golden update | `flutter test --tags golden --update-goldens` | run after UI changes; commit PNGs |
+| BDD | `flutter test test/bdd` | gherkart scenarios |
+| Integration | `flutter test integration_test/auth_integration_test.dart -d macos` | needs device; run files individually (macOS runner caveat); no real HTTP (fakes injected via Riverpod) |
+| Analyze | `flutter analyze` | 0 issues required before PR |
 
-### Run all tests
+Cross-platform behavior (verified in CI):
 
-```bash
-flutter test
-```
-
-### Platform × behavior
-
-Tests run **cross-platform**: goldens are rendered deterministically with embedded
-fonts (`test/assets/` — Roboto family + MaterialIcons) and compared with a 0.2%
-pixel tolerance, so they pass identically on macOS local and Linux CI.
-
-| Platform | `flutter test` (unit/widget) | `flutter test --tags golden` | CI job |
-|----------|------------------------------|------------------------------|--------|
-| macOS (local dev) | ✅ | ✅ (with local fonts) | — |
+| Platform | `flutter test` | `flutter test --tags golden` | CI job |
+|---|---|---|---|
+| macOS (local dev) | ✅ | ✅ (local fonts) | — |
 | Linux (CI) | ✅ | ✅ (deterministic) | `Test` / `Test Goldens` |
 | Windows (local dev) | ✅ | ✅ | — |
 
-Pre-PR rules:
-- Run `flutter analyze` — 0 issues required.
-- Run `flutter test` — 0 failures required.
-- After changing a widget that renders, regenerate goldens:
-  `flutter test --tags golden --update-goldens` and commit the new PNGs.
-  Goldens must stay cross-platform (never platform-specific).
+Mocks use `mocktail`; dependencies are replaced via Riverpod overrides — no real network calls in tests.
 
-### Run tests with coverage report
+## CI/CD Gates
 
-```bash
-flutter test --coverage
+Every PR runs `.github/workflows/ci.yml` on `develop` and `main`:
+
+| Job | Purpose |
+|---|---|
+| Analyze | `flutter analyze`, 0 issues |
+| Test | unit/widget + coverage upload to codecov (threshold 1%) |
+| Test Goldens | golden tests, cross-platform deterministic |
+| Build iOS | `flutter build ios --no-codesign` (macOS runner, CocoaPods cache) |
+| Build Android | `flutter build apk --debug` |
+| Gitleaks | secret scan gate (fail on leaked credentials) |
+| Branch Source Gate | only on PRs to `main` — rejects heads not matching `release/*` or `hotfix/*` |
+
+Dependabot updates are grouped and auto-merged (patch/minor) via [auto-merge.yml](.github/workflows/auto-merge.yml). Coverage configuration: [codecov.yml](codecov.yml).
+
+## Git Flow
+
+```
+main ────── TAG vX.Y.Z            production (default branch)
+  ▲  PR release/* | hotfix/*  (gate + 7 checks + 1 approval)
+develop ──●──●──●                integration (all changes land here)
+  ▲
+feature/* | dependabot PRs
 ```
 
-### Run a specific test file
+- `develop` — protected: PR required, 6 checks, 0 approvals (dependabot auto-merges patch/minor).
+- `main` — protected: PR required, 7 checks (incl. Branch Source Gate), 1 approval; only `release/*` and `hotfix/*` may merge.
+- Feature branches are auto-deleted after merge; releases are tagged (`v1.0.0`).
+- Releases and hotfixes are back-merged to `develop`.
 
-```bash
-flutter test test/core/database/app_database_test.dart
-```
+## AI Harness
 
-### Run tests by pattern
+This repository is also a working AI development harness:
 
-```bash
-# Run all auth-related tests
-flutter test --name "auth"
+- **Orchestrator** — [Spec-Local Orchestrator v3](.ai/orchestrators/Spec-Local-Orchestrator.md): spec definition → phase gate → all-tests-first TDD → verification.
+- **Skills** — 33 app skills (spec definition, TDD, test writers, fixers, nav-wiring, class-to-solid). Reference: [MD/APP_SKILLS.md](MD/APP_SKILLS.md)
+- **Commands** — `super-commit`, `super-md-update`, `spec-local`, `super-pull-request*` in [.ai/commands](.ai/commands/)
+- **Agent rules** — [AGENTS.md](AGENTS.md) (repo orientation for AI agents) and [MD/](MD/) reference docs (architecture, barrel pattern, package wrappers, providers, exceptions, dartz, tree).
+- **Learning material** — [LEARN.md](LEARN.md)
+- **Team rules** — 25 non-negotiable conventions (code, config, barrels, git, quality): [MD/APP_IMPORTANT_INFO.md](MD/APP_IMPORTANT_INFO.md)
 
-# Run all encounter-related tests
-flutter test --name "encounter"
-```
+## License
 
-### Verify code quality
-
-```bash
-# Run dart analyze (required before any PR)
-dart analyze
-
-# Fix automatically fixable issues
-dart fix --apply
-```
-
-> **Note:** Tests use `mocktail` for mocking. No real HTTP calls are made — dependencies are mocked via Riverpod overrides or direct injection.
-
----
-
-## 1.5 Integration tests (`integration_test/`)
-
-Integration tests require a connected device (physical, emulator, or simulator).
-
-> **Important:** Due to macOS test runner state, run integration tests **individually**, not together:
-
-```bash
-# List available devices
-flutter devices
-
-# Run auth integration tests
-flutter test integration_test/auth_integration_test.dart -d macos
-```
-
-> Note: Running all integration tests together (`flutter test integration_test/`) may cause a "Unable to start the app on the device" error. Execute them separately as shown above.
-> Integration tests use fake repositories (`_FakeAuthRepository`, `_FakeTokenStore`, `_FakeCredentialStore`, `_FakeTokenVerifier`) injected via Riverpod overrides — **no real HTTP calls are made** to the backend.
-
----
-
-# 2. Mandatory team rules
-
-## 2.1 Code rules (non-negotiable)
-
-1. **Every new external package requires its `<name>_wrapper.dart`** with `I<Name>` interface + concrete implementation in `lib/core/services/<domain>/`. Never import an external package directly in a feature.
-
-2. **Access to shared services from features:** always via `ref.watch/read(ProviderName)` from `_providers.lib.dart`. Never via static functions directly.
-
-3. **`_providers.lib.dart`** is the composition root barrel in `app/di/`. Do not add business logic in providers.
-
-4. **Every new feature follows exactly the same structure:**
-   ```
-   features/<name>/domain/datasources/i_<name>_datasource.dart
-   features/<name>/domain/entities/<name>_entity.dart   (@freezed)
-   features/<name>/domain/repositories/i_<name>_repository.dart
-   features/<name>/domain/usecases/<action>_usecase.dart
-   features/<name>/infrastructure/datasources/<name>_datasource_impl.dart
-   features/<name>/infrastructure/mappers/<name>_mapper.dart
-   features/<name>/infrastructure/repositories/<name>_repository_impl.dart
-   features/<name>/presentation/notifiers/<name>_notifier.dart + _state.dart (@freezed)
-   features/<name>/di/<name>_provider.dart (@riverpod)
-   features/<name>/presentation/screens/<name>_screen.dart
-   features/<name>/presentation/widgets/...
-   ```
-
-5. **Repositories never throw exceptions.** All exceptions caught in `guard()` in `shared/error/` → `Result<T>` (Success / Failure). If a new exception type is needed, add in `shared/exceptions/`.
-
-6. **`.g.dart` and `.freezed.dart` files are never edited manually.** Always regenerate with `dart run build_runner build --delete-conflicting-outputs`.
-
-7. **`GoRouter` is accessed via `goRouterProvider` from `app/di/router/router_provider.dart`.** In `main.dart`, use `ref.watch(goRouterProvider)` to get the instance. In features, use `ref.read(goRouterProvider).go(...)`.
-
-8. **New routes** are added in `app_router.dart` (`appRoutes()`) with the route name added to `AppRoute` enum in `app_route.dart`.
-
-9. **Use `@freezed` for all entities and states.** Do not create mutable data classes in the domain.
-
-10. **Apply the `class_to_solid`** skill (in features) or **`class_to_solid_min`** (in `core/services/`) when creating any new class. The skills document the mandatory correct pattern.
-
-## 2.2 Configuration and environment rules
-
-11. **Never hardcode URLs or credentials** in code. Use `String.fromEnvironment` with a safe default value. Document each variable in `MD/APP_COMMANDS.md`.
-
-12. **For Android emulator development:** use `--dart-define=API_HOST=10.0.2.2` to override the API host. Endpoints are defined in `lib/core/network/api_endpoints.dart`.
-
-13. **Testing with mock data:** Use Riverpod provider overrides in tests to replace the real implementation with a `FakeDatasource` class. The provider always returns `DatasourceImpl` directly — no `useMock` environment flag. Mock data uses typed entity constructors, not raw JSON maps.
-
-14. **Logger removed:** `LoggerWrapper` and `loggerProvider` have been removed from the project. Use `debugPrint` directly for temporary debug output (remove before PR). No structured logging provider is currently wired.
-
-## 2.3 Barrel and organization rules
-
-15. **When adding a file to a folder with barrel** (`_xxx.lib.dart` / `_xxx.dart`):
-    - Add `part '<new_file>.dart';` in `_xxx.lib.dart`.
-    - Add `part of '_xxx.lib.dart';` at the start of the new file.
-    - If the file exposes a public class, add the corresponding `static` in `_xxx.dart`.
-
-16. **Files inside a barrel are `part` of the library hub** (`_xxx.lib.dart`). They must not have their own `import`s; all imports go in `_xxx.lib.dart`.
-
-17. **Do not create cross imports between features.** If `feature_A` needs a type from `feature_B`, that type must move to `shared/` (domain abstractions) or `core/` (infrastructure).
-
-## 2.4 Git rules
-
-18. **Before any git command**, write the exact command and ask for confirmation from user/tech lead. (See `AGENTS.md`.)
-
-19. **Do not commit `.g.dart` files if they don't match source code.** Always regenerate before commit with `build_runner`.
-
-20. **`.env` or configuration files with secrets never go to the repository.** Use `.gitignore` and CI/CD server variables.
-
-## 2.5 Quality rules
-
-21. **`dart analyze` must pass without warnings** before any PR. Configure in CI.
-
-22. **Every new use case must have a unit test** covering the happy path and at least one Failure case.
-
-23. **Notifiers do not contain business logic.** They only call use cases and update state. Logic goes in use cases and repositories.
-
-24. **Screens do not contain logic.** They only call notifier methods and read state. Complex presentation logic goes in separate widgets or in the notifier.
-
-25. **Use `const` on all widgets that do not depend on state.** Mandatory for performance in lists and frequent rebuilds.
-
----
-
-# 3. Git Flow
-
-## Objective
-
-This project uses a Git Flow–based strategy to maintain stability, traceability, and controlled deployments.
-
-```txt
-                                   PRODUCTION
-                                        │
-                                        ▼
-main ─────────────────────────────────────●─────────── TAG v1.0.0
-                                          ▲
-                                          │
-                               merge release/1.0.0
-                                          │
-
-develop ─────●────────────────────●────────●──────────
-             ▲                    ▲
-
-feature/auth ├────●────●────●─────┘
-
-feature/clinical-history
-                  ├────●────●────●────────┘
-
-feature/* → develop → release/* → main
-```
-
-## 1. `main` Branch
-
-### Purpose
-
-Contains only production-ready code.
-
-### Rules
-
-* No direct pushes
-* Merges allowed only from `release/*` and `hotfix/*`
-* Pull Request required
-* Branch protection enabled
-* Versioning managed through tags
-
----
-
-## 2. `develop` Branch
-
-### Purpose
-
-Continuous integration branch for the next release.
-
-### Rules
-
-* No direct commits
-* All features must be merged through Pull Requests
-
----
-
-## 3. `feature/*` Branches
-
-Examples:
-
-```txt
-feature/auth
-feature/dashboard
-feature/profile
-feature/invoice-generation
-```
-
-Rules:
-
-* Create from `develop`
-* Merge back into `develop`
-* Delete after merge
-
----
-
-## 4. `release/*` Branches
-
-Example:
-
-```txt
-release/1.0.0
-```
-
-Usage:
-
-* QA testing
-* Final bug fixes
-* Pre-deployment adjustments
-
-Flow:
-
-```txt
-release → main
-release → develop
-```
-
----
-
-## 5. `hotfix/*` Branches
-
-Example:
-
-```txt
-hotfix/login-crash
-```
-
-Flow:
-
-```txt
-main
-↓
-hotfix/*
-↓
-main
-↓
-develop
-```
-
-## 6. Branch Protection (enforced)
-
-Default branch: `main`. Both branches are protected (no direct pushes, even for admins):
-
-| Branch | PR required | Required checks | Approvals |
-|---|---|---|---|
-| `develop` | Yes | Analyze, Test, Test Goldens, Build iOS, Build Android, Gitleaks | 0 (dependabot auto-merges patch/minor) |
-| `main` | Yes | same + Branch Source Gate | 1 |
-
-* `Branch Source Gate` rejects any PR to `main` whose head is not `release/*` or `hotfix/*`
-* Dependabot targets `develop`; auto-merge only for patch/minor PRs based on `develop`
-* Feature branches are auto-deleted after merge
-* Releases: PR `release/*` → `main`, merge, tag `vX.Y.Z`, back-merge `release/*` → `develop`
-* Hotfixes: PR `hotfix/*` → `main`, then back-merge → `develop`
----
+MIT — see [LICENSE](LICENSE).
