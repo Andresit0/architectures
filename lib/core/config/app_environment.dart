@@ -38,7 +38,8 @@ sealed class AppEnvironment {
 class DevEnvironment extends AppEnvironment {
   const DevEnvironment();
   @override String get appName => 'Clinical History (Dev)';
-  @override String get host => 'localhost';
+  @override
+  String get host => const String.fromEnvironment('API_HOST', defaultValue: 'localhost');
   @override int get port => 5111;
   @override bool get isProduction => false;
   @override List<String> get pinnedCertificates => const [];
