@@ -20,21 +20,22 @@ Clean Architecture layers (from the inside out):
 **The source code of inner layers must NEVER import code from outer layers.**
 
 ```
-Inner layer:  domain/   →  only imports shared/ (enterprise rules)  ✅
-Middle layer: core/     →  imports shared/ but NEVER features/      ✅
-Outer layer:  app/di/ + core/  →  may import ALL layers             ✅
+Inner layer:  domain/   →  imports shared/ + freezed_annotation + own domain  ✅
+Middle layer: core/     →  imports shared/ but NEVER features/               ✅
+Outer layer:  app/      →  may import ALL layers (core/ NO features/app — R14) ✅
 ```
 
 Dependencies always point inward:
 
 ```
-shared/  ←  core/  ←  features/*/domain/  ←  features/*/infrastructure/  ←  features/*/presentation/  ←  app/ (composition root)
-(most inner)                                                                                (most outer)
+shared/  ←  core/  ←  features/*/infrastructure/  ←  features/*/di/  ←  features/*/presentation/  ←  app/ (composition root)
+(most inner)                                                               (most outer)
 ```
+`features/*/domain/` importa solo `shared/` + `freezed_annotation` (Rule 1) — no depende de `core/`. Las features importan providers de `core/` desde su `di/`.
 
 ### What is a Composition Root?
 
-It is the app's **entry point** where the dependency graph is built. In this Flutter project, the composition root lives in `lib/app/di/`. The barrel `lib/app/di/_providers.lib.dart` re-exports all shared providers, and the feature `di/` folders wire domain interfaces to infrastructure implementations.
+It is the app's **entry point** where the dependency graph is built. In this Flutter project, the composition root lives in `lib/app/di/`. Feature `di/` folders wire domain interfaces to infrastructure implementations, importing providers directly from `core/` (one-way dependency).
 
 In any system with Dependency Injection, **someone** must know all the dependencies to build them. That someone is the Composition Root. It is intentionally "dirty" — it knows all layers so it can join them together.
 
@@ -44,12 +45,12 @@ Clean Architecture says: **the direction of the dependencies** must go from the 
 
 ```
 Inner layer (domain/)  →  does NOT mention outer layers  ✅
-Outer layer (app/ + core/)  →  DOES mention inner layers  ✅
+Outer layer (app/)  →  DOES mention inner layers  ✅ (core/ NO importa features/app — Rule 14)
 ```
 
-`app/` and `core/` are the **most outer layers** — they may mention anything because there is nothing further out that could depend on them incorrectly.
+`app/` is the **most outer layer** — it may mention anything because there is nothing further out that could depend on it incorrectly. `core/` is **shared infrastructure**: it imports only `shared/` and must NEVER import `features/` or `app/` (Rule 14).
 
-The rule is: **what cannot happen** is `domain/` importing `app/`, `core/` or any provider-wiring barrel (`app/di/`). That does break Clean Architecture. But outer layers importing `domain/` is the natural flow: the outer knows the inner.
+The rule is: **what cannot happen** is `domain/` importing `app/` or `core/`. That does break Clean Architecture. But outer layers importing `domain/` is the natural flow: the outer knows the inner.
 
 ### Definition of the key concepts
 
@@ -59,12 +60,12 @@ Contains the business rules **shared by the whole app**. It does not depend on F
 
 | What goes here | Concrete example |
 |-------------|-----------------|
-| Abstract interfaces | `ITokenStore`, `IConnectivityChecker`, `IAuthenticationObserver`, `ICredentialStore`, `ITokenVerifier`, `IPasswordHasher`, `IAppDatabase` |
-| Error types | `AppError`, `Result<T>`, `guard()`, `localizeError()` |
+| Abstract interfaces | `ITokenStore`, `IConnectivityChecker`, `ICredentialStore`, `ITokenVerifier`, `IPasswordHasher`, `IPatientInfoStore`, `IClinicalHistoryReader/Writer/Store`, `IUseCase<Input, Output>` |
+| Error types | `AppError`, `Result<T>`, `guard()` (localization happens in `l10n/error_localizer.dart`) |
 | Shared models | `PatientEntity`, `ClinicalHistoryEntity` + 6 sub-entities |
-| Offline-first mixin | `offline_first_repository.dart` |
+| Online-first helper | `online_first.dart` |
 
-**Rule:** `shared/` must NOT import `core/`, `features/`, `app/`, or any external package (only the Dart SDK).
+**Rule:** `shared/` must NOT import `core/`, `features/`, `app/`, `l10n/`, or `package:flutter/`. It may import the Dart SDK and pure annotation packages (e.g. `freezed_annotation`) only.
 
 #### `core/` — Interface Adapters (shared infrastructure)
 
@@ -89,11 +90,11 @@ Each feature is an **autonomous module** with its own sub-layers:
 
 | Sub-layer | Role | Imports from |
 |---------|-----|-----------|
-| `features/*/domain/` | Feature business rules (use cases, entities, interfaces, value objects) | Only `shared/` |
+| `features/*/domain/` | Feature business rules (use cases, entities, interfaces, value objects) | `shared/`, `freezed_annotation`, own domain |
 | `features/*/infrastructure/` | Implementations of the domain interfaces | `domain/`, `core/`, `shared/` |
 | `features/*/di/` | Feature wiring (Riverpod providers) | `core/`, `shared/`, own `domain/` + `infrastructure/` (never `presentation/`) |
-| `features/*/presentation/` | Feature UI (screens, widgets, notifiers) | `../di/`, `shared/`, `design_system/`, `l10n/` |
-| `features/*/spec/` | SDD artifacts (`spec.md`, `domain.md`, `contracts.md`, `bdd.feature`, `tests.md`, `tasks.md`) | — |
+| `features/*/presentation/` | Feature UI (screens, widgets, notifiers) | `../di/`, `../domain/`, `shared/`, `design_system/`, `l10n/` |
+| `features/*/spec/` | SDD artifacts (`spec.md`, `domain.md`, `contracts.md`, `bdd.feature`, `tests.md`, `tasks.md`; features built with spec-dev also have `generated_api_contract.md`) | — |
 
 **Rule:** A feature NEVER imports from another feature. Each feature is independent.
 
@@ -103,43 +104,47 @@ Each feature is an **autonomous module** with its own sub-layers:
 
 | What goes here | Concrete example |
 |-------------|-----------------|
-| Composition root barrel | `app/di/_providers.lib.dart` (exports all shared providers) |
-| Dio providers | `app/di/network/dio_provider.dart` → `authDioProvider` + `httpServiceProvider` |
+| Composition root | `app/di/network/dio_overrides.dart` + feature `di/` wiring (imports from `core/` directly) |
+| Dio providers | `core/network/dio/dio_providers.dart` → `authDioProvider` + `httpServiceProvider` |
 | Auth interceptor wiring | `app/di/network/auth_interceptor_impl.dart` → `AuthInterceptorImpl` |
 | Router provider | `app/di/router/router_provider.dart` → `goRouterProvider` |
-| Auth observer | `app/di/auth/auth_provider.dart` → `authenticationObserverProvider` |
-| Routing definitions | `app/router/app_route.dart`, `app/router/app_router.dart`, `app/router/guards/auth_guard.dart` |
+| Auth observer | `app/di/auth/auth_observer_provider.dart` → `authenticationObserverProvider` |
+| Routing definitions | `shared/router/app_route.dart`, `app/router/app_router.dart`, `app/router/guards/auth_guard.dart` |
 | Initialization | `app/app_initializer.dart` → platform config + jailbreak check |
 
-**Rule:** `app/` may import any `lib/` folder. No lower layer imports `app/` — the only exceptions are features that import the `app/di/_providers.lib.dart` barrel for global providers (this is the documented pattern for accessing global providers from feature code).
+**Rule:** `app/` may import any `lib/` folder. No lower layer imports `app/` — features import the providers they need directly from their `core/` source files, and define their own wiring in `features/*/di/` (Rule 11).
 
-**Global provider access from features:** features import the shared providers they need from the `app/di/_providers.lib.dart` barrel (or directly from their `core/` source files), and define their own wiring in `features/*/di/`.
+**Global provider access from features:** features import the shared providers they need directly from their `core/` source files (e.g. `core/network/dio/dio_providers.dart`, `core/services/auth/token_providers.dart`), and define their own wiring in `features/*/di/`.
 
 ```dart
-// Global providers come from the app/di barrel or core barrels:
-// app/di/_providers.lib.dart   → authDioProvider, httpServiceProvider, appDatabaseProvider,
-//                                clinicalHistoryStoreProvider, patientInfoStoreProvider,
-//                                tokenStoreProvider, tokenVerifierProvider, credentialStoreProvider,
-//                                passwordHasherProvider, connectivityCheckerProvider,
-//                                internetServiceProvider, environmentProvider, goRouterProvider
-// core/services/device/        → pathProviderProvider, flutterJailbreakDetectionProvider
+// Global providers come from core/ source files (never from app/):
+// core/network/dio/dio_providers.dart                   → authDioProvider, httpServiceProvider
+// core/network/connectivity/connectivity_providers.dart → internetServiceProvider, connectivityCheckerProvider
+// core/services/auth/token_providers.dart               → tokenStoreProvider, tokenVerifierProvider,
+//                                                         credentialStoreProvider, jwtWrapperProvider, secureStorageProvider
+// core/services/crypto/password_hasher_provider.dart     → passwordHasherProvider
+// core/config/environment_provider.dart                  → environmentProvider
+// core/database/app_database_provider.dart               → appDatabaseProvider
+// core/database/tables/*_providers.dart                  → clinicalHistoryStoreProvider, patientInfoStoreProvider
+// core/services/logging/logging_providers.dart           → loggerProvider
+// core/services/device/                                  → pathProviderProvider, flutterJailbreakDetectionProvider
+// (goRouterProvider vive en app/ — las features nunca lo importan; usan el seam IAppNavigator)
 ```
 
 | Provider | Type | Provider location |
 |---|---|---|
-| `authDioProvider` | `IDioWrapper` | `app/di/network/dio_provider.dart` |
-| `httpServiceProvider` | `IDioWrapper` | `app/di/network/dio_provider.dart` |
+| `authDioProvider` | `IDioWrapper` | `core/network/dio/dio_providers.dart` |
+| `httpServiceProvider` | `IDioWrapper` | `core/network/dio/dio_providers.dart` |
 | `goRouterProvider` | `GoRouter` | `app/di/router/router_provider.dart` |
-| `authenticationObserverProvider` | `IAuthenticationObserver` | `app/di/auth/auth_provider.dart` |
-| `appNameProvider` | `String` | `features/auth/di/auth_provider.dart` |
+| `authenticationObserverProvider` | `IAuthenticationObserver` | `app/di/auth/auth_observer_provider.dart` |
 | `tokenStoreProvider` | `ITokenStore` | `core/services/auth/token_providers.dart` |
 | `tokenVerifierProvider` | `ITokenVerifier` | `core/services/auth/token_providers.dart` |
 | `credentialStoreProvider` | `ICredentialStore` | `core/services/auth/token_providers.dart` |
 | `jwtWrapperProvider` | `IJwtWrapper` | `core/services/auth/token_providers.dart` |
 | `secureStorageProvider` | `ISecureStorageWrapper` | `core/services/auth/token_providers.dart` |
 | `appDatabaseProvider` | `IAppDatabase` | `core/database/app_database_provider.dart` |
-| `clinicalHistoryStoreProvider` | `IClinicalHistoryStore` | `core/database/tables/clinical_history.dart` |
-| `patientInfoStoreProvider` | `IPatientInfoStore` | `core/database/tables/patient_info.dart` |
+| `clinicalHistoryStoreProvider` | `IClinicalHistoryStore` | `core/database/tables/clinical_history_providers.dart` |
+| `patientInfoStoreProvider` | `IPatientInfoStore` | `core/database/tables/patient_info_providers.dart` |
 | `passwordHasherProvider` | `IPasswordHasher` | `core/services/crypto/password_hasher_provider.dart` |
 | `connectivityCheckerProvider` | `IConnectivityChecker` | `core/network/connectivity/connectivity_providers.dart` |
 | `internetServiceProvider` | `IInternetService` | `core/network/connectivity/connectivity_providers.dart` |
@@ -155,12 +160,21 @@ Feature providers live in the feature itself:
 | `authRemoteDatasourceProvider` | `IAuthRemoteDatasource` | `features/auth/di/auth_provider.dart` |
 | `localAuthDatasourceProvider` | `ILocalAuthDatasource` | `features/auth/di/auth_provider.dart` |
 | `authRepositoryProvider` | `IAuthRepository` | `features/auth/di/auth_provider.dart` |
+| `localAuthRepositoryProvider` | `ILocalAuthRepository` | `features/auth/di/auth_provider.dart` |
 | `loginUseCaseProvider` | `LoginUseCase` | `features/auth/di/auth_provider.dart` |
 | `clearSessionUseCaseProvider` | `ClearSessionUseCase` | `features/auth/di/auth_provider.dart` |
-| `refreshTokenUseCaseProvider` | `RefreshTokenUseCase` | `features/auth/di/auth_provider.dart` |
 | `restoreSessionUseCaseProvider` | `RestoreSessionUseCase` | `features/auth/di/auth_provider.dart` |
+| `resetAccountUseCaseProvider` | `ResetAccountUseCase` | `features/auth/di/auth_provider.dart` |
 | `handle401UseCaseProvider` | `Handle401UseCase` | `features/auth/di/auth_provider.dart` |
-| `rememberMeProvider` | `bool` (Notifier) | `features/auth/di/remember_me_provider.dart` |
+| `_refreshTokenUseCaseProvider` / `_credentialLoginUseCaseProvider` (private) | `RefreshTokenUseCase` / `CredentialLoginUseCase` | `features/auth/di/auth_provider.dart` |
+| `rememberMeProvider` | `bool` (Notifier) | `features/auth/presentation/notifiers/remember_me_provider.dart` |
+| `_clinicalHistoryRemoteDatasourceProvider` (private) | `IClinicalHistoryRemoteDatasource` | `features/clinical_history/di/clinical_history_provider.dart` |
+| `_clinicalHistoryLocalDatasourceProvider` (private) | `IClinicalHistoryLocalDatasource` | `features/clinical_history/di/clinical_history_provider.dart` |
+| `clinicalHistoryRepositoryProvider` | `IClinicalHistoryRepository` | `features/clinical_history/di/clinical_history_provider.dart` |
+| `loadClinicalHistoriesUseCaseProvider` | `LoadClinicalHistoriesUseCase` | `features/clinical_history/di/clinical_history_provider.dart` |
+| `refreshClinicalHistoriesUseCaseProvider` | `RefreshClinicalHistoriesUseCase` | `features/clinical_history/di/clinical_history_provider.dart` |
+| `clinicalHistoryNotifierProvider` | `ClinicalHistoryState` (Notifier) | `features/clinical_history/presentation/notifiers/clinical_history_notifier.dart` |
+| `clinicalHistoryRefreshErrorProvider` | `AppError?` (Notifier, UI-state) | `features/clinical_history/presentation/notifiers/clinical_history_refresh_error_provider.dart` |
 
 #### `design_system/` — UI primitives
 
@@ -168,10 +182,11 @@ Reusable visual components with no business logic.
 
 | What goes here | Concrete example |
 |-------------|-----------------|
-| Theme | `AppColors`, `AppTheme` |
-| Components | `LoadingIndicator` |
+| Theme | `AppColors` (incl. semantic `success`/`warning`), `AppTheme` |
+| Components | `LoadingIndicator`, `EmptyState`, `ErrorState`, `InfoChip`, `SkeletonList` |
+| UI formatters | `utils/app_formatters.dart` (`formatClinicalDate`, `formatBytes`) |
 
-**Rule:** Only imports Flutter. Does not import `core/`, `shared/`, or `features/`.
+**Rule:** Only imports Flutter (plus `intl` for locale-aware date/byte formatting). Does not import `core/`, `shared/`, or `features/`.
 
 #### `l10n/` — Internationalization
 
@@ -200,13 +215,13 @@ This project follows a Feature-First Clean Architecture pattern for medium-to-la
 
 Each feature operates as an autonomous module containing its own lifecycle and architectural layers:
 
-- `domain/` (Core Business Logic): The completely isolated layer that defines the business rules. It contains enterprise Entities, value objects, abstract contracts for data sources and repositories, and specific business orchestrators (Use Cases). It remains completely independent of any external library or framework.
+- `domain/` (Core Business Logic): The completely isolated layer that defines the business rules. It contains enterprise Entities, value objects, abstract contracts for data sources and repositories, and specific business orchestrators (Use Cases). It remains independent of Flutter and of any feature outer layer — it imports only `shared/` (+ `freezed_annotation`) and its own domain files.
 
 - `infrastructure/` (Data & External Integrations): Implements the contracts defined in the Domain layer. It handles raw data fetching via concrete Datasources (REST APIs, Local DBs), maps external data structures into Domain Entities using Mappers (DTO → Entity), and coordinates data flow through Repository implementations.
 
 - `di/` (Dependency Injection — Wiring): Feature-specific Riverpod providers that wire domain interfaces to infrastructure implementations. This is a **peer** of the other layers, not a subfolder of `presentation/`, because it knows about **all** layers: imports `core/`, `domain/`, and `infrastructure/`, but **never** imports `presentation/`. The dependency direction is `presentation/ → di/ → domain/ + infrastructure/ + core/`.
 
-- `presentation/` (UI & State Management): Manages how the feature is displayed and how users interact with it. It contains Screens (views), atomic Widgets, and State Notifiers (`Notifier` + `State`). The **only** import toward other feature layers is `presentation/notifiers/ → di/` (notifiers consume providers from `di/`). It never contains Riverpod providers — those live in `di/`.
+- `presentation/` (UI & State Management): Manages how the feature is displayed and how users interact with it. It contains Screens (views), atomic Widgets, and State Notifiers (`Notifier` + `State`). The **only** import toward other feature layers is `presentation/notifiers/ → di/` (notifiers consume providers from `di/`). Feature *wiring* providers live in `di/`; `presentation/notifiers/` holds the state notifiers themselves (which are `@riverpod` classes, e.g. `ClinicalHistoryNotifier`) and UI-state notifiers (e.g. `rememberMeProvider`).
 
 - `spec/` (Specification-Driven Development - SDD): The source of truth for the feature's requirements. It centralizes BDD Gherkin scenarios (`.feature`), functional contracts, API schemas, and task checklists, serving as the blueprint for both automated tests and implementation.
 
@@ -215,20 +230,21 @@ Each feature operates as an autonomous module containing its own lifecycle and a
 │ └── auth
 │     ├── di/              ← Peer layer (WIRING): imports core/ + domain/ + infrastructure/
 │     │   ├── auth_provider.dart        ← @riverpod providers (datasources, repository, use cases)
-│     │   ├── auth_provider.g.dart      ← generated by riverpod_generator
-│     │   └── remember_me_provider.dart ← NotifierProvider<bool>
+│     │   └── auth_provider.g.dart      ← generated by riverpod_generator
 │     ├── domain/          ← Innermost layer (BUSINESS): 0 imports from outer layers
 │     │   ├── datasources
-│     │   │   ├── i_auth_datasource.dart
+│     │   │   ├── i_auth_remote_datasource.dart
 │     │   │   └── i_local_auth_datasource.dart
 │     │   ├── entities
 │     │   │   ├── login_response_entity.dart   (@freezed)
 │     │   │   ├── token_entity.dart            (@freezed)
 │     │   │   └── *.freezed.dart               ← generated by freezed
 │     │   ├── repositories
-│     │   │   └── i_auth_repository.dart
+│     │   │   ├── i_auth_repository.dart
+│     │   │   └── i_local_auth_repository.dart
 │     │   ├── usecases
 │     │   │   ├── clear_session_usecase.dart
+│     │   │   ├── credential_login_usecase.dart
 │     │   │   ├── handle_401_usecase.dart
 │     │   │   ├── login_usecase.dart
 │     │   │   ├── refresh_token_usecase.dart
@@ -248,18 +264,18 @@ Each feature operates as an autonomous module containing its own lifecycle and a
 │     │   ├── mappers
 │     │   │   └── auth_mapper.dart
 │     │   └── repositories
-│     │       └── auth_repository_impl.dart
+│     │       ├── auth_local_repository_impl.dart
+│     │       └── auth_remote_repository_impl.dart
 │     ├── presentation/    ← Outer layer (UI): imports di/
 │     │   ├── notifiers
 │     │   │   ├── auth_notifier.dart   ← @Riverpod(keepAlive: true) Notifier
 │     │   │   ├── auth_notifier.g.dart
 │     │   │   ├── auth_state.dart      ← @freezed sealed class
-│     │   │   └── auth_state.freezed.dart
+│     │   │   ├── auth_state.freezed.dart
+│     │   │   └── remember_me_provider.dart ← NotifierProvider<bool> (UI state)
 │     │   ├── screens
-│     │   │   ├── clinical_history_placeholder_screen.dart
 │     │   │   └── login_screen.dart
 │     │   └── widgets
-│     │       ├── _widgets.lib.dart
 │     │       ├── email_form_field.dart
 │     │       ├── login_button.dart
 │     │       └── password_form_field.dart
@@ -284,14 +300,14 @@ lib/features/auth/
 ├── di/
 │   └── auth_provider.dart
 │         │
-│         ├──▶ app/di/_providers.lib.dart      (global providers: authDioProvider,
-│         │                                      appDatabaseProvider, tokenStoreProvider, ...)
-│         ├──▶ ../domain/datasources/i_auth_datasource.dart
+│         ├──▶ core/ source files            (global providers: authDioProvider,
+│         │                                      appUriesProvider, tokenStoreProvider, ...)
+│         ├──▶ ../domain/datasources/i_auth_remote_datasource.dart
 │         ├──▶ ../domain/datasources/i_local_auth_datasource.dart
 │         ├──▶ ../domain/repositories/i_auth_repository.dart
 │         ├──▶ ../domain/usecases/*.dart
 │         ├──▶ ../infrastructure/datasources/*_impl.dart
-│         └──▶ ../infrastructure/repositories/auth_repository_impl.dart
+│         └──▶ ../infrastructure/repositories/auth_remote_repository_impl.dart
 │
 │       (does NOT import presentation/ — 0 paths toward ../presentation/)
 │
@@ -302,7 +318,7 @@ lib/features/auth/
               └──▶ imports ../../di/auth_provider.dart   ← ÚNICA flecha hacia di/
 ```
 
-`auth_provider.dart` in `di/` imports from `app/di/` (global providers), `../domain/` and `../infrastructure/`, but **never** from `../presentation/`. In contrast, `auth_notifier.dart` in `presentation/` imports from `../../di/auth_provider.dart` — the direction is `presentation → di`, not the other way around.
+`auth_provider.dart` in `di/` imports from `core/` source files (global providers), `../domain/` and `../infrastructure/`, but **never** from `../presentation/`. In contrast, `auth_notifier.dart` in `presentation/` imports from `../../di/auth_provider.dart` — the direction is `presentation → di`, not the other way around.
 
 If `di/` were inside `presentation/`, the semantics would be misleading: it would suggest that wiring is a "kind of UI", when in reality it is the layer that orchestrates all the others. Placing it as a peer of `domain/`, `infrastructure/` and `presentation/` reflects its true architectural role.
 
@@ -310,26 +326,26 @@ If `di/` were inside `presentation/`, the semantics would be misleading: it woul
 |------|-----------|----------------|
 | `domain/` | nothing external | Entities, interfaces, value objects, use cases |
 | `infrastructure/` | `domain/` + `core/` + `shared/` | Concrete implementations, DTOs, mappers |
-| `di/` | `app/di/` (global providers) + `domain/` + `infrastructure/` | Providers that WIRE (never UI) |
+| `di/` | `core/` (global providers) + `domain/` + `infrastructure/` | Providers that WIRE (never UI) |
 | `presentation/` | `di/` + widgets/screens | Notifiers, screens, widgets |
 
 ### 2. The app/, core/ and shared/ Directories
 
 Cross-cutting concerns, global configurations, and reusable utilities that are shared across multiple features are centralized here to avoid duplication:
 
-- `app/`: Application composition root — `di/_providers.lib.dart` (barrel of all shared providers), `di/network/` (Dio providers + auth interceptor impl), `di/router/` (`goRouterProvider`), `di/auth/` (`authenticationObserverProvider`), `router/` (routes, guard, AppRoute enum), `app_initializer.dart`.
+- `app/`: Application composition root — `di/network/` (Dio providers + auth interceptor impl + `dioOverrides` seam), `di/router/` (`goRouterProvider`), `di/auth/` (`authenticationObserverProvider`), `router/` (routes, guard), `widgets/connectivity_banner.dart`, `app_initializer.dart`.
 
 - `core/`: Pure infrastructure — `database/` (AES-256-CBC encrypted sembast), `network/` (Dio wrapper, connectivity, interceptors, timeouts, retry, security, utils), `services/` (auth, crypto, device, storage), `config/` (AppEnvironment).
 
 - `core/database/`: Centralized persistence layer configuration (AES-256-CBC encrypted sembast) accessible by any datasource via `appDatabaseProvider`. It exposes `app_database.dart`, `sembast_db_wrapper.dart` (`ISembastDb`), `tables/` (clinical_history, patient_info), `serializers/`.
 
-- `shared/error/`: `AppError` sealed hierarchy (ApiError, NetworkError, ServerUnreachableError, ValidationError, UnexpectedError, DeviceSecurityError), `Result<T>` with `guard()`, `error_localizer.dart`.
+- `shared/error/`: `AppError` sealed hierarchy (ApiError, NetworkError, ServerUnreachableError, TimeoutError, ValidationError, UnexpectedError, DeviceSecurityError), `Result<T>` with `guard()`. Localization happens in `l10n/error_localizer.dart`.
 
 - `core/network/`: Network layer — Dio wrapper (`dio/`), connectivity checkers (`connectivity/`), interceptors (`interceptors/`), per-endpoint timeout configuration (`timeouts/`), retry logic (`retry/`), certificate pinning (`security/`).
 
-- `core/services/`: Shared services organized by domain: `auth/` (token, JWT, credentials, observer), `crypto/` (bcrypt hashing), `device/` (path_provider, jailbreak detection), `storage/` (secure_storage).
+- `core/services/`: Shared services organized by domain: `auth/` (token, JWT, credentials, observer), `crypto/` (bcrypt hashing), `device/` (path_provider, jailbreak detection), `logging/` (ILogger/DevLogger observability), `storage/` (secure_storage).
 
-- `shared/`: Pure domain abstractions — `error/` (AppError, Result, guard, localizeError), `exceptions/` (exception classes), `interfaces/` (IAppDatabase, ICredentialStore, IConnectivityChecker, ITokenStore, ITokenVerifier, IAuthenticationObserver, IPasswordHasher), `models/` (shared domain entities: PatientEntity, ClinicalHistoryEntity + sub-entities), `functions/` (offline_first_repository).
+- `shared/`: Pure domain abstractions — `error/` (AppError incl. `TimeoutError`, Result, guard), `exceptions/` (exception classes), `interfaces/` (ICredentialStore, IConnectivityChecker, ITokenStore, ITokenVerifier, IPasswordHasher, IPatientInfoStore, IClinicalHistoryReader/Writer/Store, IAppNavigator, ILogger), `models/` (shared domain entities: PatientEntity, ClinicalHistoryEntity + sub-entities), `functions/` (online_first — online-first; the helper owns all boundary guarding and reports DataOrigin remote/cache).
 
 ```bash
 lib/
@@ -338,16 +354,16 @@ lib/
 ├── app/                                ← Composition root
 │   ├── app_initializer.dart            ← Platform config + jailbreak check
 │   ├── di/
-│   │   ├── _providers.lib.dart         ← Barrel of ALL shared providers (composition root)
 │   │   ├── auth/
-│   │   │   └── auth_provider.dart      ← authenticationObserverProvider
+│   │   │   └── auth_observer_provider.dart  ← authenticationObserverProvider
 │   │   ├── network/
 │   │   │   ├── auth_interceptor_impl.dart
-│   │   │   └── dio_provider.dart       ← authDioProvider + httpServiceProvider
+│   │   │   └── dio_overrides.dart           ← binds authInterceptorProvider seam (merged in main.dart)
 │   │   └── router/
-│   │       └── router_provider.dart    ← goRouterProvider
+│   │       ├── go_router_navigator.dart ← GoRouterNavigator (única impl de IAppNavigator)
+│   │       ├── router_overrides.dart    ← routerOverrides(): binds appNavigatorProvider seam
+│   │       └── router_provider.dart     ← goRouterProvider
 │   └── router/
-│       ├── app_route.dart              ← AppRoute enum
 │       ├── app_router.dart             ← appRoutes()
 │       └── guards/
 │           └── auth_guard.dart         ← AuthGuard (redirect logic)
@@ -355,21 +371,23 @@ lib/
 ├── core/                               ← Pure infrastructure
 │   ├── config/                         ← app_environment.dart, environment_provider.dart
 │   ├── database/                       ← AppDatabase (sembast, AES-256-CBC), tables/, serializers/
-│   ├── network/                        ← dio/, connectivity/, interceptors/, retry/, security/, timeouts/, utils/
-│   └── services/                       ← auth/, crypto/, device/, storage/
+│   ├── network/                        ← dio/, connectivity/, contracts/, interceptors/, retry/, security/, timeouts/, utils/
+│   └── services/                       ← auth/, crypto/, device/, logging/, storage/
 │
 ├── design_system/                      ← Theme (AppColors, AppTheme), components (LoadingIndicator)
 │
 ├── features/
-│   └── auth/                           ← di/, domain/, infrastructure/, presentation/, spec/
+│   ├── auth/                           ← di/, domain/, infrastructure/, presentation/, spec/
+│   └── clinical_history/               ← di/, domain/, infrastructure/, presentation/, spec/
 │
 ├── l10n/                               ← app_en.arb, app_es.arb, app_localizations*.dart
 │
 └── shared/                             ← Pure domain abstractions
-    ├── error/                          ← AppError sealed hierarchy, Result<T>, guard(), error_localizer
+    ├── error/                          ← AppError sealed hierarchy, Result<T>, guard() (localizeError lives in l10n/)
     ├── exceptions/                     ← ApiException, NoConnectionException, DeviceSecurityException, etc.
-    ├── functions/                      ← offline_first_repository.dart
-    ├── interfaces/                     ← IAppDatabase, IConnectivityChecker, ICredentialStore, ITokenStore, ITokenVerifier, IAuthenticationObserver, IPasswordHasher
+    ├── functions/                      ← online_first.dart
+    ├── interfaces/                     ← IConnectivityChecker, ICredentialStore, ITokenStore, ITokenVerifier, IPasswordHasher, IPatientInfoStore, IClinicalHistoryReader/Writer/Store, IAppNavigator, ILogger, IUseCase
+    ├── router/                         ← AppRoute enum (typed route registry, pure Dart)
     └── models/                         ← PatientEntity, ClinicalHistoryEntity + sub-entities
 ```
 
@@ -381,9 +399,12 @@ Platform configuration is handled in `lib/app/app_initializer.dart` and invoked 
 // main.dart
 void main({List<Override> overrides = const []}) {
   WidgetsFlutterBinding.ensureInitialized();
-  AppInitializer.configurePlatform(); // orientation lock
+  AppInitializer.configurePlatform();
   runApp(
-    ProviderScope(overrides: overrides, child: const TudesarrolladorApp()),
+    ProviderScope(
+      overrides: [...dioOverrides(), ...routerOverrides(), ...overrides],
+      child: const TudesarrolladorApp(),
+    ),
   );
 }
 ```
@@ -392,19 +413,39 @@ void main({List<Override> overrides = const []}) {
 
 ```dart
 Future<void> _init() async {
+  _assertDiSeamsBound();
   if (!kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
        defaultTargetPlatform == TargetPlatform.iOS)) {
-    await AppInitializer.checkJailbreak(
+    final result = await AppInitializer.checkJailbreak(
       detection: ref.read(flutterJailbreakDetectionProvider),
     );
+    await result.fold<Future<void>>(
+      onSuccess: (_) async {},
+      onFailure: (error) async {
+        ref.read(loggerProvider).error(
+              '[app] security check failed',
+              technicalMessage: error.technicalMessage,
+              stackTrace: error.stackTrace,
+            );
+        if (error is DeviceSecurityError && mounted) {
+          setState(() => _securityBlocked = true);
+        }
+      },
+    );
+    if (_securityBlocked) return;
   }
   await ref.read(authProvider.notifier).restoreSession();
   if (mounted) setState(() => _initialized = true);
 }
+
+void _assertDiSeamsBound() {
+  ref.read(authInterceptorProvider);
+  ref.read(appNavigatorProvider);
+}
 ```
 
-While `_initialized == false`, the app shows a `MaterialApp` with a `LoadingIndicator`. After initialization it builds `MaterialApp.router` with `ref.watch(goRouterProvider)`.
+A confirmed `DeviceSecurityError` at boot renders `DeviceSecurityBlockedScreen` (hard-stop). A global `ref.listen<AuthState>` shows a localized `SnackBar` for any `AuthFailure`. While `_initialized == false`, the app shows a `MaterialApp` with a `LoadingIndicator`. After initialization it builds `MaterialApp.router` with `ref.watch(goRouterProvider)`.
 
 #### Jailbreak detection — implemented
 
@@ -413,12 +454,14 @@ The jailbreak check **is implemented** (in `lib/app/app_initializer.dart` + `lib
 ```dart
 // lib/app/app_initializer.dart
 class AppInitializer {
-  static Future<void> checkJailbreak({
+  static Future<Result<void>> checkJailbreak({
     required IJailbreakDetectionWrapper detection,
-  }) async {
-    if (await detection.isJailbroken()) {
-      throw DeviceSecurityException();
-    }
+  }) {
+    return guard(() async {
+      if (await detection.isJailbroken()) {
+        throw const DeviceSecurityException();
+      }
+    });
   }
 
   static void configurePlatform() {
@@ -454,14 +497,14 @@ This project follows a **4-layer Clean Architecture** (not 3). Each `lib/` direc
 
 | `lib/` directory | Clean Architecture Layer | Role | Can import from |
 |---|---|---|---|
-| `shared/` | **Enterprise Business Rules** | Global business rules: `AppError`, `Result<T>`, `guard()`, shared interfaces (`ITokenStore`, `IConnectivityChecker`, `IAppDatabase`, ...), shared models (`PatientEntity`, `ClinicalHistoryEntity`), exceptions (`ApiException`, `DeviceSecurityException`), `offline_first_repository` | Only `shared/` |
+| `shared/` | **Enterprise Business Rules** | Global business rules: `AppError`, `Result<T>`, `guard()`, shared interfaces (`ITokenStore`, `IConnectivityChecker`, `ICredentialStore`, ...), shared models (`PatientEntity`, `ClinicalHistoryEntity`), exceptions (`ApiException`, `DeviceSecurityException`), `online_first` | Only `shared/` |
 | `features/*/domain/` | **Application Business Rules** | Feature-specific business rules: use cases (`LoginUseCase`, `RestoreSessionUseCase`), entities (`TokenEntity`), repository interfaces (`IAuthRepository`), value objects (`Email`, `Password`) | `shared/` |
 | `features/*/infrastructure/` | **Interface Adapters** | Concrete implementations of the domain interfaces: datasources, repositories, mappers, DTOs | `features/*/domain/`, `core/`, `shared/` |
 | `core/` | **Interface Adapters** (shared) | Infrastructure SHARED between features: HTTP client (`DioWrapper`), database (`AppDatabase`), services (`SecureTokenStore`, `JwtWrapper`, `SecureStorageWrapper`), connectivity (`InternetService`), security (`CertificatePinner`) | `shared/`, `core/` (NEVER `features/`, NEVER `app/`) |
-| `features/*/di/` | **Wiring** | Riverpod providers that wire domain interfaces to infrastructure implementations | `app/di/` (global providers), own `domain/` + `infrastructure/`, `core/`, `shared/` |
-| `features/*/presentation/` | **Frameworks & Drivers** | Feature-specific UI: screens, widgets, notifiers (Riverpod). Contains the only import toward `di/` | `features/*/di/`, `shared/`, `design_system/`, `l10n/` |
-| `app/` | **Frameworks & Drivers** (Composition Root) | Outer layer. Contains `di/` (all shared providers barrel), `router/` (goRouter, guard, routes), `app_initializer.dart` | Any `lib/` |
-| `design_system/` | **Frameworks & Drivers** | UI primitives with no business logic: theme (`AppColors`, `AppTheme`), reusable components (`LoadingIndicator`) | Only Flutter |
+| `features/*/di/` | **Wiring** | Riverpod providers that wire domain interfaces to infrastructure implementations | `core/` (global providers), own `domain/` + `infrastructure/`, `shared/` |
+| `features/*/presentation/` | **Frameworks & Drivers** | Feature-specific UI: screens, widgets, notifiers (Riverpod). Notifiers are the layer that wires the use cases via `di/` | `features/*/di/`, own `domain/`, `shared/`, `design_system/`, `l10n/` |
+| `app/` | **Frameworks & Drivers** (Composition Root) | Outer layer. Contains `di/` (DI seams: `dio_overrides.dart`, `router_overrides.dart`, `auth_observer_provider.dart`), `router/` (goRouter, guard, routes), `app_initializer.dart` | Any `lib/` |
+| `design_system/` | **Frameworks & Drivers** | UI primitives with no business logic: theme (`AppColors`, `AppTheme`), reusable components (`LoadingIndicator`, `EmptyState`, `ErrorState`, `InfoChip`, `SkeletonList`), locale-aware formatters (`utils/app_formatters.dart`) | Only Flutter (+ `intl`) |
 | `l10n/` | **Frameworks & Drivers** | Internationalization: `AppLocalizations` with EN/ES keys for labels and error messages | Only Flutter |
 
 #### What can each layer import? (with real project paths)
@@ -469,18 +512,17 @@ This project follows a **4-layer Clean Architecture** (not 3). Each `lib/` direc
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                      app/di/ (outer)                      │
-│  lib/app/di/_providers.lib.dart                            │
-│  lib/app/di/network/dio_provider.dart                      │
+│  lib/app/di/network/dio_overrides.dart                    │
 │  lib/app/di/router/router_provider.dart                    │
 │                                                           │
 │  EACH FEATURE DI IMPORTS DIRECTLY:                        │
-│  ✅ app/di/_providers.lib.dart  → all shared providers     │
+│  ✅ core/* source files  → all shared providers           │
 │     (authDioProvider, appDatabaseProvider,                 │
 │      clinicalHistoryStoreProvider, patientInfoStoreProvider│
 │      tokenStoreProvider, credentialStoreProvider,          │
 │      tokenVerifierProvider, passwordHasherProvider,        │
 │      connectivityCheckerProvider, internetServiceProvider, │
-│      environmentProvider, goRouterProvider)                │
+│      loggerProvider)                                       │
 └──────────────────────┬───────────────────────────────────┘
                        │
                        ▼
@@ -490,7 +532,7 @@ This project follows a **4-layer Clean Architecture** (not 3). Each `lib/` direc
 │  lib/features/auth/di/auth_provider.dart  │
 │                                           │
 │  IMPORTS DIRECTLY:                        │
-│  ✅ app/di/_providers.lib.dart            │
+│  ✅ core/* source files  → all shared providers           │
 │  ✅ ../domain/datasources/*               │
 │  ✅ ../domain/repositories/*              │
 │  ✅ ../domain/usecases/*                  │
@@ -571,7 +613,7 @@ This project follows a **4-layer Clean Architecture** (not 3). Each `lib/` direc
 
 `authDioProvider` provides a `DioWrapper` **without** an auth interceptor — used exclusively by `AuthRemoteDatasource` for login/refresh, where no interception is needed. `httpServiceProvider` provides a `DioWrapper` **with** the auth interceptor (401 retry + force logout) — used by features that make authenticated HTTP calls.
 
-Both are built by the same internal factory in `app/di/network/dio_provider.dart` and receive `ConnectionProfile.standard` + `CertificatePinner`. The interceptor is added only to `httpServiceProvider`.
+Both are built by the same internal factory in `core/network/dio/dio_providers.dart` and receive `ConnectionProfile.standard` + `CertificatePinner`. The interceptor is added only to `httpServiceProvider` (via the `authInterceptorProvider` seam bound by `app/di/network/dio_overrides.dart`).
 
 This separation avoids Riverpod dependency cycles and keeps Clean Architecture dependency rules intact: each layer imports only what it needs.
 
@@ -590,9 +632,9 @@ domain/usecases/login_usecase.dart
 domain/repositories/i_auth_repository.dart
      ▲  (interface — the use case knows ONLY the interface)
      │
-     │  AuthRepositoryImpl implements IAuthRepository  ← the implementation lives in infra
+     │  AuthRemoteRepositoryImpl implements IAuthRepository  ← the implementation lives in infra
      ▼
-infrastructure/repositories/auth_repository_impl.dart
+infrastructure/repositories/auth_remote_repository_impl.dart
      │  _remoteDatasource.login(...)  ← implementation calls the DATASOURCE
      ▼
 infrastructure/datasources/auth_datasource_impl.dart
@@ -617,34 +659,60 @@ core/network/dio/dio_wrapper.dart
 @riverpod
 LoginUseCase loginUseCase(Ref ref) => LoginUseCase(
   repository: ref.watch(authRepositoryProvider),
+  sessionRepository: ref.watch(localAuthRepositoryProvider),
   passwordHasher: ref.watch(passwordHasherProvider),
   tokenStore: ref.watch(tokenStoreProvider),
 );
 
 // Nor does it call repositories, it only builds them
-@riverpod
-IAuthRepository authRepository(Ref ref) => AuthRepositoryImpl(
-  remoteDatasource: ref.watch(authRemoteDatasourceProvider),
-  localDatasource: ref.watch(localAuthDatasourceProvider),
-);
+final authRepositoryProvider = Provider<IAuthRepository>((ref) =>
+    AuthRemoteRepositoryImpl(
+      remoteDatasource: ref.watch(authRemoteDatasourceProvider),
+    ));
 ```
 
 **Whoever calls the use cases is the presentation.** `di/` only makes them available. That is the key difference between "wiring" and "executing".
 
-#### The direction of the dependencies
+#### The complete import graph (at a glance)
 
 ```
-app/ (composition root) ──▶ everything
-  │
-  ├──▶ design_system/  ──▶ Flutter
-  ├──▶ l10n/           ──▶ Flutter
-  ├──▶ features/*/presentation/ ──▶ di/ + design_system/ + l10n/ + shared/
-  ├──▶ features/*/di/ ──▶ app/di/ + domain/ + infrastructure/ + core/ + shared/
-  ├──▶ features/*/infrastructure/ ──▶ domain/ + core/ + shared/
-  ├──▶ features/*/domain/ ──▶ shared/
-  ├──▶ core/ ──▶ shared/ (never features/, never app/)
-  └──▶ shared/ ──▶ only shared/
+app/ (composition root) ◄── imports anything
+   ├──▶ features/*  core/  shared/  l10n/  design_system/
+   └──▶ go_router confinado aquí (Rule 21); seams: dioOverrides() + routerOverrides()
+
+features/<f>/
+   di/            ▶ core/ + shared/ + (own domain/ + infrastructure/)   [NO app/ — R11]
+   infrastructure ▶ domain/ + shared/ + core/                            [NO app/ — R5]
+   domain/        ▶ shared/                                              [NO core/flutter — R1]
+   presentation/  ▶ di/ + domain/ + shared/ + design_system/ + l10n/     [NO infra/core/app — R15]
+core/            ▶ shared/                                               [NO features/app — R14]
+design_system/   ▶ flutter + intl
+l10n/            ▶ flutter
+shared/          ▶ — (pure Dart; NO flutter/l10n — R10; barriles R22/23/26)
 ```
+
+#### Per-layer rules (who can import / who must NOT)
+
+| Layer | Puede importar | Prohibido |
+|---|---|---|
+| `shared/` | solo `dart:` de la SDK | flutter, l10n, core, app, features (R10) |
+| `core/` | `shared/` | features/, app/ (R14) |
+| `features/*/domain/` | `shared/` | core, flutter, app (R1) |
+| `features/*/infrastructure/` | domain/, `shared/`, `core/` | app/, otras features (R5) |
+| `features/*/presentation/` | di/, domain/, `shared/`, `design_system/`, `l10n/` | infrastructure/, core/, app/ (R15) |
+| `features/*/di/` | `core/` (providers), `shared/`, internos del feature | app/ (R11), otras features (R5) |
+| `app/` | todo | — |
+| `design_system/` | flutter, intl | — |
+| `l10n/` | flutter | — |
+| paquetes externos | solo vía wrappers en `core/` (R6) | directo desde features |
+
+#### The seams that break the dependency cycles
+
+- **`core/` ↔ `features/auth` (ciclo del interceptor):** `core/network/dio/dio_providers.dart` define `authInterceptorProvider` (seam `IAuthInterceptorProvider`, fail-fast) y `httpServiceProvider` lo aplica (`setupAuthInterceptor`). El binding real vive en la composition root: `app/di/network/dio_overrides.dart` → `dioOverrides()` ata el seam a `AuthInterceptorImpl` (que consume `handle401UseCaseProvider`, `authProvider`, `tokenStoreProvider`). Así `core/` nunca importa features (R14).
+
+- **features → navegación (Rules 11/21):** las features nunca importan `go_router` ni `app/`. `IAppNavigator` (shared/interfaces) + `appNavigatorProvider` (core/router, fail-fast) son el seam; `app/di/router/router_overrides.dart` → `routerOverrides()` lo ata a `GoRouterNavigator` (única impl de go_router). Una feature que navega imperativamente re-exporta `appNavigatorProvider` desde su `di/` y usa `ref.read(appNavigatorProvider).go/push(AppRoute.x)`.
+
+- **Boot validation:** ambos seams (`authInterceptorProvider`, `appNavigatorProvider`) se verifican en el boot de `main.dart` (`_assertDiSeamsBound`) — un binding faltante aborta el arranque (fail-fast).
 
 #### What must NEVER happen
 
@@ -677,7 +745,7 @@ Navigation (GoRouter via AuthGuard + authenticationObserverProvider)
 |-------|----------------------|-----|
 | Notifier | `auth_notifier.dart` | Calls the use case, does `fold()` on `Result<T>` |
 | UseCase | `login_usecase.dart` | Orchestrates business logic, returns `Result<T>` |
-| Repository | `auth_repository_impl.dart` | Uses `guard()` to capture exceptions → `Result<T>` |
+| Repository | `auth_remote_repository_impl.dart` / `auth_local_repository_impl.dart` | Uses `guard()` to capture exceptions → `Result<T>` |
 | Datasource | `auth_datasource_impl.dart` | Calls `DioWrapper`, lets exceptions flow |
 | Result | `result.dart` | Sealed class `Success<T>` / `Failure<T>` (Either monad) |
 | guard | `result_guard.dart` | Captures exception types → typed `AppError` |
@@ -693,17 +761,17 @@ Navigation (GoRouter via AuthGuard + authenticationObserverProvider)
 
 **Enterprise conclusion:** This pattern is exactly what a big company would expect to see. Do not change anything.
 
-#### 2. Logging — Removed
+#### 2. Logging — observability seam
 
-`LoggerWrapper`, `ILoggerWrapper`, `loggerProvider`, and the `logger` package have been removed from the project. For temporary debug output, use `debugPrint` directly and remove before PR. No structured logging provider is currently wired.
+`loggerProvider` (`Provider<ILogger>` → `DevLogger` over `dart:developer log`) lives in `core/services/logging/logging_providers.dart`. Each feature `di/` re-exports it (e.g. `features/clinical_history/di/clinical_history_provider.dart`), so presentation notifiers can log `technicalMessage`/`stackTrace` without importing `core/` (Rule 15). It is overridable in tests (e.g. `FakeLogger`). For temporary debug output use `debugPrint` and remove before PR.
 
 ### Testing Strategy & Structure
 
 The `test/` directory mirrors the application's production code (`lib/`) using a Feature-First Clean Architecture approach. This guarantees that every component has an isolated, predictable testing environment, supplemented by automated behavioral testing and centralized simulation utilities.
 
-- `app/` — Composition root tests: `app_initializer_test.dart`, `di/` (dio provider wiring, keep-alive providers), `router/` (app_route, app_router, auth_guard), `environment/`.
+- `app/` — Composition root tests: `app_initializer_test.dart`, `di/` (dio provider wiring, keep-alive providers), `router/` (app_router, auth_guard, router_overrides, go_router_deep_link), `environment/`.
 
-- `bdd/` (Acceptance & High-Level Integration): Centralizes executable behavioral tests driven by the Gherkin specifications defined in the feature's `spec/` folder (`auth_bdd_test.dart`).
+- `bdd/` (Acceptance & High-Level Integration): Centralizes executable behavioral tests driven by the Gherkin specifications defined in the feature's `spec/` folder (`auth_bdd_test.dart`, `clinical_history_bdd_test.dart`).
 
 - `features/` (Layer-Isolated Testing): Verifies the implementation details of each decoupled business capability across three distinct scopes: domain, infrastructure and presentation.
 
@@ -722,33 +790,54 @@ The `test/` directory mirrors the application's production code (`lib/`) using a
 │   ├── di
 │   │   ├── dio_provider_auth_interceptor_wiring_test.dart
 │   │   ├── keep_alive_providers_test.dart
+│   │   ├── seams_boot_test.dart
 │   │   └── network
 │   │       └── dio_provider_test.dart
 │   ├── environment
 │   │   └── app_environment_test.dart
-│   └── router
-│       ├── app_route_test.dart
-│       ├── app_router_test.dart
-│       └── auth_guard_test.dart
+│   ├── main_security_gate_test.dart
+│   ├── router
+│   │   ├── app_router_test.dart
+│   │   ├── auth_guard_test.dart
+│   │   ├── go_router_deep_link_test.dart
+│   │   └── router_overrides_test.dart
+│   └── widgets
+│       ├── app_error_screen_golden_test.dart
+│       ├── app_error_screen_test.dart
+│       ├── connectivity_banner_test.dart
+│       ├── device_security_blocked_screen_golden_test.dart
+│       └── device_security_blocked_screen_test.dart
 ├── architecture
-│   └── dependency_rules_test.dart
+│   ├── dependency_rules_test.dart
+│   ├── error_mapping_consistency_test.dart
+│   └── workflow_gates_test.dart
 ├── bdd
-│   └── auth_bdd_test.dart
+│   ├── auth_bdd_test.dart
+│   └── clinical_history_bdd_test.dart
 ├── core
 │   ├── database
+│   │   ├── app_database_encrypted_test.dart
 │   │   ├── app_database_provider_test.dart
+│   │   ├── app_database_reset_test.dart
 │   │   ├── app_database_test.dart
 │   │   ├── clinical_history_provider_test.dart
+│   │   ├── clinical_history_serializer_test.dart
 │   │   ├── clinical_history_test.dart
+│   │   ├── database_encrypt_test.dart
 │   │   ├── patient_info_provider_test.dart
 │   │   ├── patient_info_test.dart
-│   │   └── secure_storage_key_service_test.dart
+│   │   ├── patient_serializer_test.dart
+│   │   ├── secure_storage_key_service_test.dart
+│   │   └── sembast_codec_test.dart
 │   ├── network
+│   │   ├── api_endpoints_provider_test.dart
 │   │   ├── connectivity
 │   │   │   ├── connectivity_providers_test.dart
 │   │   │   ├── http_reachability_test.dart
 │   │   │   ├── internet_service_test.dart
 │   │   │   └── native_socket_reachability_test.dart
+│   │   ├── contracts
+│   │   │   └── clinical_history_mapper_test.dart
 │   │   ├── dio
 │   │   │   ├── dio_multipart_builder_test.dart
 │   │   │   ├── dio_response_parser_test.dart
@@ -768,7 +857,10 @@ The `test/` directory mirrors the application's production code (`lib/`) using a
 │   └── services
 │       ├── auth
 │       │   ├── auth_observer_test.dart
+│       │   ├── jwt_token_expiry_checker_test.dart
 │       │   ├── jwt_wrapper_test.dart
+│       │   ├── secure_credential_store_test.dart
+│       │   ├── secure_token_store_test.dart
 │       │   └── token_providers_test.dart
 │       ├── crypto
 │       │   ├── bcrypt_wrapper_test.dart
@@ -778,18 +870,28 @@ The `test/` directory mirrors the application's production code (`lib/`) using a
 │       │   ├── jailbreak_provider_test.dart
 │       │   ├── path_provider_provider_test.dart
 │       │   └── path_provider_wrapper_test.dart
+│       ├── logging
+│       │   └── dev_logger_test.dart
 │       └── storage
 │           └── secure_storage_wrapper_test.dart
 ├── design_system
-│   └── components
-│       └── loading_indicator_test.dart
+│   ├── components
+│   │   ├── empty_state_test.dart
+│   │   ├── error_state_test.dart
+│   │   ├── info_chip_test.dart
+│   │   ├── loading_indicator_test.dart
+│   │   └── skeleton_list_test.dart
+│   └── utils
+│       └── app_formatters_test.dart
 ├── features
 │   └── auth
 │       ├── domain
 │       │   ├── auth_entity_test.dart
 │       │   ├── auth_usecase_test.dart
 │       │   ├── clear_session_usecase_test.dart
+│       │   ├── credential_login_usecase_test.dart
 │       │   ├── handle_401_usecase_test.dart
+│       │   ├── reset_account_usecase_test.dart
 │       │   ├── restore_session_usecase_test.dart
 │       │   └── value_objects
 │       │       ├── email_test.dart
@@ -798,37 +900,60 @@ The `test/` directory mirrors the application's production code (`lib/`) using a
 │       ├── infrastructure
 │       │   ├── auth_datasource_impl_test.dart
 │       │   ├── auth_dto_test.dart
+│       │   ├── auth_local_repository_impl_test.dart
 │       │   ├── auth_mapper_test.dart
-│       │   ├── auth_repository_impl_test.dart
+│       │   ├── auth_remote_repository_impl_test.dart
 │       │   └── local_auth_datasource_impl_test.dart
 │       └── presentation
 │           ├── notifiers
 │           │   ├── auth_notifier_test.dart
 │           │   └── auth_state_test.dart
 │           ├── screens
-│           │   ├── clinical_history_placeholder_screen_golden_test.dart
 │           │   ├── login_screen_golden_test.dart
 │           │   └── login_screen_test.dart
 │           └── widgets
 │               └── auth_widget_test.dart
+│   └── clinical_history
+│       ├── domain
+│       │   ├── clinical_history_entity_test.dart
+│       │   └── clinical_history_usecase_test.dart
+│       ├── infrastructure
+│       │   ├── clinical_history_local_datasource_impl_test.dart
+│       │   ├── clinical_history_remote_datasource_impl_test.dart
+│       │   └── clinical_history_repository_impl_test.dart
+│       └── presentation
+│           ├── notifiers
+│           │   ├── clinical_history_notifier_test.dart
+│           │   └── clinical_history_state_test.dart
+│           ├── screens
+│           │   ├── clinical_history_screen_golden_test.dart
+│           │   └── clinical_history_screen_test.dart
+│           └── widgets
+│               ├── clinical_history_card_golden_test.dart
+│               └── clinical_history_card_test.dart
 ├── flutter_test_config.dart       ← loads Roboto font for golden tests
 ├── helpers
 │   └── mocks.dart
 ├── l10n
-│   └── app_localizations_test.dart
+│   ├── app_localizations_test.dart
+│   └── error_localizer_test.dart
 └── shared
     ├── error
-    │   ├── error_localizer_test.dart
+    │   ├── app_error_test.dart
     │   ├── result_guard_test.dart
-    │   └── result_test.dart
+    │   ├── result_test.dart
+    │   └── retry_result_test.dart
     ├── exceptions
     │   ├── exceptions_import_test.dart
     │   └── exceptions_test.dart
     ├── functions
-    │   └── offline_first_repository_test.dart
+    │   └── online_first_test.dart
+    ├── router
+    │   └── app_route_test.dart
     └── models
         ├── clinical_history
-        │   └── clinical_history_model_test.dart
+        │   ├── clinical_history_model_test.dart
+        │   └── clinical_history_status_test.dart
         └── patient
             └── patient_model_test.dart
 ```
@@ -865,7 +990,7 @@ sealed class Result<T> {
   bool get isSuccess;
 }
 
-class Success<T> extends Result<T> {
+final class Success<T> extends Result<T> {
   const Success(this.data);
   final T data;
   ...
@@ -888,16 +1013,16 @@ To keep the architecture clean, each layer has a strict single responsibility re
 | **Datasource Impl** | External Data Ingestion | Raw call execution only. **No try/catch.** Let exceptions propagate upward. |
 | **Repository Impl** | Boundary Adapter | **The Guard.** Captures exceptions and converts them into a `Result<T>`. |
 | **Repository Domain** | Contract Definition | Declares strict `Future<Result<T>>` return types. |
-| **UseCase** | Business Orchestrator | Passes the `Result` through unchanged. **Zero error-handling logic.** |
+| **UseCase** | Business Orchestrator | Passes repository `Result`s through unchanged. **Wraps shared ports** (`shared/interfaces/` returning raw values like `String?`, `bool`, `void`, records) with `guard()`. Zero UI error-handling logic. |
 | **Notifier** | Presentation State | **The Consumer.** Calls `.fold()` to transform the `Result` into UI States. **No try/catch.** |
 
 #### 3. How to Use It (Step-by-Step) with examples:
 
-##### Step 1: Catching and Creating the `Result` (Repository Layer)
-The Repository implementation is the **only** place in the entire application where exceptions are caught. We use `guard()` to safely execute the datasource. If the datasource throws an exception, `guard` automatically maps it to a domain `Failure`. For instance:
+##### Step 1: Catching and Creating the `Result` (Boundary Layer)
+`guard()` is the **only** place exceptions are caught. It wraps every fallible boundary: the **Repository** executes the datasource, and the **UseCase** wraps shared ports that return raw values (e.g. `ITokenStore`, `IConnectivityChecker`). If a datasource or port throws, `guard` automatically maps it to a domain `Failure`. For instance:
 
 ```dart
-lib/features/auth/infrastructure/repositories/auth_repository_impl.dart
+lib/features/auth/infrastructure/repositories/auth_remote_repository_impl.dart
 
 @override
 Future<Result<LoginResponseEntity>> login({
@@ -910,13 +1035,13 @@ Future<Result<LoginResponseEntity>> login({
 
 Behind the scenes, `guard()` performs this automatic mapping:
 
-- `ApiException` -> `Failure(ApiError.technical(...))`
-- `NoConnectionException` -> `Failure(NetworkError.technical())`
-- `ServerUnreachableException` -> `Failure(ServerUnreachableError.technical())`
-- `UnexpectedResponseException` -> `Failure(UnexpectedError.technical(...))`
-- `DeviceSecurityException` -> `Failure(DeviceSecurityError(...))`
-- `AppTimeoutException` / `TimeoutException` -> `Failure(NetworkError.technical())`
-- `Error` / `Exception` -> `Failure(UnexpectedError.technical(...))` (Safety net)
+- `ApiException` -> `Failure(ApiError(technicalMessage: 'HTTP <code>'))`
+- `NoConnectionException` -> `Failure(NetworkError())`
+- `ServerUnreachableException` -> `Failure(ServerUnreachableError())`
+- `UnexpectedResponseException` -> `Failure(UnexpectedError(technicalMessage: details))`
+- `DeviceSecurityException` -> `Failure(DeviceSecurityError(technicalMessage: message))`
+- `AppTimeoutException` / `TimeoutException` (dart:async) -> `Failure(TimeoutError(technicalMessage: message))`
+- `Exception` (generic) -> `Failure(UnexpectedError(technicalMessage: '$e'))` (safety net — note: `Error` (programming bugs) is NOT caught; it escapes the `Result` chain and must surface)
 
 ##### Step 2: Consuming the `Result` to Update UI (Notifier Layer)
 
@@ -928,10 +1053,8 @@ lib/features/auth/presentation/notifiers/auth_notifier.dart
 Future<void> login(String email, String password, {bool rememberMe = false}) async {
   state = const AuthState.loading();
 
-  final result = await ref.read(loginUseCaseProvider).call(
-    email: email,
-    password: password,
-    rememberMe: rememberMe,
+  final result = await ref.read(loginUseCaseProvider)(
+    LoginInput(email: email, password: password, rememberMe: rememberMe),
   );
 
   await result.fold<Future<void>>(
@@ -939,7 +1062,6 @@ Future<void> login(String email, String password, {bool rememberMe = false}) asy
       state = AuthState.loaded(
         patient: data.patient,
         token: data.token,
-        clinicalHistory: data.clinicalHistory,
       );
     },
     onFailure: (error) async {
@@ -971,15 +1093,16 @@ ref.listen<AuthState>(authProvider, (_, next) {
 });
 ```
 
-`localizeError()` lives in `lib/shared/error/error_localizer.dart`:
+`localizeError()` lives in `lib/l10n/error_localizer.dart`:
 
 ```dart
 String localizeError(AppError error, AppLocalizations l10n) => switch (error) {
   NetworkError() => l10n.errorNetwork,
   ApiError() => l10n.errorServer,
   ServerUnreachableError() => l10n.errorServer,
+  TimeoutError() => l10n.errorTimeout,
   UnexpectedError() => l10n.errorUnknown,
-  DeviceSecurityError() => l10n.errorUnknown,
+  DeviceSecurityError() => l10n.errorDeviceSecurity,
   ValidationError(:final field) => switch (field) {
     'email' => l10n.errorInvalidEmail,
     'password' => l10n.errorPasswordTooShort,
@@ -1007,7 +1130,7 @@ To keep our code unified and easily maintainable, never import the raw file. Ins
 import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 ```
 
-This barrel exports `Result`, `Success`, `Failure`, `AppError`, all error subtypes, `guard()`, `RetryResult`, `RetrySuccess`, `RetryFailed`, and `localizeError`.
+This barrel exports `Result`, `Success`, `Failure`, `AppError`, all error subtypes, `guard()`, `RetryResult`, `RetrySuccess`, `RetryFailed`. (`localizeError()` lives in `lib/l10n/error_localizer.dart`, UI layer — see `MD/APP_EXCEPTION.md`.)
 
 #### 6. How to Add a New Failure Type (Checklist)
 Whenever a new backend or feature requirement introduces a unique exception, follow this strict checklist to add its corresponding `AppError` subtype:
@@ -1016,24 +1139,25 @@ Whenever a new backend or feature requirement introduces a unique exception, fol
 
 ```dart
 lib/shared/exceptions/my_custom_exception.dart
-part of '_exceptions.lib.dart';
 
+/// One-line contract: what it represents, when it is thrown, and which
+/// `AppError` `guard()` maps it to.
 class MyCustomException implements Exception {
   const MyCustomException(this.message);
   final String message;
 }
 ```
 
-##### 2. Register the part inside `shared/exceptions/_exceptions.lib.dart`:
+##### 2. Register the export inside `shared/exceptions/_exceptions.lib.dart`:
 
 ```dart
 lib/shared/exceptions/_exceptions.lib.dart
-part 'my_custom_exception.dart';
+export 'my_custom_exception.dart';
 ```
 
 ##### 3. Update the Guard Mapper: Add the matching `on MyCustomException catch` clause inside `guard()` located in `result_guard.dart` to ensure automatic mapping.
 
-##### 4. (If it reaches the UI) Add a case in `localizeError()` in `shared/error/error_localizer.dart`.
+##### 4. (If it reaches the UI) Add a case in `localizeError()` in `l10n/error_localizer.dart`.
 
 #### 7. Execution Architecture Summary
 ```bash
@@ -1055,7 +1179,7 @@ Notifier.someMethod()
 
 #### 8. What About Composing Results in a UseCase?
 
-Some UseCases need to chain multiple `Result`-returning operations conditionally — for example, restore a session from local storage, then check token expiry, then optionally refresh. The rule says "UseCase passes Result through unchanged" and "fold lives in Presentation", but the UseCase still needs to inspect intermediate `Result` values to decide what to do next.
+Some UseCases need to chain multiple `Result`-returning operations conditionally — for example, restore a session from local storage, then check token expiry, then optionally refresh. The rule says "UseCase passes repository Results through unchanged and wraps shared ports with `guard()`" and "fold lives in Presentation", but the UseCase still needs to inspect intermediate `Result` values to decide what to do next.
 
 **❌ Wrong — using `fold` in a UseCase:**
 
@@ -1085,13 +1209,20 @@ if (localResult case Failure()) return localResult; // propagate Failure unchang
 
 final localData = (localResult as Success<LoginResponseEntity?>).data;
 if (localData == null) return const Success(null); // no session
+
+// Shared ports returning raw values are wrapped with guard()
+final expiredResult = await guard(() => _tokenExpiryChecker.isExpired(localData.token.key));
+final expired = switch (expiredResult) {
+  Success(data: final value) => value,
+  Failure() => false, // cannot verify → keep cache, no refresh
+};
 ...
 ```
 
 Dart 3 sealed classes with `is` checks (or `case` patterns) give you exhaustiveness and type safety. Always check the `Failure` branch first to propagate the error, then access the data.
 
 This pattern keeps the architectural contract intact:
-- `guard` creates the `Result` (in Repository/Infrastructure)
+- `guard` creates the `Result` (Repository wraps datasources; UseCase wraps shared ports that return raw values — both are fallible boundaries)
 - `fold` decides the UI outcome (in Notifier/Presentation)
 - `is Success` / `is Failure` (or `case` patterns) composes business logic (in UseCase/Domain)
 
@@ -1116,9 +1247,9 @@ if (localData == null) return const Success(null);
 
 **b) Expired token + refresh failed** (`restore_session_usecase.dart`):
 ```dart
-await _credentialStore.deleteAll();
-return const Success(null);
-// Refresh failed, session cleared — "nothing to restore"
+// refresh failed → the cached session is KEPT (online-first: restore never force-logs-out)
+return Success(localData);
+// the stale token stays; a later request will hit a 401 and Handle401UseCase decides
 ```
 
 ##### The full traversal to the UI
@@ -1178,7 +1309,7 @@ When `data` is `null` (`Success(null)`):
 | :--- | :--- | :--- | :--- |
 | No local session | `Success(null)` | `if (data == null) return;` | Login screen, **no error** |
 | Corrupted DB | `Failure(UnexpectedError(...))` | `state = AuthState.failure(error)` | Login screen, **error message** |
-| Refresh failed (expired token) | `Success(null)` (session cleared) | `if (data == null) return;` | Login screen, **no error** |
+| Refresh failed (expired token) | `Success(data)` — cached session KEPT (restore never force-logs-out) | `state = AuthState.loaded(...)` | Clinical history (stale token; a later 401 is handled by `Handle401UseCase`) |
 
 ##### Why `Success(null)` and not plain `null`?
 
@@ -1205,7 +1336,7 @@ In this project, `dio` is wrapped in `dio_wrapper.dart` (`IDioWrapper` / `DioWra
 - Configurable timeout per request (per-endpoint SLA).
 - Certificate pinning via `CertificatePinner`.
 
-The two Dio providers are built in `lib/app/di/network/dio_provider.dart`:
+The two Dio providers are built in `lib/core/network/dio/dio_providers.dart`:
 - `authDioProvider` — Dio WITHOUT auth interceptor (used by `AuthRemoteDatasource` for login/refresh).
 - `httpServiceProvider` — Dio WITH auth interceptor (401 retry + force logout; used by features making authenticated calls).
 
@@ -1228,17 +1359,25 @@ The datasource receives `IDioWrapper` via constructor injection from its Riverpo
 lib/features/auth/infrastructure/datasources/auth_datasource_impl.dart
 class AuthRemoteDatasourceImpl implements IAuthRemoteDatasource {
   final IDioWrapper _dio;
+  final IEndpointConfig _appUries;
 
-  AuthRemoteDatasourceImpl({required IDioWrapper dio}) : _dio = dio;
+  AuthRemoteDatasourceImpl({required this._dio, required this._appUries});
 
   @override
-  Future<LoginResponseDto> login({...}) async {
-    final response = await _dio.post(
-      AppUries().login,
+  Future<LoginResponseEntity> login({
+    required String email,
+    required String passwordHash,
+  }) async {
+    final httpResponse = await _dio.post(
+      _appUries.login,
       sla: EndpointSla.login,
-      body: {...},
+      body: <String, dynamic>{'email': email, 'passwordHash': passwordHash},
     );
-    return LoginResponseDto.fromJson(response.data as Map<String, dynamic>);
+    final response = _requireJsonMap(
+      httpResponse.data,
+      'login response must be a JSON object',
+    );
+    return AuthMapper.loginResponseFromDto(LoginResponseDto.fromJson(response));
   }
 }
 ```
@@ -1249,7 +1388,10 @@ class AuthRemoteDatasourceImpl implements IAuthRemoteDatasource {
 lib/features/auth/di/auth_provider.dart
 @riverpod
 IAuthRemoteDatasource authRemoteDatasource(Ref ref) =>
-    AuthRemoteDatasourceImpl(dio: ref.watch(authDioProvider));
+    AuthRemoteDatasourceImpl(
+      dio: ref.watch(authDioProvider),
+      appUries: ref.watch(appUriesProvider),
+    );
 ```
 
 ##### Available HTTP Methods
@@ -1343,7 +1485,7 @@ Riverpod solves this with:
 | :--- | :--- | :--- |
 | **`@riverpod` functional provider** | `features/*/di/` | Wires datasources, repositories, use cases. |
 | **`@Riverpod` Notifier** | `features/*/presentation/notifiers/` | Manages UI state with async actions. |
-| **Plain `Provider` / `NotifierProvider`** | `core/` (defined) + `app/di/` (barrel) | Shared singletons (dio, token, goRouter, sembast). |
+| **Plain `Provider` / `NotifierProvider`** | `core/` (defined, imported directly) | Shared singletons: dio, token, sembast (core/); goRouter (app/) |
 
 Example of the code-gen provider (functional):
 
@@ -1351,11 +1493,10 @@ Example of the code-gen provider (functional):
 // lib/features/auth/di/auth_provider.dart
 part 'auth_provider.g.dart';
 
-@riverpod
-IAuthRepository authRepository(Ref ref) => AuthRepositoryImpl(
-  remoteDatasource: ref.watch(authRemoteDatasourceProvider),
-  localDatasource: ref.watch(localAuthDatasourceProvider),
-);
+final authRepositoryProvider = Provider<IAuthRepository>((ref) =>
+    AuthRemoteRepositoryImpl(
+      remoteDatasource: ref.watch(authRemoteDatasourceProvider),
+    ));
 ```
 
 Example of the code-gen Notifier:
@@ -1371,17 +1512,14 @@ class AuthNotifier extends _$AuthNotifier {
 
   Future<void> login(String email, String password, {bool rememberMe = false}) async {
     state = const AuthState.loading();
-    final result = await ref.read(loginUseCaseProvider).call(
-      email: email,
-      password: password,
-      rememberMe: rememberMe,
+    final result = await ref.read(loginUseCaseProvider)(
+      LoginInput(email: email, password: password, rememberMe: rememberMe),
     );
     await result.fold<Future<void>>(
       onSuccess: (data) async {
         state = AuthState.loaded(
           patient: data.patient,
           token: data.token,
-          clinicalHistory: data.clinicalHistory,
         );
       },
       onFailure: (error) async {
@@ -1404,12 +1542,10 @@ class AuthNotifier extends _$AuthNotifier {
 
 ```dart
 lib/features/auth/di/auth_provider.dart
-@riverpod
-IAuthRepository authRepository(Ref ref) =>
-    AuthRepositoryImpl(
+final authRepositoryProvider = Provider<IAuthRepository>((ref) =>
+    AuthRemoteRepositoryImpl(
       remoteDatasource: ref.watch(authRemoteDatasourceProvider),
-      localDatasource: ref.watch(localAuthDatasourceProvider),
-    );
+    ));
 ```
 
 ##### Step 2: Watch in the UI
@@ -1432,7 +1568,6 @@ sealed class AuthState with _$AuthState {
   const factory AuthState.loaded({
     required PatientEntity patient,
     required TokenEntity token,
-    @Default(null) List<ClinicalHistoryEntity>? clinicalHistory,
   }) = AuthLoaded;
   const factory AuthState.failure(AppError error) = AuthFailure;
 }
@@ -1448,10 +1583,10 @@ sealed class AuthState with _$AuthState {
 
 #### 5. Developer Policies
 
-- ✅ Feature code accesses global providers by name (e.g. `ref.watch(authDioProvider)`), imported from the `app/di/_providers.lib.dart` barrel or the `core/` source file.
+- ✅ Feature code accesses global providers by name (e.g. `ref.watch(authDioProvider)`), imported directly from the `core/` source file (never from `app/`).
 - ✅ Use `@riverpod` annotation for functional providers and `@Riverpod` for Notifiers.
 - ✅ Run `dart run build_runner build --delete-conflicting-outputs` after adding/changing annotated providers.
-- 🚫 Never import provider files directly from another feature. Import from the `app/di/_providers.lib.dart` barrel or `core/` barrels.
+- 🚫 Never import provider files directly from another feature. Import from `core/` source files.
 - 🚫 Never use `ref.watch` inside callbacks or async methods — use `ref.read`.
 
 ---
@@ -1501,7 +1636,6 @@ class TokenDto with _$TokenDto {
 @freezed
 abstract class TokenEntity with _$TokenEntity {
   const factory TokenEntity({
-    required String type,
     required String key,
   }) = _TokenEntity;
 }
@@ -1513,7 +1647,6 @@ abstract class TokenEntity with _$TokenEntity {
 // lib/features/auth/infrastructure/mappers/auth_mapper.dart
 class AuthMapper {
   static TokenEntity tokenFromDto(TokenDto dto) => TokenEntity(
-    type: dto.type,
     key: dto.key,
   );
 }
@@ -1548,7 +1681,7 @@ switch (state) {
 
 - ✅ Use `@freezed` for entities, value objects, DTOs and state classes.
 - ✅ DTOs carry `fromJson`/`toJson` (via `json_serializable`); domain entities stay pure.
-- ✅ Mappers use constructors named (e.g. `TokenEntity(type: dto.type, key: dto.key)`), NEVER `Entity.fromJson`.
+- ✅ Mappers use constructors named (e.g. `TokenEntity(key: dto.key)`), NEVER `Entity.fromJson`.
 - ✅ Run `dart run build_runner build --delete-conflicting-outputs` after adding/changing `@freezed` files.
 
 ---
@@ -1581,7 +1714,7 @@ class MyChecker extends IConnectivityChecker { ... }
 
 | Location | Uses | For |
 |-----------|-----|------|
-| `shared/interfaces/` | `abstract interface class` | `ITokenStore`, `IConnectivityChecker`, `IAuthenticationObserver`, `ICredentialStore`, `ITokenVerifier`, `IPasswordHasher`, `IAppDatabase` — business contracts that any layer can implement |
+| `shared/interfaces/` | `abstract interface class` | `ITokenStore`, `IConnectivityChecker`, `ICredentialStore`, `ITokenVerifier`, `IPasswordHasher`, `IPatientInfoStore`, `IClinicalHistoryReader/Writer/Store`, `IUseCase` — business contracts that any layer can implement |
 | `core/` | `abstract interface class` | `IInternetService`, `IDioWrapper`, `ISecureStorageWrapper`, `IPathProviderWrapper`, `IJailbreakDetectionWrapper` — infrastructure contracts |
 | `core/network/connectivity/` | `abstract interface class` | `IInternetConnectionCheckerWrapper`, `IServerReachabilityStrategy` — internal abstractions |
 
@@ -1674,7 +1807,7 @@ DTOs use `@freezed` with `fromJson`/`toJson` generated. Mappers in `infrastructu
 
 - ✅ DTOs in `infrastructure/dtos/` use `@freezed` with `fromJson`/`toJson`.
 - ✅ Domain entities use `@freezed` ONLY — NO `fromJson`/`toJson`.
-- ✅ Mappers use constructors named (e.g. `TokenEntity(type: dto.type, key: dto.key)`), NEVER `Entity.fromJson`.
+- ✅ Mappers use constructors named (e.g. `TokenEntity(key: dto.key)`), NEVER `Entity.fromJson`.
 - ✅ Code generation via `dart run build_runner build --delete-conflicting-outputs`.
 
 ---
@@ -1699,7 +1832,7 @@ In this project, `go_router` is **not accessed directly from features**. It is e
 | :--- | :--- |
 | `goRouterProvider` | Builds the `GoRouter` instance with `AuthGuard`, `authenticationObserverProvider` as `refreshListenable` and `appRoutes()`. |
 | `appRoutes()` | Defines routes in `app/router/app_router.dart` (login + clinical-history). |
-| `AppRoute` | Enum of route paths/names in `app/router/app_route.dart`. |
+| `AppRoute` | Enum of route paths/names in `shared/router/app_route.dart`. |
 | `AuthGuard` | `redirect()` logic in `app/router/guards/auth_guard.dart` (login vs clinical-history). |
 | `authenticationObserverProvider` | `ChangeNotifier` (`AuthObserver`) that mirrors auth state and notifies GoRouter when auth state changes. |
 
@@ -1709,19 +1842,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final observer = ref.watch(authenticationObserverProvider);
   const guard = AuthGuard();
   return GoRouter(
-    initialLocation: '/',
-    refreshListenable: observer as Listenable,
+    initialLocation: AppRoute.login.path,
+    refreshListenable: observer,
     redirect: (context, state) => guard.redirect(
       location: state.matchedLocation,
+      from: state.uri.queryParameters['from'],
       isAuthenticated: observer.isAuthenticated,
     ),
-    routes: appRoutes(),
+    errorBuilder: (context, state) => AppErrorScreen(error: state.error),
+    routes: appRoutes(
+      onLogout: () => ref.read(authProvider.notifier).logout(),
+    ),
   );
 });
 ```
 
 ```dart
-// lib/app/router/app_route.dart
+// lib/shared/router/app_route.dart
 enum AppRoute {
   login(path: '/', name: 'login'),
   clinicalHistory(path: '/clinical-history', name: 'clinical-history');
@@ -1731,7 +1868,7 @@ enum AppRoute {
 
 ```dart
 // lib/app/router/app_router.dart
-List<RouteBase> appRoutes() => [
+List<RouteBase> appRoutes({Future<void> Function()? onLogout}) => [
       GoRoute(
         path: AppRoute.login.path,
         name: AppRoute.login.name,
@@ -1740,33 +1877,32 @@ List<RouteBase> appRoutes() => [
       GoRoute(
         path: AppRoute.clinicalHistory.path,
         name: AppRoute.clinicalHistory.name,
-        builder: (_, _) => const ClinicalHistoryPlaceholderScreen(),
+        builder: (_, _) => ClinicalHistoryScreen(onLogout: onLogout),
       ),
     ];
 ```
 
 #### 3. How to Use It (Step-by-Step)
 
-##### Step 1: Register a new route (in `app/router/app_route.dart` + `app/router/app_router.dart`)
+##### Step 1: Register a new route (in `shared/router/app_route.dart` + `app/router/app_router.dart`)
 
 Add a value to the `AppRoute` enum, then a `GoRoute` inside `appRoutes()`.
 
 ##### Step 2: Navigate from anywhere
 
-Navigation is mostly **reactive**: `authProvider` changes → `AuthObserver` notifies → `AuthGuard` redirects. For imperative navigation from a notifier or widget, use the Riverpod provider:
+Navigation is mostly **reactive**: `authProvider` changes → `AuthObserver` notifies → `AuthGuard` redirects. For imperative navigation from a notifier or widget, use the `IAppNavigator` seam (re-exported by the feature's `di/`):
 
 ```dart
-// From any notifier or widget — via Riverpod, never import go_router directly
-ref.read(goRouterProvider).go(AppRoute.clinicalHistory.path);
-ref.read(goRouterProvider).push('/some-route');
-ref.read(goRouterProvider).pop();
+// From any notifier or widget — via the IAppNavigator seam, never import go_router or app/ directly
+ref.read(appNavigatorProvider).go(AppRoute.clinicalHistory);
+ref.read(appNavigatorProvider).push(AppRoute.someRoute);
 ```
 
 #### 4. Developer Policies
 
-- 🚫 **Never import `go_router` directly** in feature code. Use `ref.read(goRouterProvider).xxx()`.
-- 🚫 **Never instantiate `GoRouter` directly** in features. Use `goRouterProvider` in `app/di/router/router_provider.dart`.
-- ✅ Define routes in `app/router/app_route.dart` (enum) + `app/router/app_router.dart` (`appRoutes()`).
+- 🚫 **Never import `go_router` nor `app/` directly** in feature code. Use the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` (one-line re-export in the feature's `di/`).
+- 🚫 **Never instantiate `GoRouter` directly** in features. Use `goRouterProvider` in `app/di/router/router_provider.dart` (composition root only).
+- ✅ Define routes in `shared/router/app_route.dart` (enum) + `app/router/app_router.dart` (`appRoutes()`).
 
 ---
 
@@ -1792,8 +1928,10 @@ The entire database is encrypted at rest using `SembastCodec`.
 // Access from a feature provider
 final db = await ref.read(appDatabaseProvider).database;
 
-// Clear all data (on logout or reset)
-await ref.read(appDatabaseProvider).resetDatabase();
+// Full local wipe (account reset / GDPR) — through the auth usecase, NOT directly
+await ref.read(resetAccountUseCaseProvider)(NoParams());
+// → ResetAccountUseCase → ILocalAuthRepository.resetAccount()
+//   → LocalAuthDatasourceImpl.resetAccount() = clearSession() + resetDatabase()
 ```
 
 For session/token storage, use `SecureTokenStore` (which implements `ITokenStore`) via `tokenStoreProvider`:
@@ -1809,7 +1947,7 @@ final token = await ref.read(tokenStoreProvider).read();
 await ref.read(tokenStoreProvider).delete();
 ```
 
-Sembast is also used internally by `ClinicalHistoryStore` and `PatientInfoStore` for offline-first storage of clinical data (`clinicalHistoryStoreProvider`, `patientInfoStoreProvider` in `core/database/tables/`).
+Sembast is also used internally by `ClinicalHistoryStore` and `PatientInfoStore` for offline-first storage of clinical data (`clinicalHistoryStoreProvider`, `patientInfoStoreProvider` in `core/database/tables/*_providers.dart`).
 
 #### 3. Developer Policies
 
@@ -1904,7 +2042,7 @@ The strategy is selected by `connectivity_providers.dart` based on `kIsWeb`:
 
 ```dart
 final internetServiceProvider = Provider<IInternetService>((ref) {
-  final env = AppEnvironment.current;
+  final env = ref.watch(environmentProvider);
   return InternetService(
     strategy: kIsWeb
         ? HttpReachability(dio: ..., baseUri: ...)
@@ -1933,8 +2071,8 @@ In this project, it is used inside `database_encrypt.dart` (`core/database/datab
 Encryption is transparent: `AppDatabase` uses `database_encrypt.dart` to create a `SembastCodec` that automatically encrypts/decrypts all data written to/read from sembast. The AES key is generated via `DatabaseKeyService` and stored in `flutter_secure_storage`.
 
 ```dart
-lib/core/database/database_encrypt.dart — internal implementation detail
-getEncryptSembastCodec(password:) returns SembastCodec with AES-256-CBC
+lib/core/database/sembast_codec.dart — getEncryptSembastCodec(password:) returns SembastCodec with AES-256-CBC
+(database_encrypt.dart holds the AES-256-CBC Codec internals)
 Encrypt: prepends base64-encoded IV, then AES-256-CBC ciphertext
 Decrypt: extracts IV from first 24 base64 chars, then decrypts rest
 ```
@@ -1953,7 +2091,7 @@ The app must detect jailbroken/rooted devices to protect against tampering. The 
 
 #### 2. How It's Used
 
-Wrapped in `jailbreak_detection_wrapper.dart` (`IJailbreakDetectionWrapper` / `JailbreakDetectionWrapper`) and exposed via `flutterJailbreakDetectionProvider` (`core/services/device/jailbreak_provider.dart`). Called at startup in `AppInitializer.checkJailbreak()` for Android/iOS only; on a jailbroken device it throws `DeviceSecurityException`, which maps to `DeviceSecurityError` via `guard()`.
+Wrapped in `jailbreak_detection_wrapper.dart` (`IJailbreakDetectionWrapper` / `JailbreakDetectionWrapper`) and exposed via `flutterJailbreakDetectionProvider` (`core/services/device/jailbreak_provider.dart`). Run at startup in `AppInitializer.checkJailbreak()` for Android/iOS only. It follows the **guard/fold** rule: `checkJailbreak()` returns `Future<Result<void>>` — `guard()` wraps the raw `isJailbroken()` port and maps `DeviceSecurityException` → `DeviceSecurityError`; `main.dart` folds the result and renders a hard-stop `DeviceSecurityBlockedScreen` only on a confirmed jailbreak (detection failures are logged and do not block).
 
 #### 3. Developer Policies
 
@@ -1968,11 +2106,11 @@ Wrapped in `jailbreak_detection_wrapper.dart` (`IJailbreakDetectionWrapper` / `J
 
 ---
 
-### logger — Structured Logging
+### logger — Structured Logging (observability seam)
 
-#### 1. Logger — Removed
+#### 1. Current state
 
-`LoggerWrapper`, `ILoggerWrapper`, `loggerProvider`, and the `logger` package have been removed from the project. Use `debugPrint` directly for temporary debug output. Remove all `debugPrint` calls before submitting a pull request.
+The `logger` pub package and the old `LoggerWrapper`/`ILoggerWrapper` classes were removed, but the project now ships its **own observability seam**: `ILogger` (`shared/interfaces/i_logger.dart`), `DevLogger` (over `dart:developer log`) and `loggerProvider` (`Provider<ILogger>`) in `core/services/logging/logging_providers.dart`. It is **re-exported by each feature `di/`** so presentation notifiers log `technicalMessage`/`stackTrace` without importing `core/` (Rule 15), and it is overridable in tests (e.g. `FakeLogger`). Use `debugPrint` only for temporary debug output — remove before PR.
 
 ---
 
@@ -1997,14 +2135,6 @@ dart run build_runner build --delete-conflicting-outputs
 Generates database access code from drift table definitions. Reads `@DataClass`, `@Table`, and `@UseRowClass` annotations and produces type-safe query methods.
 
 Not used — the project uses sembast with hand-written stores.
-
-### riverpod_lint — Riverpod Linting
-
-A `custom_lint` plugin that adds Riverpod-specific lint rules to `flutter analyze`. Catches common mistakes like:
-- Using `ref.read` where `ref.watch` is required.
-- Improper notifier method signatures.
-
-Configured in `analysis_options.yaml`.
 
 ### flutter_lints — Dart Lint Rules
 
@@ -2060,7 +2190,7 @@ The project uses Behavior-Driven Development (BDD) with Gherkin syntax (given/wh
 #### 2. How to Use It
 
 ```dart
-test/bdd/auth_bdd_test.dart
+test/bdd/clinical_history_bdd_test.dart
 import 'package:gherkart/gherkart.dart';
 
 void main() {
@@ -2068,27 +2198,27 @@ void main() {
 }
 
 Future<void> _testFunction() async {
-  final feature = File('lib/features/auth/spec/bdd.feature');
-  final parser = GherkartParser(feature);
-  final document = await parser.parse();
+  final registry = StepRegistry<WidgetTester>.fromMap({
+    'Given ...': (tester, context) async { /* arrange */ },
+    'When ...': (tester, context) async { /* act */ },
+    'Then ...': (tester, context) async { /* assert */ },
+  });
 
-  for (final scenario in document.scenarios) {
-    testWidgets(scenario.name, (tester) async {
-      for (final step in scenario.steps) {
-        await step.keyword.match(
-          onGiven: () async { /* arrange */ },
-          onWhen: () async { /* act */ },
-          onThen: () async { /* assert */ },
-        );
-      }
-    });
-  }
+  await runBddTests<WidgetTester>(
+    source: FileSystemSource(),
+    feature: 'lib/features/auth/spec/bdd.feature',
+    registry: registry,
+    structure: TestStructure.flat,
+    testFunction: (scenario, tester) async {
+      // one testWidgets per scenario is created by runBddTests
+    },
+  );
 }
 ```
 
 #### 3. Developer Policies
 
-- ✅ Each BDD test file must use a top-level `_testFunction()` — never embed scenarios inside `main()`.
+- ✅ Use `runBddTests<WidgetTester>` with a `StepRegistry` — the reference style is a top-level `_testFunction()` (as in `test/bdd/clinical_history_bdd_test.dart`); an inline `testFunction:` lambda inside `main()` (as in `test/bdd/auth_bdd_test.dart`) is also accepted.
 - ✅ One `testWidgets` per scenario.
 - ✅ Register all needed provider overrides before pumping the widget.
 
@@ -2102,14 +2232,14 @@ Future<void> _testFunction() async {
 | **dio** | HTTP client with interceptors | `ref.watch(authDioProvider).get/post/patch/delete/put/multiFiles(uri)` | All datasource impls for API communication |
 | **flutter_riverpod** | State management & DI (v3 code-gen) | `@riverpod` functional providers for wiring; `@Riverpod` Notifiers for state; `ref.watch/read/listen` | Every provider, notifier, and screen |
 | **freezed + json_serializable** | Immutable data classes, unions & JSON | `@freezed` entities/DTOs/state; `fromJson`/`toJson` on DTOs | All entities (`*_entity.dart`), DTOs (`*_dto.dart`), states (`*_state.dart`), value objects |
-| **go_router** | Declarative routing with redirect guards | `goRouterProvider` in `app/di/router/router_provider.dart`; `ref.read(goRouterProvider).go/push/pop(...)` from features | `lib/app/router/` (routes, guard, AppRoute), `lib/app/di/router/` (provider) |
-| **sembast** | Lightweight NoSQL document DB with AES-256 encryption | `ref.read(appDatabaseProvider).database` / `.resetDatabase()` | `core/database/app_database.dart` (encrypted sembast) |
+| **go_router** | Declarative routing with redirect guards | `goRouterProvider` in `app/di/router/router_provider.dart` (composition root only); features navigate via the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` | `lib/app/router/` (routes, guard), `lib/shared/router/` (AppRoute), `lib/app/di/router/` (provider) |
+| **sembast** | Lightweight NoSQL document DB with AES-256 encryption | `ref.read(appDatabaseProvider).database`; full wipe via `ResetAccountUseCase` (auth) → `resetDatabase()` | `core/database/app_database.dart` (encrypted sembast) |
 | **flutter_secure_storage** | Platform-native secure keystore | `ref.read(tokenStoreProvider).save/read/delete()` for tokens; `DatabaseKeyService` (internal) for DB encryption key | `secure_token_store.dart` (auth tokens), `secure_credential_store.dart` (remember-me), `secure_storage_wrapper.dart` (DB encryption key) |
 | **path_provider** | Platform temp & documents directories | `await ref.read(pathProviderProvider).getTemporaryDirectory()` or `.getApplicationDocumentsDirectory()` | Temp file storage for sharing, caching |
 | **internet_connection_checker_plus** | Internet access detection | Wrapped by `InternetConnectionCheckerWrapper`; `InternetService.isConnected()` | Only inside `core/network/connectivity/` |
 | **encrypt** | AES-256-CBC encryption | Used by `database_encrypt.dart` to create `SembastCodec` for transparent encryption | Only inside `core/database/` (internal to `AppDatabase`) |
 | **flutter_jailbreak_detection_plus** | Jailbreak / root detection | `AppInitializer.checkJailbreak()` via `flutterJailbreakDetectionProvider` | `core/services/device/jailbreak_detection_wrapper.dart`, `app/app_initializer.dart` |
-| **dart_jsonwebtoken** | JWT encode/decode/verify | `JwtWrapper` (`IJwtWrapper`) + `JwtTokenExpiryChecker` (`ITokenVerifier`) | `core/services/auth/` |
+| **dart_jsonwebtoken** | JWT decode | `JwtWrapper.decodePayload` (`IJwtWrapper`) + `JwtTokenExpiryChecker` (`ITokenVerifier.isExpired`) | `core/services/auth/` |
 | **bcrypt** | Password hashing | `BcryptWrapper` (`IPasswordHasher`) via `passwordHasherProvider` | `core/services/crypto/` |
 
 ### Dev Dependencies
@@ -2120,10 +2250,9 @@ Future<void> _testFunction() async {
 | **freezed** | Code-gen for immutable classes/unions | `@freezed` annotations | All entities, DTOs, states, value objects |
 | **json_serializable** | Code-gen for JSON | `fromJson`/`toJson` on DTOs | DTOs in `infrastructure/dtos/` |
 | **riverpod_generator** | Code-gen for Riverpod | `@riverpod` / `@Riverpod` annotations | All `features/*/di/` and notifiers |
-| **riverpod_lint** | Riverpod-specific lint rules | Added to `analysis_options.yaml` (custom_lint) | Enforces correct Riverpod usage at analyze time |
 | **flutter_lints** | Official Flutter lint rules | Added to `analysis_options.yaml` | Enforces code style & best practices |
 | **mocktail** | Mock interfaces for unit tests | `class MockRepo extends Mock implements IRepo {}` + `when/verify` | All unit tests under `test/features/*/`, `test/core/*/`, `test/shared/*/` |
-| **gherkart** | Parse and run Gherkin `.feature` files | `GherkartParser(file).parse()` → iterate scenarios → `testWidgets` per scenario | BDD tests under `test/bdd/*_bdd_test.dart` |
+| **gherkart** | Parse and run Gherkin `.feature` files | `StepRegistry` + `runBddTests` → one `testWidgets` per scenario | BDD tests under `test/bdd/*_bdd_test.dart` |
 
 ---
 
@@ -2134,42 +2263,65 @@ There is a single Dio infrastructure, but **two providers**:
 - `authDioProvider` — a `DioWrapper` **without** the auth interceptor. Used by `AuthRemoteDatasource` for login/refresh (no token exists yet, no 401 retry needed).
 - `httpServiceProvider` — a `DioWrapper` **with** the auth interceptor (401 retry + force logout). Used by every feature that makes authenticated HTTP calls.
 
-Both are built by the same internal factory in `lib/app/di/network/dio_provider.dart`.
+Both are built by the same internal factory in `lib/core/network/dio/dio_providers.dart`.
 
 The `AuthInterceptor` is added once to `httpServiceProvider` and from then on intercepts all authenticated HTTP requests from any feature.
 
 ```dart
-// lib/app/di/network/dio_provider.dart
+// lib/core/network/dio/dio_providers.dart — el seam (core no conoce el feature auth)
+final authInterceptorProvider = Provider<IAuthInterceptorProvider>(
+  (ref) => throw UnimplementedError(
+    'authInterceptorProvider must be overridden in the composition root '
+    '(app/di/network/dio_overrides.dart)',
+  ),
+);
+
 final httpServiceProvider = Provider<IDioWrapper>((ref) {
   final dio = _createDioWrapper(ref);
-  AuthInterceptorImpl(
-    handle401UseCase: ref.watch(handle401UseCaseProvider),
-  ).setupAuthInterceptor(
-    dio,
-    onForceLogout: () => ref.read(authProvider.notifier).reset(),
-  );
+  ref.watch(authInterceptorProvider).setupAuthInterceptor(dio);
   return dio;
 });
+```
+```
+// lib/app/di/network/dio_overrides.dart — el binding concreto (composition root)
+List<Override> dioOverrides() => [
+      authInterceptorProvider.overrideWith(
+        (ref) => AuthInterceptorImpl(
+          handle401UseCase: ref.watch(handle401UseCaseProvider),
+          onForceLogout: () => ref.read(authProvider.notifier).forceLogout(),
+          getToken: () => ref.read(tokenStoreProvider).read(),
+        ),
+      ),
+    ];
 ```
 
 The interceptor implementation (`AuthInterceptorImpl`) implements `IAuthInterceptorProvider` and lives in `lib/app/di/network/auth_interceptor_impl.dart`:
 
 ```dart
+// lib/app/di/network/auth_interceptor_impl.dart
 class AuthInterceptorImpl implements IAuthInterceptorProvider {
-  const AuthInterceptorImpl({required this.handle401UseCase});
-  final Handle401UseCase handle401UseCase;
+  AuthInterceptorImpl({
+    required this._handle401UseCase,
+    required this._onForceLogout,
+    required this._getToken,
+  });
+
+  final IUseCase<NoParams, RetryResult> _handle401UseCase;
+  final VoidCallback _onForceLogout;
+  final Future<String?> Function() _getToken;
 
   @override
-  void setupAuthInterceptor(IDioWrapper dioWrapper, {required VoidCallback onForceLogout}) {
+  void setupAuthInterceptor(IDioWrapper dioWrapper) {
     dioWrapper.addAuthInterceptor(
       () async {
-        final result = await handle401UseCase();
+        final result = await _handle401UseCase(NoParams());
         return switch (result) {
           Success(data: final retryResult) => retryResult,
           Failure() => const RetryFailed(),
         };
       },
-      onForceLogout: onForceLogout,
+      onForceLogout: _onForceLogout,
+      getToken: _getToken,
     );
   }
 }
@@ -2195,7 +2347,7 @@ AuthInterceptor.onError() detects 401
 Handle401UseCase.call() → returns Result<RetryResult>
 │
 ├─ connectivityChecker.isConnected()?
-│   └─ NO → Failure(NetworkError) → RetryFailed (silent, pass through)
+│   └─ NO → Success(RetryNoConnection) (silent, no logout — the interceptor retries)
 │
 ├─ tokenStore.read()? → token found
 │   └─ RefreshTokenUseCase(token)
@@ -2204,7 +2356,9 @@ Handle401UseCase.call() → returns Result<RetryResult>
 │           └─ authDioProvider.post(/refreshtoken) → new token
 │           ├─ success → save new token → RetrySuccess(newToken)
 │           └─ fails → fallback: re-login with saved credentials
-│               └─ if also fails → RetryFailed → onForceLogout
+│               └─ also fails:
+│                   ├─ last error isTransient → Success(RetryNoConnection) (silent, NO logout)
+│                   └─ non-transient → Failure → interceptor maps to RetryFailed → onForceLogout
 │
 └─ Result<RetryResult> unwrapped by interceptor
 ↓ is Success(RetrySuccess(token)):
@@ -2215,8 +2369,8 @@ handler.resolve(response) → the feature receives its data
 
 **Key distinction:**
 
-- `Handle401UseCase` uses `IAuthRepository` + `RefreshTokenUseCase` (no custom service) — follows the standard `UseCase → Repository → guard() → Datasource` flow.
-- `internalDio` is a separate, bare `Dio` instance created inside `AuthInterceptor`. It is used **only** for retrying the original failed request after obtaining a new token.
+- `Handle401UseCase` composes the `IUseCase` seams `RefreshTokenUseCase` + `CredentialLoginUseCase` (Rule 18 — it never holds `IAuthRepository` directly) — follows the standard `UseCase → Repository → guard() → Datasource` flow.
+- `internalDio` is a separate, bare `Dio` instance created in `DioWrapper.addAuthInterceptor` and injected into `AuthInterceptor`. It is used **only** for retrying the original failed request after obtaining a new token.
 - The auth datasource uses `authDioProvider` (Dio without auth interceptor) to avoid re-entering the interceptor chain for refresh and re-login calls.
 - The `_isRefreshing` guard in `AuthInterceptor` prevents concurrent refresh attempts.
 
@@ -2253,9 +2407,9 @@ The pattern: the Use Case tells the Service **what** to do (try refresh, try re-
 | :--- | :--- | :--- | :--- |
 | Does not exist | - | - | Success(null) → login screen |
 | Exists | Valid | - | Success(data) → goes directly to the app |
-| Exists | Expired | No internet | Success(data) → preserves session (offline-first). If the user makes a request, DioWrapper throws NoConnectionException |
+| Exists | Expired | No internet | Success(data) → preserves session (online-first). If the user makes a request, DioWrapper throws NoConnectionException → cache fallback |
 | Exists | Expired | Internet, refresh succeeds | POST /refresh_token → saves new token → Success(data.copyWith(token: newToken)) → app starts without interruption |
-| Exists | Expired | Internet, refresh fails | POST /refresh_token → Failure(failure) → deleteAll() → Success(null) → login screen |
+| Exists | Expired | Internet, refresh fails | POST /refresh_token → Failure(failure) → keeps cached session → Success(data) (restore NEVER force-logs-out) |
 | Exists | Any | restoreSession() fails | Failure(failure) → Notifier shows error and stays at login |
 
 **Explanation of each scenario:**
@@ -2266,7 +2420,7 @@ The pattern: the Use Case tells the Service **what** to do (try refresh, try re-
 | Valid token | JWT has not expired. AuthInterceptor handles any 401 at runtime if the server rejects it. |
 | Expired token, no internet | Cannot refresh without a network. Preserving the session allows offline use. AuthInterceptor never fires because requests never reach the API. |
 | Expired token, internet, refresh succeeds | Refresh endpoint accepts the old token and returns a new one. Seamless experience — the user never sees the login. |
-| Expired token, internet, refresh fails | Server rejected the refresh. Session is cleared. On login screen, Handle401UseCase can attempt re-login with saved credentials. |
+| Expired token, internet, refresh fails | Refresh rejected → the **cached session is kept** (`Success(localData)`); a later request hits a 401 and `Handle401UseCase` decides (re-login / silent retry / force logout). Restore never force-logs-out. |
 | restoreSession() fails | Infrastructure error (corrupted DB, etc.). Notifier shows the error message and stays at login. |
 
 `RestoreSessionUseCase` and `AuthInterceptor` operate at different moments and do not overlap:
@@ -2299,14 +2453,15 @@ AuthGuard redirects to /clinical-history
 
 When the domain communicates with infrastructure, there is an extra decision. The infrastructure call is not a single one — it is potentially two:
 
-1. **Local** (always): read patient + token + histories from Sembast/SecureStorage
-2. **Remote** (only if token expired + internet): POST /refreshtoken
+1. **Remote re-login first** (if online + saved credentials exist): `CredentialLoginUseCase` (remember-me) — returns early on success.
+2. **Local restore** (only if the remote path did not produce a fresh session): read patient + token + histories from Sembast/SecureStorage.
+3. **Refresh** (only if the restored token is expired + online): POST /refreshtoken.
 
 ```bash
 RestoreSessionUseCase.call()
 ↓
 _connectivityChecker.isConnected()? + _credentialStore.readCredentials()?
-├── online && credentials → attempt re-login (remember-me)
+├── online && credentials → attempt re-login (remember-me) → Success(data) on success
 │
 ↓
 _repository.restoreSession() → LocalDatasource → returns LoginResponseEntity?
@@ -2315,11 +2470,11 @@ Token expired?
 ├── No → returns Success(data) ← keeps the local session
 │
 └── Yes → Has internet?
-    ├── No → returns Success(data) ← offline-first, preserves session
+    ├── No → returns Success(data) ← online-first, preserves session (restore never force-logs-out)
     │
     └── Yes → **attempts refresh via API** ← SECOND infrastructure call
         ├── OK → saves new token → returns Success(data with new token)
-        └── Fails → clears session → returns Success(null)
+        └── Fails → returns Success(data) ← cached session KEPT (restore never force-logs-out)
 ```
 
 ---
@@ -2398,26 +2553,26 @@ LoginScreen (presentation/screens)
 │
 AuthNotifier (presentation/notifiers)
 ├── state = AuthState.loading()
-├── ref.read(loginUseCaseProvider).call(email, password, rememberMe)
+├── ref.read(loginUseCaseProvider)(LoginInput(email: email, password: password, rememberMe: rememberMe))
 │   │
 │   LoginUseCase (domain/usecases)
-│   ├── Email.create(email) ← value object validation
-│   ├── Password.create(password) ← value object validation
+│   ├── Email.result(email) ← value object validation
+│   ├── Password.result(password) ← value object validation
 │   ├── _passwordHasher.hash(password) ← BcryptWrapper (via IPasswordHasher)
 │   ├── _repository.login(email, passwordHash)
 │   │   │
-│   │   AuthRepositoryImpl (infrastructure/repositories)
+│   │   AuthRemoteRepositoryImpl (infrastructure/repositories)
 │   │   └── guard(() => _remoteDatasource.login(...))
 │   │       │
 │   │       AuthRemoteDatasourceImpl
-│   │       └── _dio.post('/login', sla: EndpointSla.login) → HTTP
+│   │       └── _dio.post(_appUries.login, sla: EndpointSla.login) → HTTP  ← /user/login
 │   │       → Result<LoginResponseEntity>
 │   │
-│   ├── if (rememberMe) _repository.saveSession(data, email, passwordHash)
-│   └── _tokenStore.save(data.token.key) ← token persistence in use case
+│   ├── if (rememberMe) _sessionRepository.saveSession(data, email, passwordHash)
+│   └── else _tokenStore.save(data.token.key) ← token persistence (only when rememberMe is OFF)
 │
 └── result.fold<Future<void>>(
-  onSuccess: (data) → state = AuthState.loaded(patient, token, clinicalHistory)
+  onSuccess: (data) → state = AuthState.loaded(patient, token)
   onFailure: (error) → state = AuthState.failure(error)   ← AppError passed to state; UI localizes via localizeError()
 )
 │
@@ -2441,9 +2596,9 @@ RestoreSessionUseCase (domain/usecases)
 ├── _tokenVerifier.isExpired(token) ← JwtTokenExpiryChecker (implements ITokenVerifier)
 ├── _connectivityChecker.isConnected() ← InternetService (implements IConnectivityChecker) (checked again)
 └── _tryRefresh(data)
-    ├── _repository.refreshToken(token) ← AuthRepositoryImpl → RemoteDatasource
-    ├── on success: _credentialStore.saveToken(newToken.key)
-    └── on failure: _credentialStore.deleteAll() → Success(null)
+    ├── _repository.refreshToken(token) ← AuthRemoteRepositoryImpl → RemoteDatasource
+    ├── on success: _tokenStore.save(newToken.key)
+    └── on failure: Success(localData) ← cached session KEPT (restore never force-logs-out)
 ```
 
 ---
@@ -2452,7 +2607,7 @@ RestoreSessionUseCase (domain/usecases)
 
 ### Problem
 
-The auth feature had 5 service files that were all eliminated. Four were one-line delegations — adapters that existed solely to bridge domain interfaces with shared wrapper implementations. The fifth (`dio_token_retry_handler.dart`) had real logic but was later eliminated when `Handle401UseCase` was refactored to use `IAuthRepository` directly, breaking the Riverpod cycle.
+The auth feature had 5 service files that were all eliminated. Four were one-line delegations — adapters that existed solely to bridge domain interfaces with shared wrapper implementations. The fifth (`dio_token_retry_handler.dart`) had real logic but was later eliminated when `Handle401UseCase` was refactored to compose the `IUseCase` seams `RefreshTokenUseCase` + `CredentialLoginUseCase`, breaking the Riverpod cycle.
 
 | Service | Lines | Actual logic | Status |
 | :--- | :--- | :--- | :--- |
@@ -2468,13 +2623,14 @@ The auth feature had 5 service files that were all eliminated. Four were one-lin
 
 ```
 shared/interfaces/
+i_clinical_history_store.dart
 i_connectivity_checker.dart
 i_credential_store.dart
 i_token_store.dart
 i_token_verifier.dart
 i_password_hasher.dart
-i_authentication_observer.dart
-i_app_database.dart
+i_patient_info_store.dart
+i_usecase.dart
 ```
 
 **Wrappers implement the interfaces directly:**
@@ -2502,13 +2658,13 @@ final tokenStoreProvider = Provider<ITokenStore>(
 );
 ```
 
-### Eliminated services — `Handle401UseCase` now uses `IAuthRepository` + `RefreshTokenUseCase`
+### Eliminated services — `Handle401UseCase` now composes the `IUseCase` seams (`RefreshTokenUseCase` + `CredentialLoginUseCase`)
 
 `Handle401UseCase` used to use a service created inline in `AuthInterceptorImpl` to avoid a Riverpod dependency cycle between `authDioProvider` and `authRemoteDatasourceProvider`.
 
-The solution was to create a separate `authDioProvider` (Dio without an auth interceptor) for the auth datasource, breaking the cycle. Now `Handle401UseCase` uses `IAuthRepository` (via `RefreshTokenUseCase`) directly, following the standard `UseCase → Repository → guard() → Datasource` flow.
+The solution was to create a separate `authDioProvider` (Dio without an auth interceptor) for the auth datasource, breaking the cycle. Now `Handle401UseCase` composes the `IUseCase` seams (`RefreshTokenUseCase` + `CredentialLoginUseCase`, Rule 18) and reaches the repository only transitively, following the standard `UseCase → Repository → guard() → Datasource` flow.
 
-This eliminated the intermediate services and the inline creation in `AuthInterceptorImpl`. `AuthInterceptorImpl` now receives `Handle401UseCase` by constructor (1 parameter instead of 6).
+This eliminated the intermediate services and the inline creation in `AuthInterceptorImpl`. `AuthInterceptorImpl` now receives its dependencies by constructor (3 parameters instead of 6: `handle401UseCase`, `onForceLogout` y `getToken`).
 
 #### Unified with `Result<T>` — `Handle401UseCase` returns `Result<RetryResult>`
 
@@ -2520,6 +2676,7 @@ Datasource → Repository.guard() → Result<T> → UseCase → Notifier.fold()
 
 Handle401UseCase pattern (current):
 AuthInterceptor → Handle401UseCase → IAuthRepository (+ RefreshTokenUseCase) → guard() → IAuthRemoteDatasource → HTTP
+                                       └→ shared ports (tokenStore, connectivityChecker) wrapped with guard() → Result
 ```
 
 ### Datasource vs Service — when to use each
@@ -2607,21 +2764,23 @@ The `shared/` folder is organized by **type of content**, not by layer:
 | `models/` | Domain entities | Domain |
 | `interfaces/` | Domain interfaces | Domain |
 | `exceptions/` | Failure types | Domain |
-| `error/` | `AppError`, `Result<T>`, `guard()`, `localizeError()` | Domain |
-| `functions/` | Package wrapper mixin (`offline_first_repository.dart`) | Infrastructure |
+| `error/` | `AppError`, `Result<T>`, `guard()` | Domain (`localizeError()` lives in `l10n/`, UI layer) |
+| `functions/` | Online-first helper (`online_first.dart`) | Infrastructure |
 | *(migrated to design_system/)* | Theme & colors (AppColors, AppTheme) | Presentation |
 
 No folder under `shared/` uses a layer name (`domain/`, `infrastructure/`, `presentation/`). Adding `domain/interfaces/` would break this convention — it would be the only folder organized by layer. `shared/interfaces/` follows the existing pattern: named by type, parallel to `shared/models/`.
 
 ### `RestoreSessionUseCase` depends only on `shared/interfaces/`
 
-`RestoreSessionUseCase` uses `ICredentialStore.saveToken()` (from `shared/interfaces/`) after a successful token refresh, keeping the domain layer free of infrastructure imports:
+`RestoreSessionUseCase` persists the refreshed token via `ITokenStore` (from `shared/interfaces/`) and composes single-responsibility use cases (`CredentialLoginUseCase`, `RefreshTokenUseCase`), keeping the domain layer free of infrastructure imports:
 
 ```dart
 class RestoreSessionUseCase {
-  final ICredentialStore _credentialStore;
+  final ITokenStore _tokenStore;
+  final CredentialLoginUseCase _credentialLoginUseCase;
+  final RefreshTokenUseCase _refreshTokenUseCase;
   ...
-  await _credentialStore.saveToken(tokenData.key);
+  await _tokenStore.save(tokenData.key);
 }
 ```
 
@@ -2637,8 +2796,9 @@ After all refactoring, the domain layer (`features/auth/domain/`) has clear boun
 | :--- | :--- |
 | `shared/interfaces/` | `IConnectivityChecker`, `ICredentialStore`, `ITokenStore`, `ITokenVerifier`, `IPasswordHasher` |
 | `shared/error/` | `Result`, `Success`, `Failure`, `RetryResult`, `RetrySuccess`, `RetryFailed`, `AppError` subtypes |
-| `shared/exceptions/` | `ApiException`, `NoConnectionException`, `ServerUnreachableException`, `UnexpectedResponseException`, `AppTimeoutException`, `DeviceSecurityException` |
 | Its own files | Entities, value objects, repositories, datasources, use cases |
+
+> `shared/exceptions/` is NOT imported by the domain: the typed exceptions (`ApiException`, `NoConnectionException`, `ServerUnreachableException`, `UnexpectedResponseException`, `AppTimeoutException`, `DeviceSecurityException`) are **thrown by infrastructure datasources** and mapped by `guard()` in `shared/error/result_guard.dart`.
 
 **The domain NEVER imports (and should not):**
 
@@ -2653,14 +2813,13 @@ After all refactoring, the domain layer (`features/auth/domain/`) has clear boun
 
 ### What was kept
 
-All services were eliminated. The logic was moved into use cases (`Handle401UseCase`, `RestoreSessionUseCase`) that use `IAuthRepository` directly, following the standard `UseCase → Repository` flow.
+All services were eliminated. The logic was moved into use cases (`Handle401UseCase`, `RestoreSessionUseCase`) that compose the `IUseCase` seams and reach the repository only transitively (Rule 18), following the standard `UseCase → Repository` flow.
 
 ### Test impact
 
 All unit tests and integration tests pass without behavioral changes. The only test modifications were:
-- Imports changed from `features/auth/domain/services/` to `shared/exceptions/_exceptions.lib.dart`
-- `TokenCredentialStore(mockTokenService)` replaced with `mockTokenService` directly (the mock now implements `ICredentialStore`)
-- Integration test fakes (`_FakeTokenStore`, `_FakeExpiredTokenStore`) now implement `ITokenStore` and `ICredentialStore`
+- Imports updated to the current structure (`shared/error/_error.lib.dart`, `shared/interfaces/_interfaces.lib.dart`, feature domain files)
+- Mocks/fakes implement the domain contracts (`ITokenStore`, `ICredentialStore`, `IUseCase<...>`, `ILogger`)
 
 ---
 
@@ -2674,21 +2833,24 @@ The project completed the migration from a mixed `shared/` folder to a clean sep
 
 ```
 lib/
-├── app/       ← Composition root (providers barrel, router, guard, app initializer)
+├── app/       ← Composition root (DI seams, router, guard, app initializer)
 ├── shared/    ← Pure domain abstractions
 │   ├── interfaces/
 │   ├── exceptions/
 │   ├── error/
 │   ├── models/
-│   └── functions/ (offline_first_repository)
+│   ├── router/ (AppRoute — typed route registry)
+│   └── functions/ (online_first)
 ├── core/      ← Pure infrastructure
 │   ├── config/    (AppEnvironment, environmentProvider)
 │   ├── database/  (AppDatabase, sembast wrapper, tables, serializers)
 │   ├── network/   (dio_wrapper, interceptors, connectivity, timeouts, retry, security)
 │   └── services/  (auth, crypto, device, storage)
+├── design_system/ ← Theme & reusable UI components
 ├── l10n/      ← AppLocalizations (i18n)
 └── features/
-    └── auth/  ← di/, domain/, infrastructure/, presentation/, spec/
+    ├── auth/  ← di/, domain/, infrastructure/, presentation/, spec/
+    └── clinical_history/  ← di/, domain/, infrastructure/, presentation/, spec/
 ```
 
 **Why:** The dependency direction becomes visible in the import path. If a domain file imports from `core/`, it is immediately visible as a violation. `shared/` is pure domain, `core/` is pure infrastructure, `app/` is the composition root. No mixing.
@@ -2718,7 +2880,7 @@ sealed class Result<T> {
   });
 }
 
-class Success<T> extends Result<T> {
+final class Success<T> extends Result<T> {
   final T data;
   const Success(this.data);
   ...
@@ -2777,8 +2939,8 @@ class AuthNotifier extends _$AuthNotifier {
 
   Future<void> login(String email, String password, {bool rememberMe = false}) async {
     state = const AuthState.loading();
-    final result = await ref.read(loginUseCaseProvider).call(
-      email: email, password: password, rememberMe: rememberMe,
+    final result = await ref.read(loginUseCaseProvider)(
+      LoginInput(email: email, password: password, rememberMe: rememberMe),
     );
     await result.fold<Future<void>>(
       onSuccess: (data) async {
@@ -2794,40 +2956,48 @@ class AuthNotifier extends _$AuthNotifier {
 
 This is the Riverpod v3 code-gen pattern: annotated notifiers, generated `*_notifier.g.dart` files.
 
-### 6. Error handling: typed errors with metadata + `.technical()` constructor
+### 6. Error handling: typed errors with metadata (no `userMessage`)
 
-**Current:** Each `AppError` subtype carries typed metadata (`statusCode`, `field`, stack trace) plus a `userMessage`. Localization happens at the UI layer via `localizeError()`.
+**Current:** Each `AppError` subtype is a sealed class carrying typed metadata (`field`, stack trace, diagnostic `technicalMessage`) and behavior flags (`isNetworkRelated`, `isTransient`). **`AppError` has no `userMessage`** — the UI maps types to localized strings via `localizeError()`. `technicalMessage`/`stackTrace` are diagnostic-only, consumed by the `ILogger` observability seam (`shared/interfaces/`, `loggerProvider`) in the notifiers.
 
 **Pattern:**
-- Domain/infrastructure uses `AppError.technical()` constructors (empty `userMessage` placeholder).
-- UI layer maps types to localized strings via `localizeError()` from `shared/error/error_localizer.dart`.
+- `guard()` maps exceptions to typed `AppError` subtypes (constructors take only named args — no positional message).
+- UI layer maps types to localized strings via `localizeError()` from `l10n/error_localizer.dart`.
+- `Handle401UseCase` reads `error.isTransient` (data-driven, no `is` dispatch) to decide retry vs logout.
 
 ```dart
 sealed class AppError {
-  final String userMessage;
   final String? technicalMessage;
   final StackTrace? stackTrace;
-  const AppError(this.userMessage, {this.technicalMessage, this.stackTrace});
-  const AppError.technical({this.technicalMessage, this.stackTrace}) : userMessage = '';
+  const AppError({this.technicalMessage, this.stackTrace});
+
+  bool get isNetworkRelated => false;
+  bool get isTransient => false;
+
+  @override
+  String toString() => '$runtimeType(technicalMessage: $technicalMessage)';
 }
 
 final class NetworkError extends AppError {
-  const NetworkError(super.userMessage, {super.technicalMessage, super.stackTrace});
-  const NetworkError.technical({super.technicalMessage, super.stackTrace}) : super.technical();
+  const NetworkError({super.technicalMessage, super.stackTrace});
+
+  @override
+  bool get isNetworkRelated => true;
+  @override
+  bool get isTransient => true;
 }
 
 final class ValidationError extends AppError {
   final String? field;
-  const ValidationError(super.userMessage, {this.field, super.technicalMessage, super.stackTrace});
-  const ValidationError.technical({super.technicalMessage, super.stackTrace, this.field}) : super.technical();
+  const ValidationError({super.technicalMessage, super.stackTrace, this.field});
 }
 ```
 
-**Why:** Errors carry typed metadata (statusCode, field name, stack trace) instead of hiding it in a string. All user-facing strings are centralized in l10n/ and mapped via `localizeError()`.
+**Why:** Errors carry typed metadata (field name, stack trace, diagnostic `technicalMessage`) instead of hiding it in a string. All user-facing strings are centralized in l10n/ and mapped via `localizeError()` — a single source of truth, with no duplicated `userMessage` field. Diagnostic detail flows to `ILogger` for observability. Coverage of the guard ↔ localizer mapping is enforced by `test/architecture/error_mapping_consistency_test.dart`.
 
 ### 7. Service locator only for infrastructure, not for domain
 
-`app/di/_providers.lib.dart` centralizes the shared global providers via barrel exports. Each feature's `di/` imports directly the providers it needs from the `app/di/_providers.lib.dart` barrel or from `core/` barrels. The composition root is `app/`.
+`core/` source files centralize the shared global providers. Each feature's `di/` imports directly the providers it needs from `core/` source files. The composition root is `app/`.
 
 ### Comparison table
 
@@ -2839,7 +3009,7 @@ final class ValidationError extends AppError {
 | Code generation | `freezed` + `json_serializable` + `riverpod_generator` (scoped) |
 | Providers | `@riverpod` code-gen + `@Riverpod` Notifiers |
 | Error model | `AppError` (typed fields) + `localizeError()` |
-| Service locator | Riverpod providers via `app/di/_providers.lib.dart` barrel |
+| Service locator | Riverpod providers wired via `core/` + feature `di/` (no app barrel) |
 | Navigation | `goRouterProvider` (Riverpod) + `AuthGuard` + `AppRoute` enum |
 | Tests | By layer (app/core/shared/features/bdd) |
 
@@ -2870,14 +3040,14 @@ Key design decisions:
 - **Runners by real need:** Only `Build iOS` requires macOS (Xcode). Analyze, Test, Test Goldens and Build Android run on Linux, cutting macOS usage to a single job.
 - **Builds decoupled from tests:** `Build iOS` and `Build Android` depend only on `Analyze` (`needs: [analyze]`), not on `Test`. This guarantees that a build/compile regression is never masked by a failing test job. Enforced structurally by `test/architecture/workflow_gates_test.dart`.
 - **Anti-masking gates:** `test/architecture/workflow_gates_test.dart` (runs inside `Test`, no `golden` tag) blocks the merge if CI regresses: Analyze/Test/Test Goldens not on Linux, golden tests without `@Tags(['golden'])`, builds depending on `Test`, or more than 2 macOS jobs.
-- **Caching:** all jobs enable `cache: true` on `subosito/flutter-action@v2`; `Build iOS` additionally caches CocoaPods (`actions/cache@v4`, `ios/Pods`).
+- **Caching:** all jobs enable `cache: true` on `subosito/flutter-action@v2`; `Build iOS` additionally caches CocoaPods (`actions/cache@v6`, `ios/Pods`).
 - **Least privilege:** `permissions: contents: read` on the whole workflow.
 - **Concurrency:** `concurrency: ci-${{ github.ref }}` with `cancel-in-progress: true` cancels superseded runs, saving minutes and avoiding races.
 - **Pinned Flutter version:** All jobs pin `flutter-version: '3.44.0'`.
 
 ### Golden tests
 
-Golden tests are tagged with `@Tags(['golden'])` (declared via `@Tags(['golden']) library;` at the top of each golden test file). They are **cross-platform**: `test/flutter_test_config.dart` loads the embedded fonts (`test/assets/` — Roboto Regular/Medium/Bold + MaterialIcons) via `FontLoader` and installs a tolerant `GoldenFileComparator` (0.2% pixel threshold). Determinism comes from the fonts; the tolerance absorbs subtle anti-aliasing differences between Linux CI and macOS local. They run on **Linux** in the dedicated `Test Goldens` job. The main `Test` job excludes them with `--exclude-tags golden`.
+Golden tests are tagged with `@Tags(['golden'])` (declared via `@Tags(['golden']) library;` at the top of each golden test file). The `golden` tag is declared in the root `dart_test.yaml` (`tags: golden`), so the runner emits no "A tag was used that wasn't specified in dart_test.yaml" warning. They are **cross-platform**: `test/flutter_test_config.dart` loads the embedded fonts (`test/assets/` — Roboto Regular/Medium/Bold + MaterialIcons) via `FontLoader` and installs a tolerant `GoldenFileComparator` (2% pixel threshold). Determinism comes from the fonts; the tolerance absorbs subtle anti-aliasing differences between Linux CI and macOS local. They run on **Linux** in the dedicated `Test Goldens` job. The main `Test` job excludes them with `--exclude-tags golden`.
 
 Golden files are committed under `test/**/goldens/`. Regenerate after visual changes with:
 
@@ -2906,7 +3076,7 @@ Semver-major of `flutter_jailbreak_detection_plus` is ignored (no iOS Swift
 Package Manager support yet — only minor/patch via auto-merge).
 
 `.github/workflows/auto-merge.yml` **auto-merges dependabot patch/minor PRs**
-(`gh pr merge --auto --squash`) via `dependabot/fetch-metadata@v2`; major
+(`gh pr merge --auto --squash`) via `dependabot/fetch-metadata@v3`; major
 updates require review.
 
 ### Branch protection (`develop`)
