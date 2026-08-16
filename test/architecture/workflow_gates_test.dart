@@ -76,5 +76,70 @@ void main() {
       expect(job?['runs-on'], 'ubuntu-latest',
           reason: 'gitleaks must run on Linux (free runner)');
     });
+
+    test('Analyze enforces dart format as a gate', () {
+      final steps = workflow['jobs']['analyze']['steps'] as List;
+      final runCommands = steps
+          .whereType<Map>()
+          .map((s) => s['run'] as String?)
+          .whereType<String>()
+          .toList();
+      final formatStep = runCommands.where((c) => c.contains('dart format'));
+      expect(formatStep, isNotEmpty,
+          reason: 'Analyze must run dart format --set-exit-if-changed so an '
+              'unformatted diff fails CI instead of reaching review');
+      expect(
+        formatStep.first.contains('--output=none') &&
+            formatStep.first.contains('--set-exit-if-changed'),
+        isTrue,
+        reason: 'the format gate must be non-mutating (--output=none) and '
+            'exit non-zero on diff (--set-exit-if-changed)',
+      );
+    });
+
+    test('An Integration job exists and fails on any test failure', () {
+      final job = workflow['jobs']['integration'] as Map?;
+      expect(job, isNotNull,
+          reason: 'PR 1 must add an Integration job executing integration_test '
+              'on a controlled device runner (D6)');
+      expect(job?['runs-on'], 'macos-latest',
+          reason: 'Integration must run on a controlled macOS/device runner');
+      final steps = job?['steps'] as List? ?? const [];
+      final runCommands = steps
+          .whereType<Map>()
+          .map((s) => s['run'] as String?)
+          .whereType<String>()
+          .join('\n');
+      expect(runCommands.contains('set -euo pipefail'), isTrue,
+          reason: 'Integration must fail hard; a job that always passes without '
+              'running the tests masks failures');
+      expect(runCommands.contains('flutter test'), isTrue,
+          reason: 'Integration must execute the integration tests');
+    });
+
+    test('Test and Test Goldens jobs keep the tag flags', () {
+      final runs = <String>[];
+      for (final jobName in ['test', 'test-goldens']) {
+        final steps = workflow['jobs'][jobName]['steps'] as List;
+        for (final step in steps) {
+          final run = (step as Map)['run'] as String?;
+          if (run != null && run.contains('flutter test')) {
+            runs.add('$jobName: $run');
+          }
+        }
+      }
+
+      expect(
+        runs.any((r) =>
+            r.startsWith('test:') && r.contains('--exclude-tags golden')),
+        isTrue,
+        reason: 'Test must keep --exclude-tags golden so the coverage run '
+            'never silently executes golden tests');
+      expect(
+        runs.any((r) =>
+            r.startsWith('test-goldens:') && r.contains('--tags golden')),
+        isTrue,
+        reason: 'Test Goldens must keep --tags golden so goldens actually run');
+    });
   });
 }
