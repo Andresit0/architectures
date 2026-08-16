@@ -67,6 +67,11 @@ jobs:
     name: Integration
     runs-on: macos-latest
     needs: [analyze]
+    # D6 (GIT_FLOW.md): device integration requires a controlled runner with
+    # Apple signing (the app uses flutter_secure_storage keychain groups, which
+    # cannot be signed on GitHub-hosted macOS runners). Set the repository
+    # variable RUN_DEVICE_INTEGRATION=true once such a runner is provisioned.
+    if: vars.RUN_DEVICE_INTEGRATION == 'true'
     permissions:
       contents: read
     steps:
@@ -78,10 +83,6 @@ jobs:
       - run: flutter pub get
       - name: Run integration tests on macOS device
         shell: bash
-        env:
-          CODE_SIGNING_ALLOWED: "NO"
-          CODE_SIGNING_REQUIRED: "NO"
-          CODE_SIGN_IDENTITY: "-"
         run: |
           set -euo pipefail
           tests=("$PWD"/integration_test/*_test.dart)

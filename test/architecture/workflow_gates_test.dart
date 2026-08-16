@@ -147,6 +147,14 @@ void main() {
         'macos-latest',
         reason: 'Integration must run on a controlled macOS/device runner',
       );
+      final jobIf = job?['if'] as String?;
+      expect(
+        jobIf,
+        contains('RUN_DEVICE_INTEGRATION'),
+        reason: 'Integration must be gated behind RUN_DEVICE_INTEGRATION '
+            'because the app needs Apple signing (keychain groups) that '
+            'GitHub-hosted runners cannot provide (documented D6 exception)',
+      );
       final steps = job?['steps'] as List? ?? const [];
       final runCommands = steps
           .whereType<Map>()

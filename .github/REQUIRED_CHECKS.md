@@ -12,7 +12,6 @@ the "protected PR" guarantee.
 | `Analyze` | `analyze` | `flutter pub get`, `dart format --output=none --set-exit-if-changed lib test integration_test`, `flutter analyze` (zero issues). |
 | `Test` | `test` | Unit/widget/architecture/BDD no-golden (`flutter test --coverage --exclude-tags golden`) + Codecov upload. |
 | `Test Goldens` | `test-goldens` | Goldens on Linux with `--tags golden` (deterministic). |
-| `Integration` | `integration` | Each `integration_test/*_test.dart` executed individually on `macos-latest` device runner; the job fails if any test file fails. |
 | `Build Android` | `build-android` | `flutter build apk --debug` (compilation gate). |
 | `Build iOS` | `build-ios` | `flutter build ios --no-codesign` (compilation gate). |
 | `Gitleaks` | `gitleaks` | Full-history secret scan (`fetch-depth: 0`), zero secrets. |
@@ -22,6 +21,20 @@ the "protected PR" guarantee.
 | Check | Job | Responsibility |
 |---|---|---|
 | `Branch Source Gate` | `branch-source-gate` | Rejects PR heads other than `release/*` or `hotfix/*`. |
+
+## Device Integration (D6 — gated, not yet a required check)
+
+`Integration` (`integration` job, `macos-latest`) runs every
+`integration_test/*_test.dart` on a device and fails hard on any failure. It is
+**gated behind the repository variable `RUN_DEVICE_INTEGRATION=true`** because
+the app uses `flutter_secure_storage` keychain groups, which require Apple code
+signing that GitHub-hosted macOS runners cannot provide.
+
+- Until a signing-capable/controlled runner is provisioned, the job is skipped
+  and is **NOT** a required check — this is the documented D6 exception for a
+  personal account (GIT_FLOW.md §4.4, §10.2).
+- Once the variable is set and the job is green on a controlled runner, add
+  `Integration` to branch protection as a required check and update this file.
 
 ## Coverage
 
