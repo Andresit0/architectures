@@ -78,6 +78,9 @@ jobs:
       - run: flutter pub get
       - name: Run integration tests on macOS device
         shell: bash
+        env:
+          CODE_SIGNING_ALLOWED: "NO"
+          CODE_SIGN_IDENTITY: "-"
         run: |
           set -euo pipefail
           tests=("$PWD"/integration_test/*_test.dart)
