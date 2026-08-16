@@ -151,7 +151,8 @@ void main() {
       expect(
         jobIf,
         contains('RUN_DEVICE_INTEGRATION'),
-        reason: 'Integration must be gated behind RUN_DEVICE_INTEGRATION '
+        reason:
+            'Integration must be gated behind RUN_DEVICE_INTEGRATION '
             'because the app needs Apple signing (keychain groups) that '
             'GitHub-hosted runners cannot provide (documented D6 exception)',
       );
