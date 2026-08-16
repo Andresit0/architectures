@@ -41,8 +41,8 @@ Every new feature starts with a specification, not code.
 | `tasks.md` | Implementation task checklist |
 
 **Reference examples:**
-- `lib/features/[feature_name]/spec/` — auth_login
-- `lib/features/[feature_name]/spec/` — encounter_pdf_download
+- `lib/features/auth/spec/` — auth
+- `lib/features/clinical_history/spec/` — clinical_history
 
 **How spec files feed coding agents:**
 
@@ -90,7 +90,7 @@ Applies DI + Riverpod + Interface to service classes inside `lib/core/services/`
 
 **Skill:** `.ai/skills/app-barrel/SKILL.md`
 
-Orchestrates `barrel_lib` then `barrel_file` to create `_[name].lib.dart` and `_[name].dart` facade files for any folder under `lib/`.
+Generates `_[name].lib.dart` **pure-export barrels** for a folder under `lib/` (one `export '<file>.dart';` per public file — no `part`, no facade). **Exception:** `presentation/widgets/` folders are NOT barrelled — widgets are standalone files with explicit imports, no facade.
 
 ---
 
@@ -242,7 +242,7 @@ Fixes failing tests. Analyzes each failure, fixes implementation or test, re-run
 
 **Skill:** `.ai/skills/app-agent-nav-wirer/SKILL.md`
 
-Wires navigation: AppRoute enum entry in app_route.dart, GoRoute in app_router.dart, screen import, trigger in parent screen.
+Wires navigation: AppRoute enum entry in `shared/router/app_route.dart`, GoRoute in `app_router.dart`, screen import, trigger in parent screen via `IAppNavigator` (never `goRouterProvider`).
 
 ---
 

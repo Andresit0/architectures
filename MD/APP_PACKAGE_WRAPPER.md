@@ -2,7 +2,7 @@
 
 All pub packages used inside the app are wrapped in `lib/core/services/` or `lib/core/network/` 
 and registered through Riverpod providers. External code always uses `ref.watch/read(ProviderName)`
-via the `_providers.lib.dart` barrel — never imports the package directly.
+imported from the provider's `core/` source file — never imports the package directly.
 
 ### Wrappers organized by domain
 
@@ -19,18 +19,19 @@ via the `_providers.lib.dart` barrel — never imports the package directly.
 |---|---|---|---|---|
 | **auth** | `auth/secure_token_store.dart` | `ITokenStore` | `SecureTokenStore` | `ref.watch(tokenStoreProvider)` |
 | **auth** | `auth/secure_credential_store.dart` | `ICredentialStore` | `SecureCredentialStore` | `ref.watch(credentialStoreProvider)` |
-| **auth** | `auth/jwt_wrapper.dart` | — | `JwtWrapper` | `ref.watch(jwtWrapperProvider)` |
-| **auth** | `auth/jwt_token_expiry_checker.dart` | `ITokenVerifier` | `JwtTokenExpiryChecker` | `ref.watch(tokenVerifierProvider)` |
+| **auth** | `auth/jwt_wrapper.dart` | `IJwtWrapper` | `JwtWrapper` | `ref.watch(jwtWrapperProvider)` — `decodePayload()` (decode sin verificación de firma) |
+| **auth** | `auth/jwt_token_expiry_checker.dart` | `ITokenVerifier` | `JwtTokenExpiryChecker` | `ref.watch(tokenVerifierProvider)` — `isExpired()` |
 | **crypto** | `crypto/bcrypt_wrapper.dart` | `IPasswordHasher` | `BcryptWrapper` | `ref.watch(passwordHasherProvider)` |
 | **device** | `device/path_provider_wrapper.dart` | `IPathProviderWrapper` | `PathProviderWrapper` | `ref.watch(pathProviderProvider)` — pure utility |
 | **device** | `device/jailbreak_detection_wrapper.dart` | — | `JailbreakDetectionWrapper` | — (internal, called during app init) |
+| **logging** | `shared/interfaces/i_logger.dart` + `core/services/logging/dev_logger.dart` | `ILogger` | `DevLogger` | `ref.watch(loggerProvider)` (from `logging/logging_providers.dart`; re-exported by feature `di/`) — observability seam over `dart:developer log`, swappable for telemetry (e.g. Sentry) |
 | **storage** | `storage/secure_storage_wrapper.dart` | `ISecureStorageWrapper` | `SecureStorageWrapper` | — (internal, injected into `SecureTokenStore` and `DatabaseKeyService`) |
 
 #### Shared functions (`lib/shared/functions/`)
 
 | Wrapper | Access | Notes |
 |---|---|---|
-| `offline_first_repository.dart` | Import directly | Offline-first CRUD mixin for repositories |
+| `online_first.dart` | Import directly | Online-first repository helper (remote first, cache fallback ONLY on connectivity failure) — `fetchOrFallback({remote, local, onRemoteSuccess})` takes raw closures, owns all `guard()` wrapping internally, returns `OnlineFirstResult<T>` (`Result<T>` + `DataOrigin` remote/cache), and surfaces a failed local read as `Failure` with its stack trace. Write-through is best-effort by policy: the clinical_history repo catches a failed cache write (load y refresh), logs it with stack trace via `ILogger` and still returns the remote data |
 
 ---
 
@@ -42,12 +43,12 @@ Mixing categories is an architectural error.
 | Category | Wrappers | Correct access from features | Riverpod Bridge |
 |---|---|---|---|
 | **Pure utility** | `path_provider_wrapper` | `ref.watch(provider)` directly | Provider-level (not via composition root barrel) |
- | **Injectable service** | `dio_wrapper`, `secure_token_store`, `secure_credential_store` | `ref.watch/read(ProviderName)` via `_providers.lib.dart` | YES — composition root barrel |
+ | **Injectable service** | `dio_wrapper`, `secure_token_store`, `secure_credential_store` | `ref.watch/read(ProviderName)` from its `core/` source file | YES — Riverpod provider in `core/` source file |
 | **Internal dependency** | `internet_service`, `secure_storage_wrapper`, `jailbreak_detection_wrapper` | Only inside their consuming wrappers. Never from features | NO |
-| **GoRouter (Riverpod)** | `goRouterProvider` | `ref.watch(goRouterProvider)` from `app/di/router/router_provider.dart` | NO — accessed via `ref.watch(goRouterProvider)` directly in `main.dart` and features |
+| **GoRouter (Riverpod)** | `goRouterProvider` | `ref.watch(goRouterProvider)` from `app/di/router/router_provider.dart` (composition root only) | NO — features navigate via the `IAppNavigator` seam (`appNavigatorProvider` re-exported by their `di/` on-demand), never `go_router` |
 
 **Why the injectable vs pure distinction matters:**
-- Injectable services (`dio`, `token`, `sembast`) must go through `_providers.lib.dart` to
+- Injectable services (`dio`, `token`, `sembast`) must expose a Riverpod provider from their `core/` source file to
   be overridable with mocks in widget/integration tests via `ProviderScope` overrides.
 - Pure utilities (`pathProvider`) don't need runtime substitution;
   accessing them via `ref.watch(provider)` directly is correct and expected.
@@ -65,9 +66,9 @@ final dio = Dio(BaseOptions(baseUrl: '...')); // should use ref.watch(httpServic
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 // should never access internet connectivity from features — DioWrapper already handles it
 
-// WRONG: navigate without the goRouter provider
+// WRONG: navigate without the IAppNavigator seam
 import 'package:go_router/go_router.dart';
-context.go('/[feature_name]'); // should be: ref.read(goRouterProvider).go('/[feature_name]')
+context.go('/[feature_name]'); // should be: ref.read(appNavigatorProvider).go(AppRoute.[featureName])
 ```
 
 ---
@@ -81,11 +82,11 @@ wrappers (`internetService`).
 
 ---
 
-**`goRouterProvider` pattern in `main.dart`**
+**`goRouterProvider` pattern in `main.dart` + `IAppNavigator` seam**
 
 `main.dart` uses `ref.watch(goRouterProvider)` to get the `GoRouter` instance directly from Riverpod.
-go_router types (`GoRoute`, `RouteBase`) are encapsulated within `app_router.dart` and `app_route.dart`.
-The `goRouterProvider` is defined in `app/di/router/router_provider.dart` and creates the `GoRouter` with `AuthGuard` and `authenticationObserverProvider`:
+go_router types (`GoRoute`, `RouteBase`) are encapsulated within `app_router.dart` (route table) and `GoRouterNavigator` (the single `IAppNavigator` implementation).
+The `goRouterProvider` is defined in `app/di/router/router_provider.dart` and creates the `GoRouter` with `AuthGuard` (deep-link `?from=` restore), `errorBuilder` and `authenticationObserverProvider`:
 
 ```dart
 // app/di/router/router_provider.dart — CORRECT
@@ -93,20 +94,36 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final observer = ref.watch(authenticationObserverProvider);
   const guard = AuthGuard();
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: AppRoute.login.path,
     refreshListenable: observer,
-    redirect: (context, state) => guard.redirect(...),
-    routes: appRoutes(),
+    redirect: (context, state) => guard.redirect(
+      location: state.matchedLocation,
+      from: state.uri.queryParameters['from'],
+      isAuthenticated: observer.isAuthenticated,
+    ),
+    errorBuilder: (context, state) => AppErrorScreen(error: state.error),
+    routes: appRoutes(
+      onLogout: () => ref.read(authProvider.notifier).logout(),
+    ),
   );
 });
 
-// main.dart
-routerConfig: ref.watch(goRouterProvider),
+// main.dart — merge the composition-root seams
+ProviderScope(
+  overrides: [...dioOverrides(), ...routerOverrides(), ...overrides],
+  child: const TudesarrolladorApp(),
+),
 ```
 
-To add a new route: add the `GoRoute` in `lib/app/router/app_router.dart` within `appRoutes()` and add the route name to the `AppRoute` enum in `lib/app/router/app_route.dart`.
+To add a new route: add the `GoRoute` in `lib/app/router/app_router.dart` within `appRoutes()` and add the route name to the `AppRoute` enum in `lib/shared/router/app_route.dart`.
 
-**From features:** use `ref.read(goRouterProvider).go('/path')` or `ref.read(goRouterProvider).push('/path')` to navigate.
+**From features:** a feature that navigates imperatively uses the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` — re-exporting `appNavigatorProvider` from its own `di/` file **on-demand** (see MD/APP_PROVIDERS.md). Never import `go_router` types or `app/` in features.
+
+**Deep linking (go_router):**
+- **Native scheme `clinicalhistory`**: configured in `ios/Runner/Info.plist` (`CFBundleURLTypes`) and `android/app/src/main/AndroidManifest.xml` (VIEW intent-filter). Web uses the browser URL directly.
+- **Cold start**: go_router's `_effectiveInitialLocation` yields to the platform deep link, so `initialLocation` only applies when there is none.
+- **Auth + deep-link restore**: `AuthGuard` bounces unauthenticated users to `/login?from=<encoded path>` and, after login, `refreshListenable` re-runs the redirect which returns the original target (validated against `AppRoute.fromPath`, never `/login` itself — avoids a `redirectLimit` loop).
+- **Unknown paths**: `errorBuilder` renders `AppErrorScreen` (`app/widgets/`), 404 localized. The original `state.error` is passed and shown as a copyable detail in debug builds only (`kDebugMode`); the "go home" action navigates through the `appNavigatorProvider` seam (never `go_router` directly).
 
 ---
 
@@ -114,7 +131,7 @@ To add a new route: add the `GoRoute` in `lib/app/router/app_router.dart` within
 1. `dart pub add <package>` from project root
 2. Create wrapper in `lib/core/services/<domain>/<package>_wrapper.dart`
 3. Apply the `class_to_solid_min` skill to add an abstract interface and Riverpod provider
-4. If the service needs to be injectable from features: add to `_providers.lib.dart` barrel
+4. If the service needs to be injectable from features: define its Riverpod provider in the `core/` source file (feature DI imports it directly)
 
 **When a feature introduces a new package — TDD-first rule (D.0.6):**
 

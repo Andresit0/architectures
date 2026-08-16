@@ -56,8 +56,8 @@ flutter gen-l10n
 ### 2.1 Code rules
 
 1. **Every new external package requires its `<name>_wrapper.dart`** with `I<Name>` interface + concrete implementation in `lib/core/services/<domain>/`. Never import an external package directly in a feature.
-2. **Access to shared services from features:** always via `ref.watch/read(ProviderName)` from `_providers.lib.dart`. Never via static functions directly.
-3. **`_providers.lib.dart`** is the composition root barrel in `app/di/`. Do not add business logic in providers.
+2. **Access to shared services from features:** always via `ref.watch/read(ProviderName)`, importing the provider from its `core/` source file (e.g. `core/network/dio/dio_providers.dart`). Never via static functions directly.
+3. **Providers live in `core/` source files** (`*_providers.dart`), imported directly by feature DI — never from `app/` (one-way dependency, Rule 11). Do not add business logic in providers.
 4. **Every new feature follows exactly the same structure:**
    ```
    features/<name>/domain/datasources/i_<name>_datasource.dart
@@ -72,10 +72,10 @@ flutter gen-l10n
    features/<name>/presentation/screens/<name>_screen.dart
    features/<name>/presentation/widgets/...
    ```
-5. **Repositories never throw exceptions.** All exceptions caught in `guard()` in `shared/error/` → `Result<T>` (Success / Failure). If a new exception type is needed, add in `shared/exceptions/`.
+5. **Repositories and UseCases never throw exceptions.** All exceptions are caught in `guard()` in `shared/error/` → `Result<T>` (Success / Failure): repositories wrap datasources; usecases wrap shared ports (`shared/interfaces/`) that return raw values (`String?`, `bool`, `void`, records). If a new exception type is needed, add in `shared/exceptions/` (and cover `guard()` + `localizeError()` — enforced by `test/architecture/error_mapping_consistency_test.dart`). On failure, notifiers log `technicalMessage`/`stackTrace` via `loggerProvider` (`core/services/logging/`) before setting state.
 6. **`.g.dart` and `.freezed.dart` files are never edited manually.** Always regenerate with `dart run build_runner build --delete-conflicting-outputs`.
-7. **`GoRouter` is accessed via `goRouterProvider` from `app/di/router/router_provider.dart`.** In `main.dart`, use `ref.watch(goRouterProvider)` to get the instance. In features, use `ref.read(goRouterProvider).go(...)`.
-8. **New routes** are added in `app_router.dart` (`appRoutes()`) with the route name added to `AppRoute` enum in `app_route.dart`.
+7. **`GoRouter` is accessed via `goRouterProvider` from `app/di/router/router_provider.dart`.** In `main.dart`, use `ref.watch(goRouterProvider)` to get the instance. In features, navigate via the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` — never `go_router` nor `app/` (Rules 6/11).
+8. **New routes** are added in `app_router.dart` (`appRoutes()`) with the route name added to `AppRoute` enum in `shared/router/app_route.dart`.
 9. **Use `@freezed` for all entities and states.** Do not create mutable data classes in the domain.
 10. **Apply the `class_to_solid`** skill (in features) or **`class_to_solid_min`** (in `core/services/`) when creating any new class. The skills document the mandatory correct pattern.
 
@@ -84,15 +84,15 @@ flutter gen-l10n
 11. **Never hardcode URLs or credentials** in code. Use `String.fromEnvironment` with a safe default value. Document each variable in `MD/APP_COMMANDS.md`.
 12. **For Android emulator development:** use `--dart-define=API_HOST=10.0.2.2` to override the API host. Endpoints are defined in `lib/core/network/api_endpoints.dart`.
 13. **Testing with mock data:** Use Riverpod provider overrides in tests to replace the real implementation with a `FakeDatasource` class. The provider always returns `DatasourceImpl` directly — no `useMock` environment flag. Mock data uses typed entity constructors, not raw JSON maps.
-14. **Logger removed:** `LoggerWrapper` and `loggerProvider` have been removed from the project. Use `debugPrint` directly for temporary debug output (remove before PR). No structured logging provider is currently wired.
+14. **Logging via `loggerProvider`:** `loggerProvider` (`Provider<ILogger>` → `DevLogger` over `dart:developer log`) lives in `core/services/logging/logging_providers.dart` and is **re-exported by each feature `di/`** so presentation notifiers log `technicalMessage`/`stackTrace` without importing `core/` (Rule 15). Overridable in tests (e.g. `FakeLogger`). Use `debugPrint` only for temporary debug output (remove before PR).
 
 ### 2.3 Barrel and organization rules
 
-15. **When adding a file to a folder with barrel** (`_xxx.lib.dart` / `_xxx.dart`):
-    - Add `part '<new_file>.dart';` in `_xxx.lib.dart`.
-    - Add `part of '_xxx.lib.dart';` at the start of the new file.
-    - If the file exposes a public class, add the corresponding `static` in `_xxx.dart`.
-16. **Files inside a barrel are `part` of the library hub** (`_xxx.lib.dart`). They must not have their own `import`s; all imports go in `_xxx.lib.dart`.
+15. **When adding a file to a folder with barrel** (`_xxx.lib.dart`):
+    - Add `export '<new_file>.dart';` in `_xxx.lib.dart`.
+    - The new file stays **standalone** with its own `import`s (it is NOT `part of` the barrel).
+16. **Files inside a barrelled folder are standalone; the barrel centralises them via `export`** (`_xxx.lib.dart`). They keep their own `import`s. The barrel is pure-export (no `library;`, no `part`) — enforced by CI in `test/architecture/dependency_rules_test.dart`.
+16b. **EXCEPTION — `presentation/widgets/` folders have NO barrel and NO facade.** Widget files are standalone with explicit imports, and consumers import each widget file directly using its constructor. Do NOT run the `app-barrel`/`barrel` skills on `presentation/widgets/`.
 17. **Do not create cross imports between features.** If `feature_A` needs a type from `feature_B`, that type must move to `shared/` (domain abstractions) or `core/` (infrastructure).
 
 ### 2.4 Git rules
@@ -100,11 +100,13 @@ flutter gen-l10n
 18. **Before any git command**, write the exact command and ask for confirmation from user/tech lead. (See `AGENTS.md`.)
 19. **Do not commit `.g.dart` files if they don't match source code.** Always regenerate before commit with `build_runner`.
 20. **`.env` or configuration files with secrets never go to the repository.** Use `.gitignore` and CI/CD server variables.
+21. **PR titles and commits follow Conventional Commits (`type(scope): subject`) in English, imperative mood.** The repo squash-merges with `squash_merge_commit_title: PR_TITLE`, so **the PR title becomes the commit on `develop`/`main`** — never use a `PR {N}:` prefix or stack numbering (see `super-pull-request.md`, Step 3.6.5).
+22. **Branches are type-prefixed (git-flow compatible), without stack numbers:** `feature/*`, `fix/*`, `chore/*`, `docs/*`, `ci/*`, `test/*`, `build/*`, `refactor/*` toward `develop`; `release/*` and `hotfix/*` merge only to `main` (enforced by the CI `branch-source-gate`). Stacked PRs are linked via a tracked branch list, not by numbered branch names.
 
 ### 2.5 Quality rules
 
-21. **`dart analyze` must pass without warnings** before any PR. Configure in CI.
-22. **Every new use case must have a unit test** covering the happy path and at least one Failure case.
-23. **Notifiers do not contain business logic.** They only call use cases and update state. Logic goes in use cases and repositories.
-24. **Screens do not contain logic.** They only call notifier methods and read state. Complex presentation logic goes in separate widgets or in the notifier.
-25. **Use `const` on all widgets that do not depend on state.** Mandatory for performance in lists and frequent rebuilds.
+23. **`dart analyze` must pass without warnings** before any PR. Configure in CI.
+24. **Every new use case must have a unit test** covering the happy path and at least one Failure case.
+25. **Notifiers do not contain business logic.** They only call use cases and update state. Logic goes in use cases and repositories.
+26. **Screens do not contain logic.** They only call notifier methods and read state. Complex presentation logic goes in separate widgets or in the notifier.
+27. **Use `const` on all widgets that do not depend on state.** Mandatory for performance in lists and frequent rebuilds.

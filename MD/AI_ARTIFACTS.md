@@ -106,6 +106,8 @@ trigger: When to invoke this skill
 
 **Naming**: `{command-name}.md` (kebab-case)
 
+> **Language**: All user-facing text and prompts inside a command must be in **English** (enterprise convention). Bilingual affirmative-answer lists may be kept for developer convenience.
+
 **Structure**:
 ```markdown
 # Command Name
