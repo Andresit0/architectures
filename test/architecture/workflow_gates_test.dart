@@ -217,33 +217,51 @@ void main() {
     });
 
     test('dart_test.yaml exists and declares the golden tag', () {
-      expect(File(configPath).existsSync(), isTrue,
-          reason: 'dart_test.yaml must exist so the golden tag is declared and '
-              'no "A tag was used that wasn\'t specified in dart_test.yaml" '
-              'warning is emitted on every run');
+      expect(
+        File(configPath).existsSync(),
+        isTrue,
+        reason:
+            'dart_test.yaml must exist so the golden tag is declared and '
+            'no "A tag was used that wasn\'t specified in dart_test.yaml" '
+            'warning is emitted on every run',
+      );
       final tags = config['tags'];
-      expect(tags, isA<Map>(),
-          reason: 'dart_test.yaml must declare a tags: section');
-      expect((tags as Map).containsKey('golden'), isTrue,
-          reason: 'the golden tag must be declared in dart_test.yaml');
+      expect(
+        tags,
+        isA<Map>(),
+        reason: 'dart_test.yaml must declare a tags: section',
+      );
+      expect(
+        (tags as Map).containsKey('golden'),
+        isTrue,
+        reason: 'the golden tag must be declared in dart_test.yaml',
+      );
     });
 
     test('dart_test.yaml does not exclude golden tests', () {
       final excludeTags = config['exclude_tags'];
       if (excludeTags is Iterable) {
-        expect(excludeTags.contains('golden'), isFalse,
-            reason: 'exclude_tags takes precedence over --tags golden '
-                '(test docs: "the exclusions take precedence") — '
-                'exclude_tags: golden would run 0 golden tests in the '
-                'Test Goldens CI job and pass green (masking)');
+        expect(
+          excludeTags.contains('golden'),
+          isFalse,
+          reason:
+              'exclude_tags takes precedence over --tags golden '
+              '(test docs: "the exclusions take precedence") — '
+              'exclude_tags: golden would run 0 golden tests in the '
+              'Test Goldens CI job and pass green (masking)',
+        );
       }
     });
 
     test('dart_test.yaml does not set include_tags', () {
-      expect(config.containsKey('include_tags'), isFalse,
-          reason: 'a top-level include_tags is intersected with the CLI '
-              '(--tags/--exclude-tags) and would change the default run, '
-              'masking unit/widget tests in the Test CI job');
+      expect(
+        config.containsKey('include_tags'),
+        isFalse,
+        reason:
+            'a top-level include_tags is intersected with the CLI '
+            '(--tags/--exclude-tags) and would change the default run, '
+            'masking unit/widget tests in the Test CI job',
+      );
     });
 
     test('all tags used in test/ are declared in dart_test.yaml', () {
@@ -252,9 +270,9 @@ void main() {
 
       final used = <String>{};
       final tagRegex = RegExp(r"@Tags\(\s*\[([^\]]*)\]");
-      for (final file in Directory('test')
-          .listSync(recursive: true)
-          .whereType<File>()) {
+      for (final file in Directory(
+        'test',
+      ).listSync(recursive: true).whereType<File>()) {
         if (!file.path.endsWith('.dart')) continue;
         final content = file.readAsStringSync();
         for (final match in tagRegex.allMatches(content)) {
@@ -271,10 +289,14 @@ void main() {
       }
 
       final undeclared = used.difference(declared);
-      expect(undeclared, isEmpty,
-          reason: 'every tag used in test/ must be declared in dart_test.yaml '
-              'or the "A tag was used..." warning returns. '
-              'Undeclared tags: $undeclared');
+      expect(
+        undeclared,
+        isEmpty,
+        reason:
+            'every tag used in test/ must be declared in dart_test.yaml '
+            'or the "A tag was used..." warning returns. '
+            'Undeclared tags: $undeclared',
+      );
     });
   });
 }
