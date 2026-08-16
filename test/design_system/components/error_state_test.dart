@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ErrorState', () {
-    testWidgets('renders error icon, message and action button', (tester) async {
+    testWidgets('renders error icon, message and action button', (
+      tester,
+    ) async {
       var pressed = false;
       await tester.pumpWidget(
         MaterialApp(
@@ -30,10 +32,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ErrorState(
-              title: 'Something failed',
-              message: 'Try again',
-            ),
+            body: ErrorState(title: 'Something failed', message: 'Try again'),
           ),
         ),
       );

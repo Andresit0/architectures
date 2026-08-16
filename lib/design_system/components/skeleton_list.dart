@@ -37,9 +37,8 @@ class _SkeletonListState extends State<SkeletonList>
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: widget.itemCount,
-        itemBuilder: (context, index) => _SkeletonCard(
-          key: ValueKey<String>('skeletonItem$index'),
-        ),
+        itemBuilder: (context, index) =>
+            _SkeletonCard(key: ValueKey<String>('skeletonItem$index')),
       ),
     );
   }
@@ -52,13 +51,13 @@ class _SkeletonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final blockColor = Theme.of(context).colorScheme.surfaceContainerHighest;
     Widget block(double width, double height) => Container(
-          width: width,
-          height: height,
-          decoration: BoxDecoration(
-            color: blockColor,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: blockColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(

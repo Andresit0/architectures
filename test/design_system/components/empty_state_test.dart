@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('EmptyState', () {
-    testWidgets('renders title, message, icon and action button', (tester) async {
+    testWidgets('renders title, message, icon and action button', (
+      tester,
+    ) async {
       var pressed = false;
       await tester.pumpWidget(
         MaterialApp(

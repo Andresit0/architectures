@@ -7,7 +7,9 @@ void main() {
     testWidgets('renders label and optional icon', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: InfoChip(label: 'Available', icon: Icons.check)),
+          home: Scaffold(
+            body: InfoChip(label: 'Available', icon: Icons.check),
+          ),
         ),
       );
 
@@ -18,13 +20,18 @@ void main() {
     testWidgets('applies the provided background color', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: InfoChip(label: 'Available', color: Colors.green)),
+          home: Scaffold(
+            body: InfoChip(label: 'Available', color: Colors.green),
+          ),
         ),
       );
 
       final container = tester.widget<Container>(
         find
-            .descendant(of: find.byType(InfoChip), matching: find.byType(Container))
+            .descendant(
+              of: find.byType(InfoChip),
+              matching: find.byType(Container),
+            )
             .first,
       );
       final decoration = container.decoration! as BoxDecoration;
