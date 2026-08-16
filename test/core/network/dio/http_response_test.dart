@@ -37,9 +37,9 @@ void main() {
     test('HttpSuccess is matched correctly', () {
       const HttpResponse<Map<String, dynamic>> response =
           HttpSuccess<Map<String, dynamic>>(
-        data: <String, dynamic>{'result': 'ok'},
-        statusCode: 200,
-      );
+            data: <String, dynamic>{'result': 'ok'},
+            statusCode: 200,
+          );
 
       expect(response.data, {'result': 'ok'});
       expect(response.statusCode, 200);

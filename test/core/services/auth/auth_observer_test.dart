@@ -32,9 +32,11 @@ void main() {
       int notifyCount = 0;
       observer.addListener(() => notifyCount++);
       observer.update(false); // already false from initial state
-      expect(notifyCount, 0,
-          reason:
-              'update with same value should NOT call notifyListeners');
+      expect(
+        notifyCount,
+        0,
+        reason: 'update with same value should NOT call notifyListeners',
+      );
     });
   });
 }

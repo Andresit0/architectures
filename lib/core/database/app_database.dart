@@ -8,11 +8,7 @@ import 'package:sembast/sembast_io.dart';
 import 'package:sembast_web/sembast_web.dart';
 
 class AppDatabase implements IAppDatabase {
-  AppDatabase({
-    this._pathProvider,
-    this._databaseFactory,
-    this._keyService,
-  });
+  AppDatabase({this._pathProvider, this._databaseFactory, this._keyService});
 
   final IPathProviderWrapper? _pathProvider;
   final DatabaseFactory? _databaseFactory;

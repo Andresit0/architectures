@@ -42,10 +42,7 @@ class LocalAuthDatasourceImpl implements ILocalAuthDatasource {
 
   @override
   Future<void> clearSession() async {
-    await Future.wait([
-      _tokenStore.delete(),
-      _credentialStore.deleteAll(),
-    ]);
+    await Future.wait([_tokenStore.delete(), _credentialStore.deleteAll()]);
     await _appDatabase.resetDatabase();
   }
 
@@ -56,20 +53,14 @@ class LocalAuthDatasourceImpl implements ILocalAuthDatasource {
     if (patient == null || tokenStr == null) return null;
     if (await _tokenVerifier.isExpired(tokenStr)) {
       if (await _internetService.isConnected()) {
-        await Future.wait([
-          _tokenStore.delete(),
-          _credentialStore.deleteAll(),
-        ]);
+        await Future.wait([_tokenStore.delete(), _credentialStore.deleteAll()]);
         return null;
       }
     }
     final clinicalHistory = await _clinicalHistory.loadAll();
     return LoginResponseEntity(
       patient: patient,
-      token: TokenEntity(
-        type: 'Bearer',
-        key: tokenStr,
-      ),
+      token: TokenEntity(type: 'Bearer', key: tokenStr),
       clinicalHistory: clinicalHistory,
     );
   }

@@ -10,10 +10,7 @@ void main() {
     });
 
     test('create with empty hash throws FormatException', () {
-      expect(
-        () => PasswordHash.create(''),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => PasswordHash.create(''), throwsA(isA<FormatException>()));
     });
 
     test('tryCreate returns null for empty string', () {

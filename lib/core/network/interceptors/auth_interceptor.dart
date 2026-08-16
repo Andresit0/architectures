@@ -9,7 +9,7 @@ class AuthInterceptor extends Interceptor {
     required this._internalDio,
     required this.onForceLogout,
     IRetryPolicy? retryPolicy,
-  })  : _retryPolicy = retryPolicy ?? const ExponentialBackoff();
+  }) : _retryPolicy = retryPolicy ?? const ExponentialBackoff();
 
   final Future<RetryResult> Function() _onRetry;
   final Dio _internalDio;
@@ -42,7 +42,9 @@ class AuthInterceptor extends Interceptor {
           case RetrySuccess(:final token):
             err.requestOptions.headers['Authorization'] = 'Bearer $token';
             try {
-              final response = await _internalDio.fetch<dynamic>(err.requestOptions);
+              final response = await _internalDio.fetch<dynamic>(
+                err.requestOptions,
+              );
               handler.resolve(response);
               return;
             } catch (_) {}

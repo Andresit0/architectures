@@ -30,17 +30,11 @@ void main() {
 
   final loginResponse = LoginResponseEntity(
     patient: const PatientEntity(id: '1', name: 'John Doe'),
-    token: const TokenEntity(
-      type: 'Bearer',
-      key: 'jwt_token_123',
-    ),
+    token: const TokenEntity(type: 'Bearer', key: 'jwt_token_123'),
     clinicalHistory: [],
   );
 
-  const newToken = TokenEntity(
-    type: 'Bearer',
-    key: 'new_jwt',
-  );
+  const newToken = TokenEntity(type: 'Bearer', key: 'new_jwt');
 
   setUp(() {
     registerFallbackValue(Email.create('fallback@test.com'));
@@ -49,7 +43,9 @@ void main() {
     mockConnectivity = _MockConnectivityChecker();
     mockCredentialStore = _MockCredentialStore();
     mockTokenVerifier = _MockTokenVerifier();
-    when(() => mockTokenVerifier.isExpired(any())).thenAnswer((_) async => false);
+    when(
+      () => mockTokenVerifier.isExpired(any()),
+    ).thenAnswer((_) async => false);
 
     useCase = RestoreSessionUseCase(
       repository: mockRepo,
@@ -62,14 +58,16 @@ void main() {
   group('RestoreSessionUseCase', () {
     test('online_with_credentials_login_success_returns_login_data', () async {
       when(() => mockConnectivity.isConnected()).thenAnswer((_) async => true);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => (email: 'test@example.com', passwordHash: 'hash'));
-      when(() => mockRepo.login(
-        email: any(named: 'email'),
-        passwordHash: any(named: 'passwordHash'),
-      )).thenAnswer((_) async => Success(loginResponse));
-      when(() => mockCredentialStore.saveToken(any()))
-          .thenAnswer((_) async {});
+      when(() => mockCredentialStore.readCredentials()).thenAnswer(
+        (_) async => (email: 'test@example.com', passwordHash: 'hash'),
+      );
+      when(
+        () => mockRepo.login(
+          email: any(named: 'email'),
+          passwordHash: any(named: 'passwordHash'),
+        ),
+      ).thenAnswer((_) async => Success(loginResponse));
+      when(() => mockCredentialStore.saveToken(any())).thenAnswer((_) async {});
 
       final result = await useCase();
 
@@ -86,15 +84,21 @@ void main() {
 
     test('online_with_credentials_login_fails_fallback_to_local', () async {
       when(() => mockConnectivity.isConnected()).thenAnswer((_) async => true);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => (email: 'test@example.com', passwordHash: 'hash'));
-      when(() => mockRepo.login(
-        email: any(named: 'email'),
-        passwordHash: any(named: 'passwordHash'),
-      )).thenAnswer((_) async => const Failure(UnexpectedError('error')));
-      when(() => mockRepo.restoreSession())
-          .thenAnswer((_) async => Success(loginResponse));
-      when(() => mockTokenVerifier.isExpired(any())).thenAnswer((_) async => false);
+      when(() => mockCredentialStore.readCredentials()).thenAnswer(
+        (_) async => (email: 'test@example.com', passwordHash: 'hash'),
+      );
+      when(
+        () => mockRepo.login(
+          email: any(named: 'email'),
+          passwordHash: any(named: 'passwordHash'),
+        ),
+      ).thenAnswer((_) async => const Failure(UnexpectedError('error')));
+      when(
+        () => mockRepo.restoreSession(),
+      ).thenAnswer((_) async => Success(loginResponse));
+      when(
+        () => mockTokenVerifier.isExpired(any()),
+      ).thenAnswer((_) async => false);
 
       final result = await useCase();
 
@@ -110,11 +114,15 @@ void main() {
 
     test('offline_with_valid_local_session_returns_local_data', () async {
       when(() => mockConnectivity.isConnected()).thenAnswer((_) async => false);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => null);
-      when(() => mockRepo.restoreSession())
-          .thenAnswer((_) async => Success(loginResponse));
-      when(() => mockTokenVerifier.isExpired(any())).thenAnswer((_) async => false);
+      when(
+        () => mockCredentialStore.readCredentials(),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockRepo.restoreSession(),
+      ).thenAnswer((_) async => Success(loginResponse));
+      when(
+        () => mockTokenVerifier.isExpired(any()),
+      ).thenAnswer((_) async => false);
 
       final result = await useCase();
 
@@ -130,11 +138,15 @@ void main() {
 
     test('offline_with_expired_local_session_returns_local_data', () async {
       when(() => mockConnectivity.isConnected()).thenAnswer((_) async => false);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => null);
-      when(() => mockRepo.restoreSession())
-          .thenAnswer((_) async => Success(loginResponse));
-      when(() => mockTokenVerifier.isExpired(any())).thenAnswer((_) async => true);
+      when(
+        () => mockCredentialStore.readCredentials(),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockRepo.restoreSession(),
+      ).thenAnswer((_) async => Success(loginResponse));
+      when(
+        () => mockTokenVerifier.isExpired(any()),
+      ).thenAnswer((_) async => true);
 
       final result = await useCase();
 
@@ -148,60 +160,80 @@ void main() {
       );
     });
 
-    test('online_with_expired_session_refresh_success_returns_new_token', () async {
-      when(() => mockConnectivity.isConnected()).thenAnswer((_) async => true);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => null);
-      when(() => mockRepo.restoreSession())
-          .thenAnswer((_) async => Success(loginResponse));
-      when(() => mockTokenVerifier.isExpired('jwt_token_123'))
-          .thenAnswer((_) async => true);
-      when(() => mockRepo.refreshToken(token: 'jwt_token_123'))
-          .thenAnswer((_) async => const Success(newToken));
-      when(() => mockCredentialStore.saveToken(any()))
-          .thenAnswer((_) async {});
+    test(
+      'online_with_expired_session_refresh_success_returns_new_token',
+      () async {
+        when(
+          () => mockConnectivity.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockCredentialStore.readCredentials(),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockRepo.restoreSession(),
+        ).thenAnswer((_) async => Success(loginResponse));
+        when(
+          () => mockTokenVerifier.isExpired('jwt_token_123'),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockRepo.refreshToken(token: 'jwt_token_123'),
+        ).thenAnswer((_) async => const Success(newToken));
+        when(
+          () => mockCredentialStore.saveToken(any()),
+        ).thenAnswer((_) async {});
 
-      final result = await useCase();
+        final result = await useCase();
 
-      expect(result.isSuccess, isTrue);
-      verify(() => mockCredentialStore.saveToken('new_jwt')).called(1);
-      result.fold(
-        onSuccess: (entity) {
-          expect(entity, isNotNull);
-          expect(entity!.token.key, 'new_jwt');
-        },
-        onFailure: (_) => fail('should be Success'),
-      );
-    });
+        expect(result.isSuccess, isTrue);
+        verify(() => mockCredentialStore.saveToken('new_jwt')).called(1);
+        result.fold(
+          onSuccess: (entity) {
+            expect(entity, isNotNull);
+            expect(entity!.token.key, 'new_jwt');
+          },
+          onFailure: (_) => fail('should be Success'),
+        );
+      },
+    );
 
-    test('online_with_expired_session_refresh_fails_clears_and_returns_null', () async {
-      when(() => mockConnectivity.isConnected()).thenAnswer((_) async => true);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => null);
-      when(() => mockRepo.restoreSession())
-          .thenAnswer((_) async => Success(loginResponse));
-      when(() => mockTokenVerifier.isExpired('jwt_token_123'))
-          .thenAnswer((_) async => true);
-      when(() => mockRepo.refreshToken(token: 'jwt_token_123'))
-          .thenAnswer((_) async => const Failure(UnexpectedError('error')));
-      when(() => mockCredentialStore.deleteAll())
-          .thenAnswer((_) async {});
+    test(
+      'online_with_expired_session_refresh_fails_clears_and_returns_null',
+      () async {
+        when(
+          () => mockConnectivity.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockCredentialStore.readCredentials(),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockRepo.restoreSession(),
+        ).thenAnswer((_) async => Success(loginResponse));
+        when(
+          () => mockTokenVerifier.isExpired('jwt_token_123'),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockRepo.refreshToken(token: 'jwt_token_123'),
+        ).thenAnswer((_) async => const Failure(UnexpectedError('error')));
+        when(() => mockCredentialStore.deleteAll()).thenAnswer((_) async {});
 
-      final result = await useCase();
+        final result = await useCase();
 
-      result.fold(
-        onSuccess: (entity) => expect(entity, isNull),
-        onFailure: (_) => fail('should be Success'),
-      );
-      verify(() => mockCredentialStore.deleteAll()).called(1);
-    });
+        result.fold(
+          onSuccess: (entity) => expect(entity, isNull),
+          onFailure: (_) => fail('should be Success'),
+        );
+        verify(() => mockCredentialStore.deleteAll()).called(1);
+      },
+    );
 
     test('no_credentials_and_no_local_session_returns_null', () async {
       when(() => mockConnectivity.isConnected()).thenAnswer((_) async => false);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => null);
-      when(() => mockRepo.restoreSession())
-          .thenAnswer((_) async => const Success(null));
+      when(
+        () => mockCredentialStore.readCredentials(),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockRepo.restoreSession(),
+      ).thenAnswer((_) async => const Success(null));
 
       final result = await useCase();
 
@@ -213,10 +245,12 @@ void main() {
 
     test('local_session_failure_propagates_error', () async {
       when(() => mockConnectivity.isConnected()).thenAnswer((_) async => false);
-      when(() => mockCredentialStore.readCredentials())
-          .thenAnswer((_) async => null);
-      when(() => mockRepo.restoreSession())
-          .thenAnswer((_) async => const Failure(UnexpectedError('error')));
+      when(
+        () => mockCredentialStore.readCredentials(),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockRepo.restoreSession(),
+      ).thenAnswer((_) async => const Failure(UnexpectedError('error')));
 
       final result = await useCase();
 

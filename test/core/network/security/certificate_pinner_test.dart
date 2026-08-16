@@ -28,8 +28,10 @@ void main() {
 
       test('allow all in debug mode', () {
         final dio = Dio();
-        const CertificatePinner(pinnedCertificates: [], isReleaseMode: false)
-            .apply(dio);
+        const CertificatePinner(
+          pinnedCertificates: [],
+          isReleaseMode: false,
+        ).apply(dio);
         final adapter = dio.httpClientAdapter as IOHttpClientAdapter;
         expect(adapter.validateCertificate, isNotNull);
         expect(adapter.validateCertificate!(null, 'host', 443), isTrue);

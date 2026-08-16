@@ -16,11 +16,14 @@ void main() {
       expect(first.name, 'login');
     });
 
-    test('second route has path /clinical-history and name clinical-history', () {
-      final routes = appRoutes();
-      final second = routes[1] as GoRoute;
-      expect(second.path, '/clinical-history');
-      expect(second.name, 'clinical-history');
-    });
+    test(
+      'second route has path /clinical-history and name clinical-history',
+      () {
+        final routes = appRoutes();
+        final second = routes[1] as GoRoute;
+        expect(second.path, '/clinical-history');
+        expect(second.name, 'clinical-history');
+      },
+    );
   });
 }

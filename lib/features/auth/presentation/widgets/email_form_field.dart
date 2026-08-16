@@ -52,10 +52,7 @@ class EmailFormField extends StatelessWidget {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(
-            color: AppColors.red,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: AppColors.red, width: 1.5),
         ),
       ),
     );

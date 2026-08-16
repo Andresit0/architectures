@@ -11,9 +11,7 @@ void main() {
     });
 
     test('Failure should have isFailure true', () {
-      final result = Failure<String>(
-        const ApiError('error'),
-      );
+      final result = Failure<String>(const ApiError('error'));
       expect(result.isSuccess, isFalse);
       expect(result.isSuccess, isFalse);
     });
@@ -28,9 +26,7 @@ void main() {
     });
 
     test('Failure fold should call onFailure', () {
-      final result = Failure<String>(
-        const NetworkError('no internet'),
-      );
+      final result = Failure<String>(const NetworkError('no internet'));
       final value = result.fold(
         onSuccess: (_) => 'data',
         onFailure: (e) => 'error: ${e.userMessage}',
@@ -40,14 +36,18 @@ void main() {
 
     test('Success getOrElse should return data', () {
       const result = Success<String>('data');
-      expect(result.fold(onSuccess: (d) => d, onFailure: (_) => 'fallback'), 'data');
+      expect(
+        result.fold(onSuccess: (d) => d, onFailure: (_) => 'fallback'),
+        'data',
+      );
     });
 
     test('Failure getOrElse should return fallback', () {
-      final result = Failure<String>(
-        const ApiError('error'),
+      final result = Failure<String>(const ApiError('error'));
+      expect(
+        result.fold(onSuccess: (d) => d, onFailure: (_) => 'fallback'),
+        'fallback',
       );
-      expect(result.fold(onSuccess: (d) => d, onFailure: (_) => 'fallback'), 'fallback');
     });
   });
 
@@ -117,5 +117,3 @@ void main() {
     });
   });
 }
-
-

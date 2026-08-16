@@ -8,11 +8,11 @@ abstract interface class IInternetService implements IConnectivityChecker {
 }
 
 class InternetService implements IInternetService {
-
   InternetService({
     required this._strategy,
     IInternetConnectionCheckerWrapper? connectionChecker,
-  }) : _connectionChecker = connectionChecker ?? const InternetConnectionCheckerWrapper();
+  }) : _connectionChecker =
+           connectionChecker ?? const InternetConnectionCheckerWrapper();
   final IServerReachabilityStrategy _strategy;
   final IInternetConnectionCheckerWrapper _connectionChecker;
   DateTime? _lastReachableCheck;

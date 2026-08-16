@@ -10,9 +10,7 @@ import '../dtos/login_response_dto.dart';
 import '../dtos/token_dto.dart';
 
 class AuthRemoteDatasourceImpl implements IAuthRemoteDatasource {
-  AuthRemoteDatasourceImpl({
-    required this._dio,
-  });
+  AuthRemoteDatasourceImpl({required this._dio});
 
   final IDioWrapper _dio;
 
@@ -38,6 +36,8 @@ class AuthRemoteDatasourceImpl implements IAuthRemoteDatasource {
       headers: <String, String>{'Authorization': 'Bearer $token'},
     );
     final response = httpResponse.data!;
-    return AuthMapper.tokenFromDto(TokenDto.fromJson(response['token'] as Map<String, dynamic>));
+    return AuthMapper.tokenFromDto(
+      TokenDto.fromJson(response['token'] as Map<String, dynamic>),
+    );
   }
 }

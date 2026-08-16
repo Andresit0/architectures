@@ -21,7 +21,6 @@ Uint8List _generateEncryptPassword(String password) {
 }
 
 class _EncryptEncoder extends Converter<Object?, String> {
-
   _EncryptEncoder(this.encrypter);
   final Encrypter encrypter;
 
@@ -35,7 +34,6 @@ class _EncryptEncoder extends Converter<Object?, String> {
 }
 
 class _EncryptDecoder extends Converter<String, Object?> {
-
   _EncryptDecoder(this.encrypter);
   final Encrypter encrypter;
 
@@ -61,7 +59,6 @@ class _EncryptDecoder extends Converter<String, Object?> {
 }
 
 class _EncryptCodec extends Codec<Object?, String> {
-
   _EncryptCodec(Uint8List passwordBytes) {
     assert(passwordBytes.length == 32, 'AES-256 requires a 32-byte key');
     final key = Key(passwordBytes);

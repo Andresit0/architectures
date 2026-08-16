@@ -22,12 +22,15 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('should cache result for subsequent calls within 10 seconds', () async {
-      final strategy = FakeReachability(true);
-      final service = InternetService(strategy: strategy);
-      final result1 = await service.isServerReachable();
-      final result2 = await service.isServerReachable();
-      expect(result1, equals(result2));
-    });
+    test(
+      'should cache result for subsequent calls within 10 seconds',
+      () async {
+        final strategy = FakeReachability(true);
+        final service = InternetService(strategy: strategy);
+        final result1 = await service.isServerReachable();
+        final result2 = await service.isServerReachable();
+        expect(result1, equals(result2));
+      },
+    );
   });
 }

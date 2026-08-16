@@ -2,10 +2,7 @@ enum AppRoute {
   login(path: '/', name: 'login'),
   clinicalHistory(path: '/clinical-history', name: 'clinical-history');
 
-  const AppRoute({
-    required this.path,
-    required this.name,
-  });
+  const AppRoute({required this.path, required this.name});
 
   final String path;
   final String name;

@@ -3,7 +3,8 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'clinical_history_service_entity.freezed.dart';
 
 @freezed
-abstract class ClinicalHistoryServiceEntity with _$ClinicalHistoryServiceEntity {
+abstract class ClinicalHistoryServiceEntity
+    with _$ClinicalHistoryServiceEntity {
   const ClinicalHistoryServiceEntity._();
 
   const factory ClinicalHistoryServiceEntity({

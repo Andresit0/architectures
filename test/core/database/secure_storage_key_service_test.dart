@@ -53,10 +53,8 @@ void main() {
         await keyService.saveKey('my_test_key');
 
         verify(
-          () => mockStorage.write(
-            key: 'db_encryption_key',
-            value: 'my_test_key',
-          ),
+          () =>
+              mockStorage.write(key: 'db_encryption_key', value: 'my_test_key'),
         ).called(1);
       });
     });

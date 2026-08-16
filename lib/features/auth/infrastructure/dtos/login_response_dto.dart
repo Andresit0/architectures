@@ -12,7 +12,9 @@ abstract class LoginResponseDto with _$LoginResponseDto {
   const factory LoginResponseDto({
     required PatientDto patient,
     required TokenDto token,
-    @JsonKey(name: 'clinical_history') @Default([]) List<ClinicalHistoryDto> clinicalHistory,
+    @JsonKey(name: 'clinical_history')
+    @Default([])
+    List<ClinicalHistoryDto> clinicalHistory,
   }) = _LoginResponseDto;
 
   factory LoginResponseDto.fromJson(Map<String, dynamic> json) =>

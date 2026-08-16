@@ -20,12 +20,13 @@ void main() {
       });
 
       test(
-          'should return true for a valid token signed with correct secret',
-          () {
-        final result = wrapper.verifySignature(validToken, secret);
+        'should return true for a valid token signed with correct secret',
+        () {
+          final result = wrapper.verifySignature(validToken, secret);
 
-        expect(result, isTrue);
-      });
+          expect(result, isTrue);
+        },
+      );
 
       test('should return false for a tampered token', () {
         final parts = validToken.split('.');
@@ -36,10 +37,8 @@ void main() {
         expect(result, isFalse);
       });
 
-      test('should return false for a token signed with different secret',
-          () {
-        final result =
-            wrapper.verifySignature(validToken, differentSecret);
+      test('should return false for a token signed with different secret', () {
+        final result = wrapper.verifySignature(validToken, differentSecret);
 
         expect(result, isFalse);
       });

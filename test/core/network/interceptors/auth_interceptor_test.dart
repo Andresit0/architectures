@@ -49,7 +49,6 @@ void main() {
     forceLogoutCalled = false;
     retryResult = null;
 
-
     interceptor = AuthInterceptor(
       onRetry: onRetry,
       internalDio: internalDio,
@@ -66,7 +65,9 @@ void main() {
         statusCode: 200,
         data: {'ok': true},
       );
-      when(() => internalDio.fetch<dynamic>(any())).thenAnswer((_) async => retryResponse);
+      when(
+        () => internalDio.fetch<dynamic>(any()),
+      ).thenAnswer((_) async => retryResponse);
 
       final err = DioException(
         requestOptions: RequestOptions(path: '/original'),
@@ -101,31 +102,34 @@ void main() {
   });
 
   group('onError - 401 without connection', () {
-    test('passes through without calling onForceLogout after max retries', () async {
-      retryResult = const RetryNoConnection();
+    test(
+      'passes through without calling onForceLogout after max retries',
+      () async {
+        retryResult = const RetryNoConnection();
 
-      interceptor = AuthInterceptor(
-        onRetry: onRetry,
-        internalDio: internalDio,
-        onForceLogout: () => forceLogoutCalled = true,
-        retryPolicy: const ExponentialBackoff(
-          baseDelay: Duration.zero,
-          maxRetries: 1,
-        ),
-      );
+        interceptor = AuthInterceptor(
+          onRetry: onRetry,
+          internalDio: internalDio,
+          onForceLogout: () => forceLogoutCalled = true,
+          retryPolicy: const ExponentialBackoff(
+            baseDelay: Duration.zero,
+            maxRetries: 1,
+          ),
+        );
 
-      final err = DioException(
-        requestOptions: RequestOptions(path: '/original'),
-        response: Response(
+        final err = DioException(
           requestOptions: RequestOptions(path: '/original'),
-          statusCode: 401,
-        ),
-      );
+          response: Response(
+            requestOptions: RequestOptions(path: '/original'),
+            statusCode: 401,
+          ),
+        );
 
-      await runOnError(err);
+        await runOnError(err);
 
-      expect(forceLogoutCalled, isTrue);
-    });
+        expect(forceLogoutCalled, isTrue);
+      },
+    );
   });
 
   group('onError - non-401 errors', () {

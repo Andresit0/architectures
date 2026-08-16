@@ -6,13 +6,14 @@ abstract interface class IJailbreakDetectionWrapper {
 }
 
 class JailbreakDetectionWrapper implements IJailbreakDetectionWrapper {
-
   JailbreakDetectionWrapper({
     Future<bool> Function()? jailbrokenFn,
     Future<bool> Function()? developerModeFn,
-  })  : _jailbrokenFn = jailbrokenFn ?? (() => FlutterJailbreakDetectionPlus.jailbroken),
-        _developerModeFn =
-            developerModeFn ?? (() => FlutterJailbreakDetectionPlus.developerMode);
+  }) : _jailbrokenFn =
+           jailbrokenFn ?? (() => FlutterJailbreakDetectionPlus.jailbroken),
+       _developerModeFn =
+           developerModeFn ??
+           (() => FlutterJailbreakDetectionPlus.developerMode);
   final Future<bool> Function() _jailbrokenFn;
   final Future<bool> Function() _developerModeFn;
 

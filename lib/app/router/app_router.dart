@@ -4,14 +4,14 @@ import 'package:clean_architecture_sdd_harness/features/auth/presentation/screen
 import 'package:go_router/go_router.dart';
 
 List<RouteBase> appRoutes() => [
-      GoRoute(
-        path: AppRoute.login.path,
-        name: AppRoute.login.name,
-        builder: (_, _) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: AppRoute.clinicalHistory.path,
-        name: AppRoute.clinicalHistory.name,
-        builder: (_, _) => const ClinicalHistoryPlaceholderScreen(),
-      ),
-    ];
+  GoRoute(
+    path: AppRoute.login.path,
+    name: AppRoute.login.name,
+    builder: (_, _) => const LoginScreen(),
+  ),
+  GoRoute(
+    path: AppRoute.clinicalHistory.path,
+    name: AppRoute.clinicalHistory.name,
+    builder: (_, _) => const ClinicalHistoryPlaceholderScreen(),
+  ),
+];

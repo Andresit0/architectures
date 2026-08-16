@@ -9,17 +9,11 @@ void main() {
     });
 
     test('throws FormatException for empty password', () {
-      expect(
-        () => Password.create(''),
-        throwsFormatException,
-      );
+      expect(() => Password.create(''), throwsFormatException);
     });
 
     test('throws FormatException for password shorter than 6 characters', () {
-      expect(
-        () => Password.create('abc'),
-        throwsFormatException,
-      );
+      expect(() => Password.create('abc'), throwsFormatException);
     });
 
     test('supports value equality', () {

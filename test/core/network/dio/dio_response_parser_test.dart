@@ -48,23 +48,25 @@ void main() {
       expect(result.data, isNull);
     });
 
-    test('bytes type with non-List<int> data throws UnexpectedResponseException',
-        () {
-      final response = Response(
-        requestOptions: RequestOptions(path: ''),
-        data: 'not bytes',
-        statusCode: 200,
-      );
+    test(
+      'bytes type with non-List<int> data throws UnexpectedResponseException',
+      () {
+        final response = Response(
+          requestOptions: RequestOptions(path: ''),
+          data: 'not bytes',
+          statusCode: 200,
+        );
 
-      expect(
-        () => parser.parse(
-          response: response,
-          type: 'bytes',
-          returnDioResponse: false,
-        ),
-        throwsA(isA<UnexpectedResponseException>()),
-      );
-    });
+        expect(
+          () => parser.parse(
+            response: response,
+            type: 'bytes',
+            returnDioResponse: false,
+          ),
+          throwsA(isA<UnexpectedResponseException>()),
+        );
+      },
+    );
 
     test('image type returns HttpSuccess', () {
       final response = Response(
@@ -107,7 +109,21 @@ void main() {
         requestOptions: RequestOptions(path: ''),
         statusCode: 200,
         data: <int>[
-          123, 34, 107, 101, 121, 34, 58, 32, 34, 118, 97, 108, 117, 101, 34,
+          123,
+          34,
+          107,
+          101,
+          121,
+          34,
+          58,
+          32,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
           125,
         ],
       );
@@ -127,9 +143,7 @@ void main() {
       final response = Response(
         requestOptions: RequestOptions(path: ''),
         statusCode: 200,
-        data: <int>[
-          91, 34, 97, 34, 44, 32, 34, 98, 34, 93,
-        ],
+        data: <int>[91, 34, 97, 34, 44, 32, 34, 98, 34, 93],
       );
 
       final result = parser.parse(

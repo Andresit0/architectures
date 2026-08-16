@@ -11,9 +11,10 @@ abstract class IPatientInfoStore {
 }
 
 class PatientInfo implements IPatientInfoStore {
-
   PatientInfo({required Future<Database> database}) : _db = database;
-  final StoreRef<int, Map<String, Object?>> _store = intMapStoreFactory.store('patient_info');
+  final StoreRef<int, Map<String, Object?>> _store = intMapStoreFactory.store(
+    'patient_info',
+  );
   final Future<Database> _db;
 
   @override
@@ -42,7 +43,5 @@ class PatientInfo implements IPatientInfoStore {
 
 final patientInfoStoreProvider = Provider<IPatientInfoStore>((ref) {
   final appDb = ref.watch(appDatabaseProvider);
-  return PatientInfo(
-    database: appDb.database.then((isDb) => isDb.db),
-  );
+  return PatientInfo(database: appDb.database.then((isDb) => isDb.db));
 });

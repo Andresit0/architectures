@@ -30,13 +30,16 @@ void main() {
 
     test('unknown is the fallback', () {
       const values = EndpointSla.values;
-      expect(values, containsAll([
-        EndpointSla.urgent,
-        EndpointSla.standard,
-        EndpointSla.login,
-        EndpointSla.upload,
-        EndpointSla.unknown,
-      ]));
+      expect(
+        values,
+        containsAll([
+          EndpointSla.urgent,
+          EndpointSla.standard,
+          EndpointSla.login,
+          EndpointSla.upload,
+          EndpointSla.unknown,
+        ]),
+      );
     });
 
     test('uses const constructor', () {

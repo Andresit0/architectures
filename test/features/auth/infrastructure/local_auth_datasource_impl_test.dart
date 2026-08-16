@@ -30,10 +30,7 @@ final _patientEntity = PatientEntity(id: '1', name: 'John Doe');
 
 final _loginResponse = LoginResponseEntity(
   patient: _patientEntity,
-  token: TokenEntity(
-    type: 'Bearer',
-    key: 'jwt_token_123',
-  ),
+  token: TokenEntity(type: 'Bearer', key: 'jwt_token_123'),
   clinicalHistory: [],
 );
 
@@ -99,7 +96,9 @@ void main() {
       });
 
       test('stores clinical history list when present', () async {
-        when(() => mockClinicalHistory.storeAll(any())).thenAnswer((_) async {});
+        when(
+          () => mockClinicalHistory.storeAll(any()),
+        ).thenAnswer((_) async {});
 
         await datasource.saveSession(
           data: _loginResponse.copyWith(
@@ -139,7 +138,9 @@ void main() {
       });
 
       test('propagates exception from patientInfo', () async {
-        when(() => mockPatientInfo.save(any())).thenThrow(Exception('db error'));
+        when(
+          () => mockPatientInfo.save(any()),
+        ).thenThrow(Exception('db error'));
 
         expect(
           () => datasource.saveSession(
@@ -166,22 +167,23 @@ void main() {
       });
 
       test('propagates exception from delete', () async {
-        when(() => mockTokenStore.delete())
-            .thenThrow(Exception('storage error'));
+        when(
+          () => mockTokenStore.delete(),
+        ).thenThrow(Exception('storage error'));
 
-        expect(
-          () => datasource.clearSession(),
-          throwsA(isA<Exception>()),
-        );
+        expect(() => datasource.clearSession(), throwsA(isA<Exception>()));
       });
     });
 
     group('restoreSession', () {
       test('returns LoginResponseEntity when valid session exists', () async {
-        when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
+        when(
+          () => mockPatientInfo.load(),
+        ).thenAnswer((_) async => _patientEntity);
         when(() => mockTokenStore.read()).thenAnswer((_) async => 'valid_jwt');
-        when(() => mockTokenVerifier.isExpired('valid_jwt'))
-            .thenAnswer((_) async => false);
+        when(
+          () => mockTokenVerifier.isExpired('valid_jwt'),
+        ).thenAnswer((_) async => false);
         when(() => mockClinicalHistory.loadAll()).thenAnswer((_) async => []);
 
         final result = await datasource.restoreSession();
@@ -202,7 +204,9 @@ void main() {
       });
 
       test('returns null when no token stored', () async {
-        when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
+        when(
+          () => mockPatientInfo.load(),
+        ).thenAnswer((_) async => _patientEntity);
         when(() => mockTokenStore.read()).thenAnswer((_) async => null);
 
         final result = await datasource.restoreSession();
@@ -210,30 +214,41 @@ void main() {
         expect(result, isNull);
       });
 
-      test('clears storage and returns null when token expired and online', () async {
-        when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
-        when(() => mockTokenStore.read()).thenAnswer((_) async => 'expired');
-        when(() => mockTokenVerifier.isExpired('expired'))
-            .thenAnswer((_) async => true);
-        when(() => mockInternetService.isConnected())
-            .thenAnswer((_) async => true);
-        when(() => mockTokenStore.delete()).thenAnswer((_) async {});
-        when(() => mockCredentialStore.deleteAll()).thenAnswer((_) async {});
+      test(
+        'clears storage and returns null when token expired and online',
+        () async {
+          when(
+            () => mockPatientInfo.load(),
+          ).thenAnswer((_) async => _patientEntity);
+          when(() => mockTokenStore.read()).thenAnswer((_) async => 'expired');
+          when(
+            () => mockTokenVerifier.isExpired('expired'),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockInternetService.isConnected(),
+          ).thenAnswer((_) async => true);
+          when(() => mockTokenStore.delete()).thenAnswer((_) async {});
+          when(() => mockCredentialStore.deleteAll()).thenAnswer((_) async {});
 
-        final result = await datasource.restoreSession();
+          final result = await datasource.restoreSession();
 
-        verify(() => mockTokenStore.delete()).called(1);
-        verify(() => mockCredentialStore.deleteAll()).called(1);
-        expect(result, isNull);
-      });
+          verify(() => mockTokenStore.delete()).called(1);
+          verify(() => mockCredentialStore.deleteAll()).called(1);
+          expect(result, isNull);
+        },
+      );
 
       test('returns session when token expired but offline', () async {
-        when(() => mockPatientInfo.load()).thenAnswer((_) async => _patientEntity);
+        when(
+          () => mockPatientInfo.load(),
+        ).thenAnswer((_) async => _patientEntity);
         when(() => mockTokenStore.read()).thenAnswer((_) async => 'expired');
-        when(() => mockTokenVerifier.isExpired('expired'))
-            .thenAnswer((_) async => true);
-        when(() => mockInternetService.isConnected())
-            .thenAnswer((_) async => false);
+        when(
+          () => mockTokenVerifier.isExpired('expired'),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => false);
         when(() => mockClinicalHistory.loadAll()).thenAnswer((_) async => []);
 
         final result = await datasource.restoreSession();
@@ -247,10 +262,7 @@ void main() {
       test('propagates exception from patientInfo load', () async {
         when(() => mockPatientInfo.load()).thenThrow(Exception('db error'));
 
-        expect(
-          () => datasource.restoreSession(),
-          throwsA(isA<Exception>()),
-        );
+        expect(() => datasource.restoreSession(), throwsA(isA<Exception>()));
       });
     });
   });

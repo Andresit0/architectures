@@ -86,7 +86,6 @@ abstract class IDioWrapper {
 }
 
 class DioWrapper implements IDioWrapper {
-
   DioWrapper(
     this._internetService, [
     Dio? dio,
@@ -95,8 +94,8 @@ class DioWrapper implements IDioWrapper {
     IDioResponseParser? responseParser,
     ConnectionProfile? profile,
   ]) : _dio = dio ?? Dio(),
-       _certificatePinner = certificatePinner ??
-           CertificatePinner(pinnedCertificates: const []),
+       _certificatePinner =
+           certificatePinner ?? CertificatePinner(pinnedCertificates: const []),
        _multipartBuilder = multipartBuilder ?? const DioMultipartBuilder(),
        _responseParser = responseParser ?? const DioResponseParser(),
        _profile = profile ?? ConnectionProfile.standard {
@@ -118,11 +117,13 @@ class DioWrapper implements IDioWrapper {
     required VoidCallback onForceLogout,
   }) {
     final internalDio = Dio();
-    _dio.interceptors.add(CustomInterceptors.auth(
-      onRetry: onRetry,
-      internalDio: internalDio,
-      onForceLogout: onForceLogout,
-    ));
+    _dio.interceptors.add(
+      CustomInterceptors.auth(
+        onRetry: onRetry,
+        internalDio: internalDio,
+        onForceLogout: onForceLogout,
+      ),
+    );
   }
 
   Future<void> _checkConnectivity() async {
@@ -213,10 +214,10 @@ class DioWrapper implements IDioWrapper {
           );
         }
         throw AppTimeoutException(
-            endpoint: uri.toString(),
-            configuredTimeout: sla.timeout,
-            attemptNumber: attempt,
-          );
+          endpoint: uri.toString(),
+          configuredTimeout: sla.timeout,
+          attemptNumber: attempt,
+        );
       }
       if (e.response != null) {
         throw ApiException(e.response!.statusCode ?? 0);
@@ -239,10 +240,10 @@ class DioWrapper implements IDioWrapper {
         );
       }
       throw AppTimeoutException(
-          endpoint: uri.toString(),
-          configuredTimeout: sla.timeout,
-          attemptNumber: attempt,
-        );
+        endpoint: uri.toString(),
+        configuredTimeout: sla.timeout,
+        attemptNumber: attempt,
+      );
     } catch (error) {
       throw UnexpectedResponseException('Dio internal error: $error');
     }

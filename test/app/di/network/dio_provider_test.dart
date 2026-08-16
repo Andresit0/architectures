@@ -16,16 +16,22 @@ class MockCredentialStore extends Mock implements ICredentialStore {}
 void main() {
   group('httpServiceProvider', () {
     test('provides a DioWrapper with ConnectionProfile injected', () {
-      final container = ProviderContainer(overrides: [
-        internetServiceProvider.overrideWithValue(MockInternetService()),
-        handle401UseCaseProvider.overrideWith((ref) => Handle401UseCase(
-          tokenStore: MockTokenStore(),
-          connectivityChecker: MockConnectivityChecker(),
-          credentialStore: MockCredentialStore(),
-          repository: MockAuthRepository(),
-          refreshTokenUseCase: RefreshTokenUseCase(repository: MockAuthRepository()),
-        )),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          internetServiceProvider.overrideWithValue(MockInternetService()),
+          handle401UseCaseProvider.overrideWith(
+            (ref) => Handle401UseCase(
+              tokenStore: MockTokenStore(),
+              connectivityChecker: MockConnectivityChecker(),
+              credentialStore: MockCredentialStore(),
+              repository: MockAuthRepository(),
+              refreshTokenUseCase: RefreshTokenUseCase(
+                repository: MockAuthRepository(),
+              ),
+            ),
+          ),
+        ],
+      );
 
       final dioWrapper = container.read(httpServiceProvider);
 
@@ -35,16 +41,22 @@ void main() {
     });
 
     test('returns IDioWrapper interface', () {
-      final container = ProviderContainer(overrides: [
-        internetServiceProvider.overrideWithValue(MockInternetService()),
-        handle401UseCaseProvider.overrideWith((ref) => Handle401UseCase(
-          tokenStore: MockTokenStore(),
-          connectivityChecker: MockConnectivityChecker(),
-          credentialStore: MockCredentialStore(),
-          repository: MockAuthRepository(),
-          refreshTokenUseCase: RefreshTokenUseCase(repository: MockAuthRepository()),
-        )),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          internetServiceProvider.overrideWithValue(MockInternetService()),
+          handle401UseCaseProvider.overrideWith(
+            (ref) => Handle401UseCase(
+              tokenStore: MockTokenStore(),
+              connectivityChecker: MockConnectivityChecker(),
+              credentialStore: MockCredentialStore(),
+              repository: MockAuthRepository(),
+              refreshTokenUseCase: RefreshTokenUseCase(
+                repository: MockAuthRepository(),
+              ),
+            ),
+          ),
+        ],
+      );
 
       final dio = container.read(httpServiceProvider);
 
@@ -56,16 +68,22 @@ void main() {
 
   group('authDioProvider', () {
     test('returns IDioWrapper', () {
-      final container = ProviderContainer(overrides: [
-        internetServiceProvider.overrideWithValue(MockInternetService()),
-        handle401UseCaseProvider.overrideWith((ref) => Handle401UseCase(
-          tokenStore: MockTokenStore(),
-          connectivityChecker: MockConnectivityChecker(),
-          credentialStore: MockCredentialStore(),
-          repository: MockAuthRepository(),
-          refreshTokenUseCase: RefreshTokenUseCase(repository: MockAuthRepository()),
-        )),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          internetServiceProvider.overrideWithValue(MockInternetService()),
+          handle401UseCaseProvider.overrideWith(
+            (ref) => Handle401UseCase(
+              tokenStore: MockTokenStore(),
+              connectivityChecker: MockConnectivityChecker(),
+              credentialStore: MockCredentialStore(),
+              repository: MockAuthRepository(),
+              refreshTokenUseCase: RefreshTokenUseCase(
+                repository: MockAuthRepository(),
+              ),
+            ),
+          ),
+        ],
+      );
 
       final dio = container.read(authDioProvider);
 
@@ -76,25 +94,38 @@ void main() {
   });
 
   group('dio_provider identity', () {
-    test('authDioProvider and httpServiceProvider return DIFFERENT instances', () {
-      final container = ProviderContainer(overrides: [
-        internetServiceProvider.overrideWithValue(MockInternetService()),
-        handle401UseCaseProvider.overrideWith((ref) => Handle401UseCase(
-          tokenStore: MockTokenStore(),
-          connectivityChecker: MockConnectivityChecker(),
-          credentialStore: MockCredentialStore(),
-          repository: MockAuthRepository(),
-          refreshTokenUseCase: RefreshTokenUseCase(repository: MockAuthRepository()),
-        )),
-      ]);
+    test(
+      'authDioProvider and httpServiceProvider return DIFFERENT instances',
+      () {
+        final container = ProviderContainer(
+          overrides: [
+            internetServiceProvider.overrideWithValue(MockInternetService()),
+            handle401UseCaseProvider.overrideWith(
+              (ref) => Handle401UseCase(
+                tokenStore: MockTokenStore(),
+                connectivityChecker: MockConnectivityChecker(),
+                credentialStore: MockCredentialStore(),
+                repository: MockAuthRepository(),
+                refreshTokenUseCase: RefreshTokenUseCase(
+                  repository: MockAuthRepository(),
+                ),
+              ),
+            ),
+          ],
+        );
 
-      final dioWithout = container.read(authDioProvider);
-      final dioWith = container.read(httpServiceProvider);
+        final dioWithout = container.read(authDioProvider);
+        final dioWith = container.read(httpServiceProvider);
 
-      expect(identical(dioWithout, dioWith), isFalse,
-          reason: 'MUST be different instances to avoid interceptor contamination');
+        expect(
+          identical(dioWithout, dioWith),
+          isFalse,
+          reason:
+              'MUST be different instances to avoid interceptor contamination',
+        );
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
   });
 }

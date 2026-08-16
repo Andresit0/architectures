@@ -19,7 +19,9 @@ class ClinicalHistoryPlaceholderScreen extends ConsumerWidget {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
-              content: Text(localizeError(next.error, AppLocalizations.of(context)!)),
+              content: Text(
+                localizeError(next.error, AppLocalizations.of(context)!),
+              ),
               backgroundColor: AppColors.red,
               duration: const Duration(seconds: 4),
             ),

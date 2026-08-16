@@ -6,8 +6,6 @@ part 'token_entity.freezed.dart';
 abstract class TokenEntity with _$TokenEntity {
   const TokenEntity._();
 
-  const factory TokenEntity({
-    required String type,
-    required String key,
-  }) = _TokenEntity;
+  const factory TokenEntity({required String type, required String key}) =
+      _TokenEntity;
 }

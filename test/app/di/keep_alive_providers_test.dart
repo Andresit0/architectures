@@ -24,16 +24,22 @@ void main() {
     });
 
     test('httpServiceProvider returns the same instance on multiple reads', () {
-      final container = ProviderContainer(overrides: [
-        internetServiceProvider.overrideWithValue(MockInternetService()),
-        handle401UseCaseProvider.overrideWith((ref) => Handle401UseCase(
-          tokenStore: MockTokenStore(),
-          connectivityChecker: MockConnectivityChecker(),
-          credentialStore: MockCredentialStore(),
-          repository: MockAuthRepository(),
-          refreshTokenUseCase: RefreshTokenUseCase(repository: MockAuthRepository()),
-        )),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          internetServiceProvider.overrideWithValue(MockInternetService()),
+          handle401UseCaseProvider.overrideWith(
+            (ref) => Handle401UseCase(
+              tokenStore: MockTokenStore(),
+              connectivityChecker: MockConnectivityChecker(),
+              credentialStore: MockCredentialStore(),
+              repository: MockAuthRepository(),
+              refreshTokenUseCase: RefreshTokenUseCase(
+                repository: MockAuthRepository(),
+              ),
+            ),
+          ),
+        ],
+      );
       final instance1 = container.read(httpServiceProvider);
       final instance2 = container.read(httpServiceProvider);
       expect(identical(instance1, instance2), isTrue);

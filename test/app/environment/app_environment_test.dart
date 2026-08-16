@@ -29,11 +29,9 @@ void main() {
       test('isProduction == true', () {
         expect(const ProductionEnvironment().isProduction, isTrue);
       });
-
     });
 
-    group('StagingEnvironment', () {
-    });
+    group('StagingEnvironment', () {});
 
     test('AppEnvironment.current is DevEnvironment by default', () {
       expect(AppEnvironment.current, isA<DevEnvironment>());

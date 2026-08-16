@@ -22,19 +22,18 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<Result<LoginResponseEntity>> login({
     required Email email,
     required PasswordHash passwordHash,
-  }) =>
-      fetchOrFallback(
-        remote: () => guard(() => _remoteDatasource.login(
-          email: email.value,
-          passwordHash: passwordHash.value,
-        )),
-        local: () => guard(() => _localDatasource.restoreSession()),
-      );
+  }) => fetchOrFallback(
+    remote: () => guard(
+      () => _remoteDatasource.login(
+        email: email.value,
+        passwordHash: passwordHash.value,
+      ),
+    ),
+    local: () => guard(() => _localDatasource.restoreSession()),
+  );
 
   @override
-  Future<Result<TokenEntity>> refreshToken({
-    required String token,
-  }) =>
+  Future<Result<TokenEntity>> refreshToken({required String token}) =>
       guard(() => _remoteDatasource.refreshToken(token: token));
 
   @override
@@ -42,12 +41,13 @@ class AuthRepositoryImpl implements IAuthRepository {
     required LoginResponseEntity data,
     required String email,
     required String passwordHash,
-  }) =>
-      guard(() => _localDatasource.saveSession(
-            data: data,
-            email: email,
-            passwordHash: passwordHash,
-          ));
+  }) => guard(
+    () => _localDatasource.saveSession(
+      data: data,
+      email: email,
+      passwordHash: passwordHash,
+    ),
+  );
 
   @override
   Future<Result<void>> clearSession() =>

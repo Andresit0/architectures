@@ -7,17 +7,11 @@ Future<Result<T>> fetchOrFallback<T>({
   final r = await remote();
   if (r.isSuccess) return r;
 
-  final error = r.fold(
-    onSuccess: (_) => null,
-    onFailure: (e) => e,
-  );
+  final error = r.fold(onSuccess: (_) => null, onFailure: (e) => e);
 
   if (error != null && error.isNetworkRelated) {
     final l = await local();
-    final localData = l.fold(
-      onSuccess: (data) => data,
-      onFailure: (_) => null,
-    );
+    final localData = l.fold(onSuccess: (data) => data, onFailure: (_) => null);
     if (localData != null) return Success<T>(localData);
   }
 

@@ -12,7 +12,6 @@ class _UriFake extends Fake implements Uri {}
 class _OptionsFake extends Fake implements Options {}
 
 class MockHttpClientAdapter implements HttpClientAdapter {
-
   MockHttpClientAdapter(this.handler);
   final Future<ResponseBody> Function(RequestOptions options) handler;
 
@@ -47,32 +46,41 @@ void main() {
     group('with mocked Dio (interface mock)', () {
       test('should return true when server responds with 200', () async {
         final reachability = HttpReachability(dio: mockDio, baseUri: baseUri);
-        when(() => mockDio.headUri<dynamic>(any(), options: any(named: 'options')))
-            .thenAnswer((_) async => Response(
-                  statusCode: 200,
-                  requestOptions: RequestOptions(path: baseUri.toString()),
-                ));
+        when(
+          () => mockDio.headUri<dynamic>(any(), options: any(named: 'options')),
+        ).thenAnswer(
+          (_) async => Response(
+            statusCode: 200,
+            requestOptions: RequestOptions(path: baseUri.toString()),
+          ),
+        );
         final result = await reachability.check();
         expect(result, isTrue);
       });
 
       test('should return true even on 5xx (server is reachable)', () async {
         final reachability = HttpReachability(dio: mockDio, baseUri: baseUri);
-        when(() => mockDio.headUri<dynamic>(any(), options: any(named: 'options')))
-            .thenAnswer((_) async => Response(
-                  statusCode: 503,
-                  requestOptions: RequestOptions(path: baseUri.toString()),
-                ));
+        when(
+          () => mockDio.headUri<dynamic>(any(), options: any(named: 'options')),
+        ).thenAnswer(
+          (_) async => Response(
+            statusCode: 503,
+            requestOptions: RequestOptions(path: baseUri.toString()),
+          ),
+        );
         final result = await reachability.check();
         expect(result, isTrue);
       });
 
       test('should return false on DioException (network error)', () async {
         final reachability = HttpReachability(dio: mockDio, baseUri: baseUri);
-        when(() => mockDio.headUri<dynamic>(any(), options: any(named: 'options')))
-            .thenThrow(DioException(
-              requestOptions: RequestOptions(path: baseUri.toString()),
-            ));
+        when(
+          () => mockDio.headUri<dynamic>(any(), options: any(named: 'options')),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: baseUri.toString()),
+          ),
+        );
         final result = await reachability.check();
         expect(result, isFalse);
       });
@@ -99,15 +107,18 @@ void main() {
         expect(result, isTrue);
       });
 
-      test('should return false on connection error through real Dio', () async {
-        final adapter = MockHttpClientAdapter((options) async {
-          throw DioException(requestOptions: options);
-        });
-        final dio = Dio()..httpClientAdapter = adapter;
-        final reachability = HttpReachability(dio: dio, baseUri: baseUri);
-        final result = await reachability.check();
-        expect(result, isFalse);
-      });
+      test(
+        'should return false on connection error through real Dio',
+        () async {
+          final adapter = MockHttpClientAdapter((options) async {
+            throw DioException(requestOptions: options);
+          });
+          final dio = Dio()..httpClientAdapter = adapter;
+          final reachability = HttpReachability(dio: dio, baseUri: baseUri);
+          final result = await reachability.check();
+          expect(result, isFalse);
+        },
+      );
     });
   });
 }

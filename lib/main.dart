@@ -38,7 +38,7 @@ class _TudesarrolladorAppState extends ConsumerState<TudesarrolladorApp> {
   Future<void> _init() async {
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
-         defaultTargetPlatform == TargetPlatform.iOS)) {
+            defaultTargetPlatform == TargetPlatform.iOS)) {
       await AppInitializer.checkJailbreak(
         detection: ref.read(flutterJailbreakDetectionProvider),
       );

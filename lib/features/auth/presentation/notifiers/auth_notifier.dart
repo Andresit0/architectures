@@ -12,13 +12,15 @@ class AuthNotifier extends _$AuthNotifier {
 
   void reset() => state = const AuthState.initial();
 
-  Future<void> login(String email, String password, {bool rememberMe = false}) async {
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     state = const AuthState.loading();
-    final result = await ref.read(loginUseCaseProvider).call(
-      email: email,
-      password: password,
-      rememberMe: rememberMe,
-    );
+    final result = await ref
+        .read(loginUseCaseProvider)
+        .call(email: email, password: password, rememberMe: rememberMe);
     await result.fold<Future<void>>(
       onSuccess: (data) async {
         state = AuthState.loaded(

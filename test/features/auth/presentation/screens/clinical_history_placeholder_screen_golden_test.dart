@@ -42,14 +42,14 @@ void main() {
   testGoldens('ClinicalHistoryPlaceholderScreen golden test — initial state', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _buildScreen(const AuthState.initial()),
-    );
+    await tester.pumpWidget(_buildScreen(const AuthState.initial()));
     await tester.pump();
 
     await expectLater(
       find.byType(ClinicalHistoryPlaceholderScreen),
-      matchesGoldenFile('goldens/clinical_history_placeholder_screen_initial.png'),
+      matchesGoldenFile(
+        'goldens/clinical_history_placeholder_screen_initial.png',
+      ),
     );
   });
 
@@ -57,10 +57,7 @@ void main() {
     tester,
   ) async {
     const patient = PatientEntity(id: '1', name: 'John Doe');
-    const token = TokenEntity(
-      type: 'Bearer',
-      key: 'test-token',
-    );
+    const token = TokenEntity(type: 'Bearer', key: 'test-token');
     await tester.pumpWidget(
       _buildScreen(AuthLoaded(patient: patient, token: token)),
     );
@@ -68,7 +65,9 @@ void main() {
 
     await expectLater(
       find.byType(ClinicalHistoryPlaceholderScreen),
-      matchesGoldenFile('goldens/clinical_history_placeholder_screen_loaded.png'),
+      matchesGoldenFile(
+        'goldens/clinical_history_placeholder_screen_loaded.png',
+      ),
     );
   });
 }

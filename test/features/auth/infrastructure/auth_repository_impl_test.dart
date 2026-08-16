@@ -18,17 +18,11 @@ class _MockLocalDatasource extends Mock implements ILocalAuthDatasource {}
 
 final _loginResponseEntity = LoginResponseEntity(
   patient: PatientEntity(id: '1', name: 'John Doe'),
-  token: TokenEntity(
-    type: 'Bearer',
-    key: 'token',
-  ),
+  token: TokenEntity(type: 'Bearer', key: 'token'),
   clinicalHistory: [],
 );
 
-const _tokenEntity = TokenEntity(
-  type: 'Bearer',
-  key: 'new_jwt_token',
-);
+const _tokenEntity = TokenEntity(type: 'Bearer', key: 'new_jwt_token');
 
 void main() {
   late _MockRemoteDatasource mockRemote;
@@ -99,8 +93,9 @@ void main() {
           passwordHash: any(named: 'passwordHash'),
         ),
       ).thenThrow(const NoConnectionException());
-      when(() => mockLocal.restoreSession())
-          .thenAnswer((_) async => _loginResponseEntity);
+      when(
+        () => mockLocal.restoreSession(),
+      ).thenAnswer((_) async => _loginResponseEntity);
 
       final result = await repository.login(
         email: Email.create('test@example.com'),
@@ -118,27 +113,29 @@ void main() {
       );
     });
 
-    test('login_returns_Failure_when_no_connection_and_no_local_data', () async {
-      when(
-        () => mockRemote.login(
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenThrow(const NoConnectionException());
-      when(() => mockLocal.restoreSession())
-          .thenAnswer((_) async => null);
+    test(
+      'login_returns_Failure_when_no_connection_and_no_local_data',
+      () async {
+        when(
+          () => mockRemote.login(
+            email: any(named: 'email'),
+            passwordHash: any(named: 'passwordHash'),
+          ),
+        ).thenThrow(const NoConnectionException());
+        when(() => mockLocal.restoreSession()).thenAnswer((_) async => null);
 
-      final result = await repository.login(
-        email: Email.create('test@example.com'),
-        passwordHash: PasswordHash.create('hash'),
-      );
+        final result = await repository.login(
+          email: Email.create('test@example.com'),
+          passwordHash: PasswordHash.create('hash'),
+        );
 
-      expect(result.isSuccess, isFalse);
-      result.fold(
-        onSuccess: (_) => fail('should be Failure'),
-        onFailure: (error) => expect(error, isA<NetworkError>()),
-      );
-    });
+        expect(result.isSuccess, isFalse);
+        result.fold(
+          onSuccess: (_) => fail('should be Failure'),
+          onFailure: (error) => expect(error, isA<NetworkError>()),
+        );
+      },
+    );
   });
 
   group('refreshToken', () {
@@ -226,8 +223,9 @@ void main() {
     });
 
     test('clearSession_failure_returns_UnexpectedError', () async {
-      when(() => mockLocal.clearSession())
-          .thenThrow(Exception('storage error'));
+      when(
+        () => mockLocal.clearSession(),
+      ).thenThrow(Exception('storage error'));
 
       final result = await repository.clearSession();
 
@@ -241,8 +239,9 @@ void main() {
 
   group('restoreSession', () {
     test('restoreSession_valid_returns_Success_with_entity', () async {
-      when(() => mockLocal.restoreSession())
-          .thenAnswer((_) async => _loginResponseEntity);
+      when(
+        () => mockLocal.restoreSession(),
+      ).thenAnswer((_) async => _loginResponseEntity);
 
       final result = await repository.restoreSession();
 
@@ -258,8 +257,7 @@ void main() {
     });
 
     test('restoreSession_no_session_returns_null', () async {
-      when(() => mockLocal.restoreSession())
-          .thenAnswer((_) async => null);
+      when(() => mockLocal.restoreSession()).thenAnswer((_) async => null);
 
       final result = await repository.restoreSession();
 
@@ -270,8 +268,7 @@ void main() {
     });
 
     test('restoreSession_failure_returns_UnexpectedError', () async {
-      when(() => mockLocal.restoreSession())
-          .thenThrow(Exception('db error'));
+      when(() => mockLocal.restoreSession()).thenThrow(Exception('db error'));
 
       final result = await repository.restoreSession();
 

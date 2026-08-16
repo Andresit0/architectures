@@ -7,4 +7,6 @@ class RememberMeNotifier extends Notifier<bool> {
   void set(bool value) => state = value;
 }
 
-final rememberMeProvider = NotifierProvider<RememberMeNotifier, bool>(RememberMeNotifier.new);
+final rememberMeProvider = NotifierProvider<RememberMeNotifier, bool>(
+  RememberMeNotifier.new,
+);
