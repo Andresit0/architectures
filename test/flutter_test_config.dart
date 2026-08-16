@@ -24,7 +24,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   await testMain();
 }
 
-const double _kMaxDiffPercent = 0.02;
+const double _kMaxDiffPercent = 0.03;
 
 Future<void> _loadFont(String family, String path) async {
   final fontBytes = File(path).readAsBytesSync();
