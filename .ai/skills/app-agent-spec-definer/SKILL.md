@@ -1,6 +1,6 @@
 ---
 name: app-agent-spec-definer
-description: Creates complete specification packages for new features before any Dart code is written. Drives collaborative requirement refinement, stores provided JSON samples in lib/shared/jsons/, and writes all six spec artifacts (spec.md, bdd.feature, tests.md, contracts.md, domain.md, tasks.md) to lib/features/<name>/spec/. Invoked by the Spec-Local orchestrator as Phase B — do NOT call directly in response to feature requests. Call directly only when the user explicitly says "run app-agent-spec-definer directly" or "load skill app-agent-spec-definer".
+description: Creates complete specification packages for new features before any Dart code is written. Drives collaborative requirement refinement, stores provided JSON samples in lib/features/<name>/spec/samples/, and writes all six spec artifacts (spec.md, bdd.feature, tests.md, contracts.md, domain.md, tasks.md) to lib/features/<name>/spec/. Invoked by the Spec-Local orchestrator as Phase B — do NOT call directly in response to feature requests. Call directly only when the user explicitly says "run app-agent-spec-definer directly" or "load skill app-agent-spec-definer".
 ---
 
 # Spec-Definer Agent
@@ -22,7 +22,7 @@ Run these commands to discover actual paths. Do NOT skip:
 find lib/core/network/ -name "api_endpoints.dart"
 
 # 2. List existing JSON mock files
-ls lib/shared/jsons/
+ls lib/features/<name>/spec/samples/
 
 # 3. List existing wrappers
 find lib/core/services/ -name "*_wrapper.dart" -type f 2>/dev/null | sort
@@ -67,7 +67,7 @@ mem_context()  ← check recent sessions for related features or spec patterns
 
 Load prior knowledge about:
 - Previous spec gaps that forced mid-implementation pivots (e.g., missing notifier.type, missing anti-barrel rule)
-- JSON mock data already in `shared/jsons/`
+- JSON mock data already in `<feature>/spec/samples/`
 - Naming conventions established in previous features
 
 ### During work
@@ -101,11 +101,12 @@ mem_save(
 - Feature folder names: English snake_case (e.g. `medical_appointments`, `auth_login`)
 - Spec folder always lives at: `lib/features/<feature_name>/spec/`
 - Six artifact files per feature: `spec.md`, `bdd.feature`, `tests.md`, `contracts.md`, `domain.md`, `tasks.md`
-- When the user provides a JSON sample it goes to: `lib/shared/jsons/<feature>_json.dart`
+- When the user provides a JSON sample it goes to: `lib/features/<name>/spec/samples/<feature>_json.dart`
 - FakeDatasource: create `lib/features/<feature>/infrastructure/datasources/fake_<feature>_datasource.dart` implementing the datasource interface with hardcoded entity constructors. See `lib/features/auth/infrastructure/datasources/auth_datasource_impl.dart` as a reference implementation.
-- All shared providers: `httpServiceProvider`, `tokenStoreProvider`, `credentialStoreProvider`, `goRouterProvider`
+- All shared providers: `httpServiceProvider`, `tokenStoreProvider`, `credentialStoreProvider`
+- Navigation: features use the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` (re-exported by the feature's di/). Never `goRouterProvider` nor `app/`
 - Injectable services must be accessed via `ref.watch/read(<name>Provider)` — never static locators directly
-- Failure conversion at repository boundary: `guard()` from `shared/error/result_guard.dart`
+- Failure conversion at every fallible boundary: repository wraps datasources with `guard()`; usecases wrap shared ports (raw values) with `guard()` — all from `shared/error/result_guard.dart`
 - Error message in notifier: pass `AppError` to state via `AuthState.failure(error)`. UI localizes via `localizeError(error, AppLocalizations.of(context)!)`
 - Architecture layers: `domain/`, `infrastructure/`, `presentation/`
 - Interface naming: `I<Name>Datasource`, `I<Name>Repository`
@@ -120,7 +121,7 @@ After running Step 0 discovery, reference ONLY the actual file paths found. Comm
 |---|---|
 | `lib/design_system/theme/app_colors.dart` | `find lib/design_system/ -name "*.dart"` |
 | `lib/features/X/domain/usecases/get_X_usecase.dart` | `find lib/features/X/ -name "*usecase*"` |
-| `lib/shared/jsons/X_json.dart` (assume exists) | `ls lib/shared/jsons/` |
+| `lib/features/<name>/spec/samples/X_json.dart` (assume exists) | `ls lib/features/<name>/spec/samples/` |
 | `lib/core/services/<domain>/X_wrapper.dart` (assume exists) | `ls lib/core/services/<domain>/` |
 
 If a file is not at the assumed path, search — don't guess.
@@ -284,7 +285,7 @@ endpoints:
     auth: bearer_token
     notes:
       - <implementation note>
-      - Mock JSON file: lib/shared/jsons/<feature>_json.dart
+      - Mock JSON file: lib/features/<name>/spec/samples/<feature>_json.dart
 ```
 
 ### domain.md
@@ -355,8 +356,9 @@ usecases:
 - [ ] Create feature widgets
 
 ### Navigation (if applicable)
+- [ ] Add AppRoute entry to shared/router/app_route.dart
 - [ ] Add route to app_router.dart
-- [ ] Add navigation trigger to entry screen
+- [ ] Add navigation trigger to entry screen (via IAppNavigator, never goRouterProvider)
 
 ### Shared dependencies used
 - [ ] Document each provider dependency used
@@ -371,8 +373,8 @@ usecases:
 ## Reference examples
 
 Two complete worked examples are already in the repo:
-- `lib/features/[feature_name]/spec/` — auth_login (no JSON file; data embedded in login response)
-- `lib/features/[feature_name]/spec/` — medical_appointments (with JSON file in shared/jsons/)
+- `lib/features/auth/spec/` — auth (no JSON file; data embedded in login response)
+- `lib/features/clinical_history/spec/` — clinical_history (no JSON file; data embedded in login response)
 
 ---
 

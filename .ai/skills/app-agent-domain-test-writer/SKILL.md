@@ -17,7 +17,7 @@ Before starting, load these resources in order:
 
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
     - `Result<T>` return types
-    - `guard()` from `shared/error/result_guard.dart` boundary rule
+    - `guard()` from `shared/error/result_guard.dart` boundary rule (repository wraps datasources; usecase wraps shared ports with raw values)
 
 2. **`MD/APP_DARTZ.md`** — Result/guard/fold pattern. Required to:
    - Write correct repository interface method signatures in tests

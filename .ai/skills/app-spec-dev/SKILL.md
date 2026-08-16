@@ -32,23 +32,23 @@ Read these MD files directly to understand the project:
 - `MD/APP_DARTZ.md` — Result/guard/fold pattern (guard, fold, AppError types)
 - `MD/APP_IMPORTANT_INFO.md` — critical rules and project constraints
 - `MD/APP_TREE.md` — current app directory tree
-- `MD/APP_PROVIDERS.md` — shared providers (dio, token, user, goRouter)
+- `MD/APP_PROVIDERS.md` — shared providers (dio, token, connectivity) + `IAppNavigator` seam
 - `MD/APP_STATE_MANAGMENT.md` — Riverpod v2 state management conventions
 - `MD/APP_PACKAGE_WRAPPER.md` — wrapper pattern and access categories
 - `MD/APP_EXCEPTION.md` — exception types and CustomFunction.failure.launch() pattern
 
 ### 0.3 Read reference feature code
 
-Read the appointments feature as canonical example:
-- `lib/features/appointments/domain/entities/appointment_entity.dart`
-- `lib/features/appointments/infrastructure/datasources/appointments_datasource_impl.dart`
-- `lib/features/appointments/infrastructure/repositories/appointments_repository_impl.dart`
-- `lib/features/appointments/presentation/notifiers/appointments_state.dart`
-- `lib/features/appointments/presentation/notifiers/appointments_notifier.dart`
-- `lib/features/appointments/di/appointments_provider.dart`
-- `lib/features/appointments/presentation/screens/appointments_screen.dart`
-- `lib/features/appointments/presentation/widgets/_widgets.lib.dart`
-- `integration_test/encounter_integration_test.dart` ← integration test pattern
+Read the auth feature as canonical example:
+- `lib/features/auth/domain/entities/login_response_entity.dart`
+- `lib/features/auth/infrastructure/datasources/auth_datasource_impl.dart`
+- `lib/features/auth/infrastructure/repositories/auth_remote_repository_impl.dart`
+- `lib/features/auth/presentation/notifiers/auth_state.dart`
+- `lib/features/auth/presentation/notifiers/auth_notifier.dart`
+- `lib/features/auth/di/auth_provider.dart`
+- `lib/features/auth/presentation/screens/login_screen.dart`
+- `lib/features/auth/presentation/widgets/<widget_name>.dart`  ← standalone (no barrel, no facade)
+- `integration_test/auth_integration_test.dart` ← integration test pattern
 
 ### 0.4 Create TodoWrite task list
 
@@ -324,7 +324,7 @@ Example:
 ### FlChartWrapper — accessed via ref.watch(flChartProvider)
 - lineChart({required List<double> values, List<String>? labels, Color? lineColor, Color? fillColor}) → Widget
 - pieChart({required Map<String, double> segments, List<Color>? colors}) → Widget
-### DioWrapper (IDioWrapper) — accessed via ref.watch(httpServiceProvider)
+### DioWrapper (IDioWrapper) — accessed via ref.watch(httpServiceProvider) (`core/network/dio/dio_providers.dart`)
 - get(String path, {Map<String, String>? headers}) → Future<dynamic>
 ### CredentialStore (ICredentialStore) — accessed via ref.watch(credentialStoreProvider)
 - read() → Future<String?>
@@ -611,7 +611,7 @@ Future<Result<T>> <methodName>(<args>) =>
     guard(() => _datasource.<methodName>(<args>));
 ```
 
-**Rule:** Always use `guard()` from `shared/error/result_guard.dart`. Never raw try/catch.
+**Rule:** Always use `guard()` from `shared/error/result_guard.dart`. Never raw try/catch. Repositories wrap datasources; usecases wrap shared ports (raw values like `String?`, `bool`, `void`, records).
 
 ### 5.4 Run infrastructure tests → expect GREEN
 
@@ -806,6 +806,24 @@ All presentation tests must pass before proceeding.
 
 ---
 
+## Phase 8.5 — Golden tests → GREEN
+
+**Requirement:** every feature with a `presentation/screens/` folder ships a golden test with committed fixtures. Golden tests are snapshot tests of real rendered UI, so they are created here (after the screen exists) — NOT at Phase 0.5.
+
+Reference pattern: `test/features/auth/presentation/screens/login_screen_golden_test.dart`.
+
+1. Create `test/features/<feature_name>/presentation/screens/<feature_name>_screen_golden_test.dart` with `@Tags(['golden']);` then `library;` at the top (exact form of the login reference). Use `golden_toolkit`'s `testGoldens`.
+2. Build a fake notifier that fixes the state: extend the feature's notifier, override `build()` to return the target state and `load()`/`refresh()` as no-ops (so any screen auto-load `postFrameCallback` cannot change the state). Override the screen's notifier provider with it.
+3. Pump the real screen inside `ProviderScope(overrides:)` + `MaterialApp(theme: ThemeData(fontFamily: 'Roboto'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: <Name>Screen())`.
+4. Cover ONLY stable visible states (no animations; failure is not goldenable when the body renders nothing/transient snackbar): **loading** (use the Loading variant, NOT Initial, to avoid the auto-load callback), **loaded** (2+ realistic fixture entities), **empty** (loaded with empty list). Add other stable states if the screen has them (e.g. expanded card).
+5. Assert with `matchesGoldenFile('goldens/<feature_name>_screen_<state>.png')` — fixtures live in `test/features/<feature_name>/presentation/screens/goldens/`.
+6. Do NOT call `loadAppFonts` — fonts are loaded globally by `test/flutter_test_config.dart` (deterministic across macOS local and Linux CI).
+7. Generate the PNGs: `flutter test --tags golden --update-goldens` from repo root. Confirm the PNGs were created under `goldens/`.
+8. Verify: `flutter test --tags golden` → GREEN.
+9. Do NOT modify spec files (frozen) — golden files were already listed in `## Required Files` of `generated_api_contract.md` at Phase 0.5.
+
+---
+
 ## Phase 9 — Integration test → RED (analyze)
 
 **Integration test already exists from Phase 0.5 (`integration_test/<feature_name>_integration_test.dart`).**
@@ -861,38 +879,38 @@ All scenarios must pass. If any fail:
 
 ---
 
-## Phase 10 — Barrel files + navigation wiring → GREEN
+## Phase 10 — Widgets + navigation wiring → GREEN
 
-### 10.1 Widgets barrel
+### 10.1 Widgets (standalone — NO barrel, NO facade)
 
-Create `presentation/widgets/_widgets.lib.dart`:
+Each widget is a **standalone file** with explicit imports — no `_widgets.lib.dart` barrel
+and no `Custom[Name]Widgets` static facade (project convention since the widgets refactor;
+see `MD/APP_BARREL_PATTERN.md` → "presentation/widgets exception").
 
 ```dart
-library _widgets;
-
+// presentation/widgets/<widget_name>.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-// other imports
+// other imports (value_objects, l10n, design_system, shared/models)
 
-part '_widgets.dart';
-part '<widget_name>.dart';
+class <WidgetName> extends StatelessWidget {
+  const <WidgetName>({super.key, ...});
+
+  @override
+  Widget build(BuildContext context) { ... }
+}
 ```
 
-Create `presentation/widgets/_widgets.dart`:
+Consumers import the widget file directly and use its constructor:
 
 ```dart
-part of '_widgets.lib.dart';
-
-class CustomWidgets {
-  CustomWidgets._();
-
-  static <WidgetName> create<WidgetName>({...}) => <WidgetName>(...);
-}
+import 'package:clean_architecture_sdd_harness/features/<name>/presentation/widgets/<widget_name>.dart';
+// ...
+<WidgetName>(...)
 ```
 
 ### 10.2 Add AppRoute entry
 
-In `lib/app/router/app_route.dart`:
+In `lib/shared/router/app_route.dart`:
 
 ```dart
 <name>(path: '/<path>', name: '<name>'),
@@ -936,11 +954,13 @@ If `tasks.md` specifies adding a trigger on a parent screen:
 IconButton(
   tooltip: '<Tooltip Text>',
   icon: const Icon(Icons.<icon>),
-  onPressed: () => ref.read(goRouterProvider).push(
-    '/<name>',
+  onPressed: () => ref.read(appNavigatorProvider).push(
+    AppRoute.<name>,
   ),
 ),
 ```
+
+Add the one-line `appNavigatorProvider` re-export to the feature's `di/` file to use it from presentation code (see MD/APP_PROVIDERS.md).
 
 ### 10.7 Run analyze → expect GREEN
 
@@ -1020,12 +1040,12 @@ flutter test integration_test/<feature_name>_integration_test.dart -d <device_id
 
 ## Canonical example
 
-The `appointments` feature is the reference implementation:
-- `lib/features/appointments/` — all layers
-- `test/features/appointments/` — all unit + widget tests
-- `integration_test/encounter_integration_test.dart` — integration test pattern
+The `auth` feature is the reference implementation:
+- `lib/features/auth/` — all layers
+- `test/features/auth/` — all unit + widget tests
+- `integration_test/auth_integration_test.dart` — integration test pattern
 
-When in doubt, read the corresponding file from appointments and adapt it.
+When in doubt, read the corresponding file from auth and adapt it.
 
 ---
 
@@ -1039,7 +1059,7 @@ When in doubt, read the corresponding file from appointments and adapt it.
 | Freezed entity | `@freezed abstract class` + `const Foo._()` | `@freezed class` without `._()` |
 | Freezed state | `@freezed sealed class` | state with `._()` |
 | Entity barrel | import entity files directly | `library`+`part` barrel for `@freezed` entities |
-| Import part files | `import '_widgets.lib.dart'` | `import 'widget_file.dart'` |
+| Widget imports | `import '<widget_file>.dart'` (standalone) | `import '_widgets.lib.dart'` (barrel facade) |
 | Integration test boot | `app.main(overrides: [...])` | `runApp(...)` directly |
 | Build runner | run from project root | run from repo root |
 | Notifier pattern | non-family; params via `load(<args>)` from initState | `@riverpod` family |

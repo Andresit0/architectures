@@ -17,7 +17,7 @@ Before starting, load these resources in order:
 
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
     - `Result<T>` return types
-    - `guard()` from `shared/error/result_guard.dart` boundary rule
+    - `guard()` from `shared/error/result_guard.dart` boundary rule (repository wraps datasources; usecase wraps shared ports with raw values)
    - Injectable service access rule (use `ref.watch(httpServiceProvider)` — never static locator)
 
 2. **`MD/APP_DARTZ.md`** — Result/guard/fold pattern. Required to:
@@ -77,7 +77,7 @@ Create infrastructure test files that:
 1. Import datasource and repository implementations using the paths they WILL have once spec-dev creates them
 2. Mock HTTP client (Dio) using mocktail
 3. Test datasource: that it calls the right endpoint and returns the right data
-4. Test repository: that it wraps datasource calls with guard() and returns Result
+4. Test repository: that it wraps datasource calls with guard() and returns Result. Also test usecase shared-port calls: a port that throws → Failure (not an escaping exception)
 5. Are written purely from `generated_api_contract.md` and `domain.md` — no production files exist yet
 
 **IMPORTANT: Do NOT check if production files exist. They don't. Derive all signatures from `generated_api_contract.md`.**
@@ -236,5 +236,5 @@ Report:
 | Check if production files exist before writing | Write tests from generated_api_contract.md — no production files exist |
 | Use static locator directly | Mock Dio via mocktail; production code uses ref.watch(httpServiceProvider) |
 | Skip repository test | Always create both datasource AND repository tests |
-| Raw try/catch in repository | Repository uses guard() — test both Success and Failure |
+| Raw try/catch in repository/usecase | Repository wraps datasources; usecase wraps shared ports with guard() — test both Success and Failure |
 | Run tests before stubs exist | Report files created; tests run RED in Phase D.4 once stubs are written |

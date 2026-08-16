@@ -322,7 +322,7 @@ Key conventions:
 - Interface prefix: `I<Name>Datasource`, `I<Name>Repository`
 - State sealed class variants: `<Name>Initial`, `<Name>Loading`, `<Name>Success`, `<Name>Failure` or domain-specific names like `<Name>Idle`, `<Name>Downloading`
 - Shared providers access: `httpServiceProvider`, `tokenStoreProvider`, `credentialStoreProvider`
-- Failure conversion: `guard()` from `shared/error/result_guard.dart` at repository boundary
+- Failure conversion: `guard()` from `shared/error/result_guard.dart` at every fallible boundary (repository wraps datasources; usecase wraps shared ports with raw values)
 - Error mapping: state passes `AppError` via `AuthState.failure(error)` in notifier fold; UI localizes via `localizeError(error, AppLocalizations.of(context)!)`
 
 ---
