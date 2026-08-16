@@ -35,19 +35,19 @@ A production-oriented Flutter starter that enforces clean architecture conventio
 
 ## Screenshots
 
-> Screenshots are generated from the committed golden fixtures (`test/features/auth/presentation/screens/goldens/`).
+> Screenshots are generated from the committed golden fixtures (`test/features/auth/presentation/screens/goldens/`, `test/features/clinical_history/presentation/screens/goldens/`).
 
-| Login | Clinical History placeholder |
+| Login | Clinical History |
 |---|---|
-| ![Login](screenshots/login_screen.png) | ![Clinical History](screenshots/clinical_history_placeholder.png) |
+| ![Login](screenshots/login_screen.png) | ![Clinical History](screenshots/clinical_history.png) |
 
 ## Architecture
 
 ```
 lib/
-├── app/            Composition root: providers barrel (_providers.lib.dart), GoRouter, guards, initializer
+├── app/            Composition root: GoRouter, guards, initializer, offline banner, DI seam bindings
 ├── core/           Infrastructure: network (dio wrapper, interceptors, retry), database (sembast), services (auth, crypto, device, storage), config
-├── shared/         Domain abstractions: error (Result/AppError/guard), interfaces, models/entities, exceptions, offline-first mixin
+├── shared/         Domain abstractions: error (Result/AppError/guard), interfaces, models/entities, exceptions, online-first repository helper
 ├── features/       Feature-first modules: <name>/domain|infrastructure|presentation|di|spec
 ├── design_system/  Theme + reusable UI
 └── l10n/           AppLocalizations (en/es)
@@ -92,8 +92,8 @@ flutter run -d mac --dart-define-from-file=.env
 
 | Type | Command | Notes |
 |---|---|---|
-| Unit / widget | `flutter test` | entities, use cases, mappers, repos, datasources, providers, notifiers |
-| Golden | `flutter test --tags golden` | deterministic: embedded fonts + 0.2% tolerance |
+| Unit / widget | `flutter test --exclude-tags golden` | entities, use cases, mappers, repos, datasources, providers, notifiers |
+| Golden | `flutter test --tags golden` | deterministic: embedded fonts + 2% tolerance (`golden` tag declared in `dart_test.yaml`) |
 | Golden update | `flutter test --tags golden --update-goldens` | run after UI changes; commit PNGs |
 | BDD | `flutter test test/bdd` | gherkart scenarios |
 | Integration | `flutter test integration_test/auth_integration_test.dart -d macos` | needs device; run files individually (macOS runner caveat); no real HTTP (fakes injected via Riverpod) |
@@ -103,9 +103,11 @@ Cross-platform behavior (verified in CI):
 
 | Platform | `flutter test` | `flutter test --tags golden` | CI job |
 |---|---|---|---|
-| macOS (local dev) | ✅ | ✅ (local fonts) | — |
+| macOS (local dev) | ✅ | ✅ (deterministic) | — |
 | Linux (CI) | ✅ | ✅ (deterministic) | `Test` / `Test Goldens` |
-| Windows (local dev) | ✅ | ✅ | — |
+| Windows (local dev) | ✅ | ✅ (deterministic) | — |
+
+Plain `flutter test` runs everything locally, including goldens (deterministic, embedded fonts). Use `--exclude-tags golden` for a unit/widget-only run — this is what the CI `Test` job does; `Test Goldens` runs `--tags golden`.
 
 Mocks use `mocktail`; dependencies are replaced via Riverpod overrides — no real network calls in tests.
 
@@ -116,7 +118,7 @@ Every PR runs `.github/workflows/ci.yml` on `develop` and `main`:
 | Job | Purpose |
 |---|---|
 | Analyze | `flutter analyze`, 0 issues |
-| Test | unit/widget + coverage upload to codecov (threshold 1%) |
+| Test | unit/widget (goldens excluded via `--exclude-tags golden`) + coverage upload to codecov (threshold 1%) |
 | Test Goldens | golden tests, cross-platform deterministic |
 | Build iOS | `flutter build ios --no-codesign` (macOS runner, CocoaPods cache) |
 | Build Android | `flutter build apk --debug` |
