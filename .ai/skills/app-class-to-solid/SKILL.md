@@ -77,18 +77,24 @@ abstract interface class I<Feature>Repository {
 #### `domain/usecases/<feature>_usecase.dart`
 ```dart
 import '../../../../shared/error/_error.lib.dart';
+import '../../../../shared/interfaces/i_usecase.dart';
 import '../entities/<feature>_entity.dart';
 import '../repositories/i_<feature>_repository.dart';
 
-class <Feature>UseCase {
-  final I<Feature>Repository repository;
+class <Feature>UseCase implements IUseCase<<Feature>Input, <Feature>Entity> {
+  const <Feature>UseCase({required I<Feature>Repository repository})
+      : _repository = repository;
 
-  const <Feature>UseCase(this.repository);
+  final I<Feature>Repository _repository;
 
-  Future<Result<<Feature>Entity>> call({required String param}) =>
-      repository.<primaryMethod>(param: param);
+  @override
+  Future<Result<<Feature>Entity>> call(<Feature>Input input) =>
+      _repository.<primaryMethod>(param: input.param);
 }
 ```
+
+> **UseCase → UseCase (Rule 18):** si este usecase orquesta OTRO usecase, el parámetro es `IUseCase<In, Out>` (nunca la clase concreta), y el provider concreto se inyecta solo en `features/<name>/di/`.
+> **1 clase = 1 contrato (Rule 19b):** el repository impl implementa UNA sola interfaz de dominio. Si el feature necesita roles remote/local, se crean dos interfaces (`I<Feature>RemoteRepository`/`I<Feature>LocalRepository`) y dos impls separados.
 
 #### `infrastructure/datasources/<feature>_datasource_impl.dart`
 ```dart
@@ -211,7 +217,7 @@ After generating all files, verify each principle:
 | **O** Open/Closed | New behaviour via new implementations, not by modifying existing ones. Interfaces are extension points. |
 | **L** Liskov Substitution | `Impl` classes are substitutable for their abstract types. No method throws `UnimplementedError`. |
 | **I** Interface Segregation | Each interface declares only the methods that its consumers actually use. No fat interfaces. |
-| **D** Dependency Inversion | High-level classes (`UseCase`, `RepositoryImpl`) depend on abstractions (`I*`), never on concretions. Riverpod providers wire concretions at the edge. |
+| **D** Dependency Inversion | High-level classes (`UseCase`, `RepositoryImpl`) depend on abstractions (`I*`), never on concretions. Riverpod providers wire concretions at the edge. Un usecase que orquesta otro usecase depende de `IUseCase<In, Out>`, nunca de la clase concreta (Rule 18). |
 
 If a violation is found, fix it before moving on.
 

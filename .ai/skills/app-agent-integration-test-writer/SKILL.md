@@ -18,8 +18,8 @@ Before starting, load these resources in order:
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
    - DI chain: datasource → repository → usecase → notifier
    - The DI seam rule: integration tests override ONLY repositories
-    - `goRouterProvider` and navigation patterns (access via `ref.read(goRouterProvider).go(...)`)
-    - Route enums in `AppRoute` and route definitions in `appRoutes()`
+    - `IAppNavigator` seam and navigation patterns (features navigate via `ref.read(appNavigatorProvider).go(...)`; auth transitions are declarative via AuthGuard redirect)
+    - Route enums in `AppRoute` (shared/router/app_route.dart) and route definitions in `appRoutes()`
 
 2. **`MD/APP_ARCHITECTURE.md`** — layer paths. Required to:
    - Identify the correct repository interface to override

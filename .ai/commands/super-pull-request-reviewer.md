@@ -25,12 +25,12 @@ Load:
 
 Ask the user:
 
-> "¿Quieres filtrar los PRs a revisar? Puedes especificar (opcional):
-> - `--label <label>`: solo PRs con cierto label
-> - `--branch <pattern>`: solo PRs cuya rama coincida con el patrón (glob)
-> - `--author <username>`: solo PRs de un autor específico
+> "Do you want to filter the PRs to review? You can specify (optional):
+> - `--label <label>`: only PRs with a certain label
+> - `--branch <pattern>`: only PRs whose branch matches the pattern (glob)
+> - `--author <username>`: only PRs by a specific author
 >
-> Deja vacío para revisar **todos** los PRs abiertos."
+> Leave empty to review **all** open PRs."
 
 Collect `$FILTER_LABEL`, `$FILTER_BRANCH`, `$FILTER_AUTHOR` from the user response.
 
@@ -125,13 +125,22 @@ Result: `PASS` / `FAIL`
 
 ### Gate 3 — ✓ Architecture remains consistent
 
-Validate clean architecture rules:
+Validate clean architecture rules (matrix per MD/APP_ARCHITECTURE.md, Rules 1-28):
 
-- `lib/**/domain/` must NOT import from `infrastructure/` or `presentation/`
-- `lib/**/infrastructure/` may import from `domain/` only
-- `lib/**/presentation/` may import from `domain/` and `infrastructure/`
-- `lib/features/{f1}/` must NOT import from `lib/features/{f2}/` (feature isolation)
-- `lib/shared/` should not import from `lib/features/`
+```
+shared              -> solo shared / Dart puro
+core                -> shared y core; nunca features ni app
+features/domain     -> shared y anotaciones permitidas
+features/infra      -> own domain + shared + core
+features/presentation -> own di + domain + shared + design_system + l10n
+app                 -> composition root
+```
+
+- `lib/features/{f}/presentation/` must NOT import `infrastructure/` directly (it goes through `di/` and the shared seam)
+- `lib/features/{f}/domain/` must NOT import `infrastructure/` or `presentation/`
+- `lib/features/{f1}/` must NOT import from `lib/features/{f2}/` (feature isolation; auth/clinical_history coupling only via Shared Kernel contracts)
+- `lib/shared/` must be pure Dart (no Flutter, no third-party types)
+- `lib/core/` must NEVER import `features/` or `app/` (avoids `core <-> auth` cycles)
 
 Analyze imports in the diff to detect violations.
 
@@ -358,7 +367,7 @@ Based on review depth (heuristic):
 
 Output this note after each blocked/needs-review PR:
 
-> *Este PR requiere revisión manual. Enfócate en: <specific areas>*
+> *This PR requires manual review. Focus on: <specific areas>*
 
 ---
 
@@ -379,15 +388,15 @@ If stacked, determine the merge order by analyzing the dependency chain. The fir
 
 Show the summary table from Step 7.1 to the user and ask:
 
-> "Los siguientes PRs pasaron todos los gates y están listos para aprobar y mergear:
+> "The following PRs passed all gates and are ready to approve and merge:
 > - #<N1> — <title>
 > - #<N2> — <title>
 >
-> ¿Quieres que ejecute `gh pr review --approve` y luego los mergee en orden?"
+> Do you want me to run `gh pr review --approve` and then merge them in order?"
 
 If stacked PRs were detected, also add:
 
-> "⚠️ Se detectó un stack de PRs. Se mergearán secuencialmente: se aprobarán todos, luego se mergeará el PR base, se retargeteará el siguiente a develop, se mergeará, y así sucesivamente hasta el último."
+> "⚠️ A stack of PRs was detected. They will be merged sequentially: all will be approved, then the base PR will be merged, the next one will be retargeted to develop, merged, and so on until the last one."
 
 Valid affirmative answers: `yes`, `approve`, `approve all`, `execute`, `merge`, `merge all`, `si`, `sí`, `adelante`
 
@@ -415,6 +424,8 @@ done
 
 In a stacked chain, each PR's branch is based on the previous PR's branch. Merging out of order or in parallel will cause "Base branch was modified" errors and potential conflicts.
 
+**Policy**: this repository squash-merges with `squash_merge_commit_title: PR_TITLE` (GIT_FLOW.md §11). ALWAYS use `--squash`. NEVER use `--merge`, which would leave merge commits and contradict the documented branch protection policy.
+
 **NEVER** use parallel tool calls (`bash` invocations in the same message) for merge operations. Always use a **single sequential `for` loop** in one `bash` call.
 
 ### 10.1 — Independent PRs (all target develop)
@@ -423,7 +434,7 @@ In a stacked chain, each PR's branch is based on the previous PR's branch. Mergi
 for N in <PR_NUMBER_1> <PR_NUMBER_2> ...; do
   echo "🔀 Merging PR #$N..."
   gh pr ready $N 2>/dev/null
-  gh pr merge $N --merge && echo "✅ PR #$N merged" || echo "❌ PR #$N failed"
+  gh pr merge $N --squash && echo "✅ PR #$N merged" || echo "❌ PR #$N failed"
 done
 ```
 
@@ -435,14 +446,14 @@ Merge in dependency order (base PR first, then each subsequent PR):
 # 1. Merge the base PR (it already targets develop/main)
 BASE_N=<BASE_PR_NUMBER>
 gh pr ready $BASE_N 2>/dev/null
-gh pr merge $BASE_N --merge || { echo "❌ PR #$BASE_N failed. STOP."; exit 1; }
+gh pr merge $BASE_N --squash || { echo "❌ PR #$BASE_N failed. STOP."; exit 1; }
 
 # 2. For each remaining PR in the stack:
 for N in <NEXT_N1> <NEXT_N2> ...; do
   echo "🔀 Processing PR #$N..."
   gh pr ready $N 2>/dev/null
   gh pr edit $N --base develop
-  gh pr merge $N --merge && echo "✅ PR #$N merged" || {
+  gh pr merge $N --squash && echo "✅ PR #$N merged" || {
     echo "❌ PR #$N merge failed. STOP. Do not continue with downstream PRs."
     exit 1
   }
@@ -451,7 +462,7 @@ done
 
 **Why retarget works:** After the previous PR is merged into develop, its commits are already part of develop. Retargeting (`--base develop`) makes GitHub recalculate the merge-base, so the diff shrinks to only the PR's own commits. No `git rebase` or manual merge is needed.
 
-**No `--squash`**: Use `--merge` to keep individual commits. Squash merges collapse the PR into a single commit, losing granularity and complicating stacked chains.
+**Squash policy**: Always `--squash`. The internal atomic commits remain mandatory for review and rollback before the merge; the squash commit preserves reviewability on develop (GIT_FLOW.md §11). Do NOT use `--merge`.
 
 ---
 

@@ -98,7 +98,7 @@ If artificial RED is detected:
 VERIFIED:
 [ ] All 6 spec files read
 [ ] MD context files read (APP_ARCHITECTURE, APP_DARTZ, APP_STATE_MANAGMENT, APP_PROVIDERS, APP_PACKAGE_WRAPPER, APP_IMPORTANT_INFO, APP_EXCEPTION)
-[ ] Reference feature (appointments) files read
+[ ] Reference feature (auth) files read
 [ ] TodoWrite created from tasks.md
 
 FAIL CONDITIONS:
@@ -211,7 +211,7 @@ VERIFIED:
 [ ] FakeDatasource exists at infrastructure/datasources/fake_*_datasource.dart (for testing via Riverpod overrides)
 [ ] Provider returns DatasourceImpl directly (no useMock conditional): @riverpod IDatasource datasource(Ref ref) => DatasourceImpl(dio: ...)
 [ ] Mapper uses named constructors (NO Entity.fromJson)
-[ ] Repository uses guard() from shared/error/result_guard.dart (NOT try/catch)
+[ ] Repository uses guard() from shared/error/result_guard.dart (NOT try/catch); usecases also wrap shared ports (raw values) with guard()
 [ ] Infrastructure tests pass (GREEN)
 [ ] CONTRACT DRIFT CHECK: repository method signatures in <name>_repository_impl.dart match generated_api_contract.md (same method names, return types, parameter names)
 
@@ -272,6 +272,23 @@ FAIL CONDITIONS:
 - State variant names differ from generated_api_contract.md → CRITICAL (contract drift detected)
 ```
 
+### Phase 8.5 — Golden Tests → GREEN
+
+```
+VERIFIED (only if the feature has a presentation/screens/ folder; otherwise skip):
+[ ] <feature_name>_screen_golden_test.dart exists in test/features/<name>/presentation/screens/ with @Tags(['golden'])
+[ ] goldens/ fixtures exist (ls test/features/<name>/presentation/screens/goldens/) and cover the stable states (loading/loaded/empty minimum)
+[ ] Golden test uses a fake notifier with fixed build() + no-op load()/refresh() (real screen, deterministic)
+[ ] flutter test --tags golden passes GREEN
+[ ] No spec file was modified (freeze respected)
+
+FAIL CONDITIONS:
+- Feature has screens but no golden test → CRITICAL (visual regression coverage missing — this is what happened to clinical_history)
+- Fixtures not committed / goldens/ empty → BLOCK
+- Golden test fails → BLOCK
+- Spec file modified → CRITICAL (freeze violation)
+```
+
 ### Phase 9 — Integration Test → RED (analyze)
 
 ```
@@ -301,14 +318,14 @@ FAIL CONDITIONS:
 - BDD tests fail → BLOCK
 ```
 
-### Phase 10 — Barrels + Navigation
+### Phase 10 — Widgets + Navigation
 
 ```
 VERIFIED:
-[ ] presentation/widgets/_widgets.lib.dart exists
-[ ] presentation/widgets/_widgets.dart exists (facade)
+[ ] presentation/widgets/<widget>.dart files exist (standalone — NO _widgets.lib.dart barrel, NO Custom facade)
+[ ] Widget files have explicit imports (no part of)
 [ ] URI added to uries.dart
-[ ] AppRoute enum entry added to app_route.dart
+[ ] AppRoute enum entry added to shared/router/app_route.dart
 [ ] GoRoute added to app_router.dart
 [ ] Screen import added to _configs.lib.dart
 [ ] Navigation trigger (IconButton) added to parent screen if required
@@ -317,7 +334,7 @@ VERIFIED:
 [ ] Integration test ran GREEN after navigation was wired (or deferral explicitly documented)
 
 FAIL CONDITIONS:
-- _widgets.lib.dart or _widgets.dart missing → CRITICAL
+- Widget files missing from presentation/widgets/ (standalone .dart, no _widgets.lib.dart barrel, no Custom facade) → CRITICAL
 - URI missing from uries.dart → CRITICAL
 - Route missing from app_router.dart → CRITICAL
 - Screen import missing from _configs.lib.dart → CRITICAL
@@ -369,7 +386,7 @@ FAIL CONDITIONS:
 | No artificial RED | Any RED phase | CRITICAL |
 | No direct package imports | Any `.dart` in feature folder | CRITICAL |
 | Injectable via providers | Notifiers, providers | CRITICAL |
-| guard() | Repository implementations | CRITICAL |
+| guard() | Repository implementations AND usecase shared-port calls | CRITICAL |
 | AuthState.failure(AppError) | Notifier error handling | CRITICAL |
 | @freezed entity + const Foo._() | Entity files | CRITICAL |
 | @freezed sealed state (NO ._()) | State files | CRITICAL |

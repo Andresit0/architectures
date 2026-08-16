@@ -1,6 +1,6 @@
 ---
 name: app-agent-nav-wirer
-description: Wires navigation for a feature: adds GoRoute to app_router.dart, adds AppRoute entry to app_route.dart, adds screen import, and adds navigation trigger to parent screen. Use after spec-dev Phase 10.
+description: Wires navigation for a feature: adds GoRoute to app_router.dart, adds AppRoute entry to shared/router/app_route.dart, adds screen import, and adds navigation trigger to parent screen via IAppNavigator. Use after spec-dev Phase 10.
 ---
 
 # Nav-Wirer Agent
@@ -15,7 +15,7 @@ Before starting, load these resources in order:
 
 1. **AGENTS.md** — read `AGENTS.md` at the project root. It contains:
    - `goRouterProvider` — `main.dart` uses `ref.watch(goRouterProvider)` from `app/di/router/router_provider.dart`
-   - `ref.read(goRouterProvider).go(...)` pattern for navigation from features
+   - `IAppNavigator` seam — features navigate via `ref.read(appNavigatorProvider).go/push(AppRoute.x)` (imported through a one-line re-export in the feature's `di/`), NEVER `goRouterProvider` (Rules 6/11)
 
 2. **`MD/APP_PACKAGE_WRAPPER.md`** — specifically the "GoRouter (Riverpod)" category.
 
@@ -58,7 +58,7 @@ mem_save(
 mem_save(
   title: "Nav wired: <feature_name>",
   type: "bugfix",
-  content: "What: Wired navigation for <feature>. Why: Required for feature accessibility. Where: app_route.dart, app_router.dart, parent_screen.dart. Learned: <any gotchas>"
+  content: "What: Wired navigation for <feature>. Why: Required for feature accessibility. Where: shared/router/app_route.dart, app_router.dart, parent_screen.dart. Learned: <any gotchas>"
 )
 ```
 
@@ -74,7 +74,7 @@ Wire all navigation elements for `<feature_name>`. Check each step and fix if mi
 
 ```bash
 grep "<feature_name>" lib/app/router/app_router.dart
-grep "<feature_name>" lib/app/router/app_route.dart
+grep "<feature_name>" lib/shared/router/app_route.dart
 ```
 
 If any grep returns empty → the element is missing, add it.
@@ -85,7 +85,7 @@ If any grep returns empty → the element is missing, add it.
 
 ### 2.1 Add AppRoute entry (app_route.dart)
 
-Read `lib/app/router/app_route.dart` and add:
+Read `lib/shared/router/app_route.dart` and add:
 
 ```dart
 <featureName>(path: '/<path>', name: '<feature_name>'),
@@ -135,13 +135,19 @@ If no trigger exists, read the parent screen and add:
 IconButton(
   tooltip: '<Tooltip>',
   icon: const Icon(Icons.<icon>),
-  onPressed: () => ref.read(goRouterProvider).push(
-    '/<feature_name>',
+  onPressed: () => ref.read(appNavigatorProvider).push(
+    AppRoute.<feature_name>,
   ),
 ),
 ```
 
-**CRITICAL:** Features navigate via `ref.read(goRouterProvider).go/push(path)` — NEVER import `go_router` directly in feature files.
+To use `appNavigatorProvider` inside the feature, add this one-line re-export to the feature's `di/` file (e.g. `lib/features/<feature>/di/<feature>_provider.dart`):
+
+```dart
+export 'package:clean_architecture_sdd_harness/core/router/app_navigator_provider.dart';
+```
+
+**CRITICAL:** Features navigate via `ref.read(appNavigatorProvider).go/push(AppRoute.x)` — NEVER import `go_router` or `app/` directly in feature files (Rules 6/11).
 
 ---
 
@@ -167,7 +173,7 @@ flutter test integration_test/<feature_name>_integration_test.dart -d macos
 
 If integration tests fail:
 - Check for missing `pump()` calls after navigation
-- Check that the route path matches the AppRoute entry in `app_route.dart`
+- Check that the route path matches the AppRoute entry in `shared/router/app_route.dart`
 - Fix integration test assertions if the screen renders differently after wiring
 - Re-run until GREEN
 

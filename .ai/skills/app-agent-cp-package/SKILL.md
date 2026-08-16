@@ -186,7 +186,7 @@ class FlChartWrapper implements IFlChartWrapper {
 
 The wrapper file (`<package>_wrapper.dart`) is a standalone file. It has its own `import` statements for the package it wraps.
 
-Wrappers are accessed via Riverpod providers. Register the provider in `_providers.lib.dart` barrel if the service needs injection (category "Injectable service"). Consumer files access via:
+Wrappers are accessed via Riverpod providers. Register the provider in a dedicated `*_providers.dart` file in `core/` (e.g. `core/services/<domain>/<name>_provider.dart`) — there is no app-level barrel (Rule 20: DI separado de la implementación). Consumer files access via:
 ```dart
 ref.watch(<pkg>Provider)
 ```

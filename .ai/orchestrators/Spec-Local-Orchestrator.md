@@ -10,6 +10,7 @@ This orchestrator coordinates the complete workflow to implement features in Tem
 - spec-dev ran in "automatic mode" — code first, tests second (inverse of TDD)
 - Phase-Gate was skipped — direct package imports, missing tests, missing barrels
 - No memory persistence — next session started blind
+- Features lost their golden-test coverage when legacy screens were removed and no golden was created for the replacement screen (the `clinical_history` placeholder had goldens; the new screen shipped without them)
 
 **v3 fix:** Enforces stub → RED → GREEN per layer. Every phase gate is a blocking check before code. Engram is queried at start and written after every decision.
 
@@ -194,6 +195,7 @@ mem_session_summary({
 | **NO-SKIP RULE** | **No agent may skip D.0.1–D.0.5b by claiming "tests can be written after implementation." This is the pattern that caused clinical_history to fail. Violating this rule is a CRITICAL violation.** |
 | Phase D.7 | Did presentation tests run RED? |
 | **Before Phase D.8** | **Did D.7 confirm tests are RED? (D.7.5 no longer exists — wrappers are already done at D.0.6)** |
+| **Before Phase D.9** | **Did D.8.5 create the screen golden test with committed fixtures under test/features/<name>/presentation/screens/goldens/ and `flutter test --tags golden` GREEN? If NO → STOP.** |
 | During Phase D | Is app-agent-spec-dev-supervisor verifying after each layer? |
 | Phase D.2 | Did domain stubs run RED against pre-existing tests? |
 | Phase D.4 | Did infra stubs run RED against pre-existing tests? |
@@ -233,6 +235,7 @@ ls test/bdd/<name>_bdd_test.dart
 | "implement the X feature from its spec", "run Spec-Dev on X" | Phase C (skip A–B) |
 | "verify feature X" | *sdd-verify-adapted skill not available — verify manually* |
 | "update documentation" | Load `app-agent-update-md` skill |
+| "extract X out of Y", "move X into its own feature", "decommission X" | Phase R — Extraction / Decommission (below Phase G) |
 
 ---
 
@@ -262,7 +265,7 @@ Use `task(subagent_type="general")` with a prompt that includes:
 - Path to execute: `.ai/skills/app-agent-spec-definer/SKILL.md`
 - Feature name (snake_case confirmed by user)
 - All confirmed assumptions from Phase A (verbatim)
-- Instruction: "Read the SKILL.md, then discover project structure using bash/glob before writing any file. Return confirmation of all 6 files written."
+- Instruction: "Read the SKILL.md, then discover project structure using bash/glob before writing any file. IMPORTANT: in `tests.md`, plan a GOLDEN test for the feature's primary screen (if the feature has a `presentation/screens/` folder) covering its STABLE visible states — minimum loading, loaded, empty (failure is not goldenable when the body renders nothing/transient snackbar). Golden tests are created at D.8.5, not at All-Tests-First — plan them here so they are spec'd before the freeze. Return confirmation of all 6 files written."
 
 The agent will itself read: AGENTS.md, MD/APP_ARCHITECTURE.md, MD/APP_DARTZ.md, MD/APP_PROVIDERS.md, MD/APP_TREE.md, and the canonical reference at `lib/features/[feature_name]/spec/`.
 
@@ -433,6 +436,7 @@ D.5   → Infrastructure Implementation → GREEN
 D.6   → State + Notifier + Providers + codegen
 D.7   → Presentation Tests → RED
 D.8   → Presentation Implementation → GREEN
+D.8.5 → Golden Tests → GREEN (screen golden test + committed fixtures + `flutter test --tags golden`)
 D.9   → Integration Test → RED
 D.9.5 → BDD Step Definitions
 D.10  → Barrels + Navigation → GREEN
@@ -475,7 +479,7 @@ mem_search("feature <name> architecture decisions")
 **Purpose:** Extract and normalize all API contracts from the 6 spec files into a single source of truth. Every test writer reads this file — not the raw spec files — to derive method signatures, state variants, and entity fields.
 
 ```
-task(subagent_type="general", prompt="Run app-agent-api-extractor for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-api-extractor/SKILL.md and execute fully. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Read all 6 spec files (spec.md, domain.md, contracts.md, bdd.feature, tests.md, tasks.md) and write generated_api_contract.md with all 6 sections (Section 1: Entities, Section 2: Method Signatures, Section 3: State Variants, Section 4: Provider Names, Section 5: BDD Scenarios, Required Files). Return: STATUS, file path, and confirmation that all 6 sections are present.")
+task(subagent_type="general", prompt="Run app-agent-api-extractor for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-api-extractor/SKILL.md and execute fully. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Read all 6 spec files (spec.md, domain.md, contracts.md, bdd.feature, tests.md, tasks.md) and write generated_api_contract.md with all 6 sections (Section 1: Entities, Section 2: Method Signatures, Section 3: State Variants, Section 4: Provider Names, Section 5: BDD Scenarios, Required Files). If the feature has a `presentation/screens/` folder, the Required Files section MUST also list `test/features/<feature_name>/presentation/screens/<feature_name>_screen_golden_test.dart` and the `test/features/<feature_name>/presentation/screens/goldens/` directory (created at D.8.5 — golden tests are NOT part of the D.0.1–D.0.5b All-Tests-First gate). Return: STATUS, file path, and confirmation that all 6 sections are present.")
 ```
 
 **Orchestrator gate check (D.0.5):** After sub-agent returns, run:
@@ -640,7 +644,7 @@ Wait for completion before launching D.0.3.
 ### D.0.3 — Presentation Test Writer (MANDATORY before D.1)
 
 ```
-task(subagent_type="general", prompt="Run app-agent-presentation-test-writer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-presentation-test-writer/SKILL.md and follow it exactly. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md first — your primary source for state variants, provider names, AND the '## Wrapper API' section that lists every wrapper interface the feature uses. Also read domain.md and tests.md. CRITICAL: No notifier, state, or screen files exist yet — do NOT run tests (they will fail to compile). WRAPPER RULE: For ANY external package used by the feature, mock its wrapper INTERFACE (I<Xxx>Wrapper from ## Wrapper API) — NEVER the raw package class directly. This rule applies to ALL packages without exception (charts, PDF, camera, maps, audio, share, HTTP, etc.). Write test files to test/features/<feature_name>/presentation/ (notifier tests, screen tests, widget tests as defined in tests.md). Return: list of test files created with their full paths.")
+task(subagent_type="general", prompt="Run app-agent-presentation-test-writer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-presentation-test-writer/SKILL.md and follow it exactly. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md first — your primary source for state variants, provider names, AND the '## Wrapper API' section that lists every wrapper interface the feature uses. Also read domain.md and tests.md. CRITICAL: No notifier, state, or screen files exist yet — do NOT run tests (they will fail to compile). GOLDEN NOTE: golden tests are NOT written at this phase — they require the real screen and are created at D.8.5 (see Required Files). WRAPPER RULE: For ANY external package used by the feature, mock its wrapper INTERFACE (I<Xxx>Wrapper from ## Wrapper API) — NEVER the raw package class directly. This rule applies to ALL packages without exception (charts, PDF, camera, maps, audio, share, HTTP, etc.). Write test files to test/features/<feature_name>/presentation/ (notifier tests, screen tests, widget tests as defined in tests.md). Return: list of test files created with their full paths.")
 ```
 
 Wait for completion before launching D.0.4.
@@ -759,12 +763,35 @@ task(subagent_type="general", prompt="Verify spec-dev Phase D.7 for feature <fea
 ### D.8 — Presentation Implementation → GREEN
 
 ```
-task(subagent_type="general", prompt="Run spec-dev Phase D.8 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.8 only. Also read MD/APP_STATE_MANAGMENT.md, MD/APP_PROVIDERS.md, MD/APP_EXCEPTION.md, MD/APP_PACKAGE_WRAPPER.md. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md — specifically the '## Wrapper API' section which lists all wrappers created at D.0.6 and their method signatures. Also read lib/features/[feature_name]/presentation/ as reference. WRAPPER RULE: All pub packages must be used via ref.watch(<wrapper>Provider) or via the wrapper's own provider — NEVER import the raw package directly in feature files. For goRouter, use ref.read(goRouterProvider).go(...). Actions: (1) Implement notifier load(): state=Loading → call usecase → on Right: state=Loaded(data) → on Left: state = Failure(error) (pass AppError to state). (2) Implement screen as ConsumerStatefulWidget: ref.watch for state, ref.listen for failure → localizeError(error, AppLocalizations.of(context)!) to get message → show snackbar + ref.read(notifier.notifier).reset(). (3) Implement feature widgets using wrapper providers (e.g. ref.watch(flChartProvider) or a chart notifier). (4) Run 'dart run build_runner build --delete-conflicting-outputs'. (5) Run 'flutter test test/features/<feature_name>/presentation/' — MUST ALL PASS GREEN. CRITICAL RULES: localizeError() at UI layer, NEVER failure.message directly. ref.listen + snackbar + reset() are MANDATORY. Feature-specific logic (ChartDataBuilder, color mapping, etc.) stays in the widget/notifier — NEVER in a wrapper. Return: files written + test output showing GREEN.")
+task(subagent_type="general", prompt="Run spec-dev Phase D.8 for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md and execute Phase D.8 only. Also read MD/APP_STATE_MANAGMENT.md, MD/APP_PROVIDERS.md, MD/APP_EXCEPTION.md, MD/APP_PACKAGE_WRAPPER.md. Spec folder: lib/features/<feature_name>/spec/. Read generated_api_contract.md — specifically the '## Wrapper API' section which lists all wrappers created at D.0.6 and their method signatures. Also read lib/features/[feature_name]/presentation/ as reference. WRAPPER RULE: All pub packages must be used via ref.watch(<wrapper>Provider) or via the wrapper's own provider — NEVER import the raw package directly in feature files. For goRouter, features navigate via the IAppNavigator seam: `ref.read(appNavigatorProvider).go(...)` (re-export from their di/ — see MD/APP_PROVIDERS.md). Actions: (1) Implement notifier load(): state=Loading → call usecase → on Right: state=Loaded(data) → on Left: state = Failure(error) (pass AppError to state). (2) Implement screen as ConsumerStatefulWidget: ref.watch for state, ref.listen for failure → localizeError(error, AppLocalizations.of(context)!) to get message → show snackbar + ref.read(notifier.notifier).reset(). (3) Implement feature widgets using wrapper providers (e.g. ref.watch(flChartProvider) or a chart notifier). (4) Run 'dart run build_runner build --delete-conflicting-outputs'. (5) Run 'flutter test test/features/<feature_name>/presentation/' — MUST ALL PASS GREEN. CRITICAL RULES: localizeError() at UI layer, NEVER failure.message directly. ref.listen + snackbar + reset() are MANDATORY. Feature-specific logic (ChartDataBuilder, color mapping, etc.) stays in the widget/notifier — NEVER in a wrapper. Return: files written + test output showing GREEN.")
 ```
 
 **Supervisor check after D.8:**
 ```
 task(subagent_type="general", prompt="Verify spec-dev Phase D.8 for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) Notifier passes AppError to state via Failure(error) (not failure.message). (2) ref.listen for failure state present with localizeError(). (3) reset() called after failure. (4) No direct package imports in presentation files — all packages accessed via ref.watch(<wrapper>Provider) or their own provider. (5) Presentation tests GREEN. Return: PASS or VIOLATION with details.")
+```
+
+### D.8.5 — Golden Tests → GREEN (MANDATORY)
+
+> ⛔ **Why this phase exists:** features MUST ship with golden tests for their screens. The `clinical_history` extraction (2026) silently dropped the placeholder screen's golden tests and never created them for the new screen — do not repeat it. Every feature with a `presentation/screens/` folder gets a golden test with committed fixtures. Golden tests are snapshot tests of REAL rendered UI, so they are intentionally NOT part of the All-Tests-First gate (D.0.1–D.0.5b) — the screen must exist (D.8) before they can be written.
+
+```
+task(subagent_type="general", prompt="Run spec-dev Phase D.8.5 (Golden Tests) for feature <feature_name>. Read the reference golden test at test/features/auth/presentation/screens/login_screen_golden_test.dart and follow its EXACT pattern. Spec folder: lib/features/<feature_name>/spec/. If the feature has NO presentation/screens/ folder, SKIP this phase and report 'no screen — golden skipped'. Actions:
+(1) Create test/features/<feature_name>/presentation/screens/<feature_name>_screen_golden_test.dart with `@Tags(['golden']);` followed by `library;` at the top (exact form used by login_screen_golden_test.dart). Use golden_toolkit's testGoldens.
+(2) Build a fake notifier that FIXES the state: extend the feature's notifier class, override build() to return the target state, and override load()/refresh() as no-ops (so the screen's auto-load postFrameCallback, if any, cannot change the state). Override the screen's notifier provider with it (mirror _FakeAuthNotifier + authProvider.overrideWith in the reference).
+(3) Pump the real screen inside a ProviderScope(overrides) + MaterialApp(theme: ThemeData(fontFamily: 'Roboto'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: <Name>Screen()).
+(4) Cover ONLY the screen's STABLE visible states (no animations; failure is NOT goldenable when the body renders nothing/transient snackbar): loading state (use the Loading variant — NOT the Initial variant, to avoid the auto-load postFrame callback), loaded state (2+ realistic fixture entities via the shared domain entities), and empty state (loaded with empty list). Cover other stable states if the screen has them (e.g. expanded card).
+(5) Assert with matchesGoldenFile('goldens/<feature_name>_screen_<state>.png'). The fixtures live in test/features/<feature_name>/presentation/screens/goldens/ (relative path from the test file).
+(6) Do NOT call loadAppFonts — fonts are loaded globally by test/flutter_test_config.dart (deterministic across macOS local and Linux CI).
+(7) Generate the PNG fixtures: run 'flutter test --tags golden --update-goldens' from the repo root. CONFIRM the PNGs were created under test/features/<feature_name>/presentation/screens/goldens/ and are NOT gitignored.
+(8) Verify: run 'flutter test --tags golden' → MUST PASS GREEN (0 failures across ALL golden tests).
+(9) DO NOT modify any spec file (spec.md/domain.md/contracts.md/bdd.feature/tests.md/tasks.md/generated_api_contract.md are frozen) — golden files were already listed in Required Files at D.0.5.
+Return: golden test file path, PNG fixture paths created, 'flutter test --tags golden' output GREEN.")
+```
+
+**Supervisor check after D.8.5:**
+```
+task(subagent_type="general", prompt="Verify spec-dev Phase D.8.5 (Golden Tests) for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Check: (1) <feature_name>_screen_golden_test.dart exists in test/features/<feature_name>/presentation/screens/ with @Tags(['golden']). (2) goldens/ fixtures exist: ls test/features/<feature_name>/presentation/screens/goldens/. (3) 'flutter test --tags golden' passes GREEN. (4) No spec file was modified. Return: PASS or VIOLATION with details.")
 ```
 
 ### D.9 — Integration Test → RED
@@ -794,14 +821,14 @@ task(subagent_type="general", prompt="Verify spec-dev Phase D.9.5 for feature <f
 task(subagent_type="general", prompt="After BDD fixes in Phase D.9.5, run flutter analyze on integration test for feature <feature_name>. Execute: flutter analyze integration_test/<feature_name>_integration_test.dart. Return: PASS (0 issues) or FAIL with issue list. Ensures BDD fixes did not break integration test compile.")
 ```
 
-### D.10 — Barrels + Navigation → GREEN
+### D.10 — Widgets + Navigation → GREEN
 
-> ⛔ D.10 is TWO separate task() calls in sequence. Barrel files first, navigation second. Do NOT merge them into one task — they use different SKILL.md files and have different verification gates.
+> ⛔ D.10 is TWO separate task() calls in sequence. Widgets first, navigation second. Do NOT merge them into one task — they use different SKILL.md files and have different verification gates.
 
-**D.10a — Barrel files:**
+**D.10a — Widgets (standalone):**
 
 ```
-task(subagent_type="general", prompt="Run spec-dev Phase D.10 barrel step for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md (Phase D.10 section). Also read MD/APP_BARREL_PATTERN.md for barrel file conventions. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Actions: (1) Create presentation/widgets/_widgets.lib.dart (library declaration + part directives for all widget files). (2) Create presentation/widgets/_widgets.dart (CustomWidgets facade class). (3) Run 'dart run build_runner build --delete-conflicting-outputs'. (4) Run 'flutter analyze' — must return 0 issues. Return: list of barrel files created + analyze output showing 0 issues.")
+task(subagent_type="general", prompt="Run spec-dev Phase D.10 widgets step for feature <feature_name>. Read SKILL.md at .ai/skills/app-spec-dev/SKILL.md (Phase D.10 section). Also read MD/APP_BARREL_PATTERN.md (see 'presentation/widgets exception' — widgets are STANDALONE files, NO _widgets.lib.dart barrel and NO Custom[Name]Widgets facade). Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Actions: (1) Create presentation/widgets/<widget_name>.dart as standalone files with explicit imports (no part of, no facade). (2) Wire each widget into the screen with a direct import + constructor call. (3) Run 'dart run build_runner build --delete-conflicting-outputs'. (4) Run 'flutter analyze' — must return 0 issues. Return: list of widget files created + analyze output showing 0 issues.")
 ```
 
 Wait for D.10a to return PASS before launching D.10b.
@@ -809,19 +836,19 @@ Wait for D.10a to return PASS before launching D.10b.
 **D.10b — Navigation wiring:**
 
 ```
-task(subagent_type="general", prompt="Run app-agent-nav-wirer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-nav-wirer/SKILL.md and execute fully. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Also read tasks.md to identify the parent screen and navigation trigger. Actions: (1) Add AppRoute entry to lib/app/router/app_route.dart. (2) Add GoRoute + screen import to lib/app/router/app_router.dart. (3) Add navigation trigger to parent screen if required by tasks.md. (4) Run 'flutter analyze' — MUST return 0 issues GREEN. Return: list of files modified + analyze output showing 0 issues.")
+task(subagent_type="general", prompt="Run app-agent-nav-wirer for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-nav-wirer/SKILL.md and execute fully. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Also read tasks.md to identify the parent screen and navigation trigger. Actions: (1) Add AppRoute entry to lib/shared/router/app_route.dart. (2) Add GoRoute + screen import to lib/app/router/app_router.dart. (3) Add navigation trigger to parent screen if required by tasks.md (via appNavigatorProvider). (4) Run 'flutter analyze' — MUST return 0 issues GREEN. Return: list of files modified + analyze output showing 0 issues.")
 
 ```
-**Supervisor check after D.10a (barrels):**
+**Supervisor check after D.10a (widgets):**
 ```
-task(subagent_type="general", prompt="Verify spec-dev Phase D.10a (barrel files) for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) _widgets.lib.dart exists in presentation/widgets/. (2) _widgets.dart exists in presentation/widgets/. (3) flutter analyze returns 0 issues. Return: PASS or VIOLATION with details.")
+task(subagent_type="general", prompt="Verify spec-dev Phase D.10a (standalone widgets) for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) presentation/widgets/ contains standalone <widget>.dart files with explicit imports. (2) NO _widgets.lib.dart barrel and NO Custom[Name]Widgets facade exist. (3) flutter analyze returns 0 issues. Return: PASS or VIOLATION with details.")
 ```
 
 If VIOLATION → re-run D.10a task. Do NOT proceed to D.10b until supervisor returns PASS.
 
 **Supervisor check after D.10b (navigation):**
 ```
-task(subagent_type="general", prompt="Verify spec-dev Phase D.10b (navigation wiring) for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) URI added to uries.dart. (2) AppRoute enum entry added to app_route.dart. (3) GoRoute added to app_router.dart. (4) Screen import added to _configs.lib.dart. (5) flutter analyze returns 0 issues. Return: PASS or VIOLATION with details.")
+task(subagent_type="general", prompt="Verify spec-dev Phase D.10b (navigation wiring) for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) URI added to uries.dart. (2) AppRoute enum entry added to shared/router/app_route.dart. (3) GoRoute added to app_router.dart. (4) Screen import added to _configs.lib.dart. (5) flutter analyze returns 0 issues. Return: PASS or VIOLATION with details.")
 ```
 
 If VIOLATION → re-run D.10b task. Do NOT proceed to D.10.5 until supervisor returns PASS.
@@ -914,14 +941,15 @@ task(subagent_type="general", prompt="Run spec-dev Phase D.11 Final Verification
 (3) Run 'flutter test test/bdd/<feature_name>_bdd_test.dart' → must return 0 failures.
 (4) Integration test: if D.10.6 was already executed (check for Engram entry 'Integration test executed: <feature_name> — PASS'), skip execution and report the D.10.6 result. Otherwise run: 'flutter test integration_test/<feature_name>_integration_test.dart -d macos'. If device unavailable → FAIL → do NOT proceed. **Integration test execution is MANDATORY — no deferral allowed.** If D.10.6 failed or was skipped, this step must fail.
 (5) Cross-feature import check: run grep -rn \"import 'package:clean_architecture_sdd_harness/features/\" lib/features/<feature_name>/ | grep -v 'package:clean_architecture_sdd_harness/features/<feature_name>/'. If any match found → CRITICAL VIOLATION — report and stop.
-(6) Required Files check: read ## Required Files section from lib/features/<feature_name>/spec/generated_api_contract.md and verify each listed file exists via ls. Report any missing file as BLOCKED.
+(6) Required Files check: read ## Required Files section from lib/features/<feature_name>/spec/generated_api_contract.md and verify each listed file exists via ls. Report any missing file as BLOCKED. This includes the golden test + goldens/ dir listed at D.0.5.
+(7) Golden tests: if the feature has a presentation/screens/ folder, verify test/features/<feature_name>/presentation/screens/goldens/ has committed fixtures and run 'flutter test --tags golden' → must be GREEN (0 failures). If missing → FAIL (do NOT defer).
 
-Return: structured report with (a) analyze result, (b) unit+widget test result, (c) BDD test result, (d) integration test result or deferral reason, (e) cross-feature import result, (f) required files check result. Overall verdict: PASS, FAIL, or BLOCKED.")
+Return: structured report with (a) analyze result, (b) unit+widget test result, (c) BDD test result, (d) integration test result or deferral reason, (e) cross-feature import result, (f) required files check result, (g) golden test result. Overall verdict: PASS, FAIL, or BLOCKED.")
 ```
 
 **Supervisor check after D.11:**
 ```
-task(subagent_type="general", prompt="Verify spec-dev Phase D.11 for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) flutter analyze = 0 issues. (2) unit + widget tests GREEN. (3) BDD tests GREEN. (4) Integration test executed on device with ALL tests GREEN (D.10.6 PASS) — deferral is NOT accepted. (5) No cross-feature imports. (6) All Required Files from generated_api_contract.md exist. Return: PASS or VIOLATION with details.")
+task(subagent_type="general", prompt="Verify spec-dev Phase D.11 for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-spec-dev-supervisor/SKILL.md. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Check: (1) flutter analyze = 0 issues. (2) unit + widget tests GREEN. (3) BDD tests GREEN. (4) Integration test executed on device with ALL tests GREEN (D.10.6 PASS) — deferral is NOT accepted. (5) No cross-feature imports. (6) All Required Files from generated_api_contract.md exist. (7) If the feature has screens, golden tests GREEN (fixtures committed, `flutter test --tags golden`). Return: PASS or VIOLATION with details.")
 ```
 
 If VIOLATION → launch repair agent (`fix-analyzer-issues` or `fix-tests`) → re-run D.11 verification task → repeat until PASS.
@@ -949,7 +977,7 @@ mem_save(
 ## Phase F — Documentation Sync
 
 ```
-task(subagent_type="general", prompt="Run app-agent-update-md for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-update-md/SKILL.md. IMPORTANT: The skill requires loading .ai/skills/app-changes/SKILL.md as its Phase 1 — follow that instruction exactly before gathering changes. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Changes made this session: <summary of what was implemented>. Update MD/* and AGENTS.md as needed. Return: list of files updated.")
+task(subagent_type="general", prompt="Run app-agent-update-md for feature <feature_name>. Read SKILL.md at .ai/skills/app-agent-update-md/SKILL.md. IMPORTANT: The skill requires loading .ai/skills/app-changes/SKILL.md as its Phase 1 — follow that instruction exactly before gathering changes. Feature name: <feature_name>. Spec folder: lib/features/<feature_name>/spec/. Changes made this session: <summary of what was implemented>. Update MD/* and AGENTS.md as needed. ADDITIONALLY: (1) ensure MD/APP_TREE.md lists the feature's golden test (test/features/<feature_name>/presentation/screens/<feature_name>_screen_golden_test.dart) and its goldens/ fixtures dir. (2) If the feature has a primary screen with a committed loaded golden fixture, generate screenshots/<feature_name>.png from that fixture (copy test/features/<feature_name>/presentation/screens/goldens/<feature_name>_screen_loaded.png → screenshots/<feature_name>.png), add/update its entry in the README Screenshots table, and generalize the README golden-fixture note to list this feature's goldens path alongside the existing auth path. (3) If this session included refactors that renamed implementation classes or moved providers (e.g. repository splits like AuthRepositoryImpl → AuthRemoteRepositoryImpl/AuthLocalRepositoryImpl, or provider moves to *_providers.dart), sync the feature's spec files (spec/domain.md, spec/tests.md, spec/tasks.md, spec/contracts.md, spec/generated_api_contract.md) so class names and provider locations match the code — specs are living docs, not frozen history. Return: list of files updated.")
 ```
 
 ---
@@ -986,15 +1014,58 @@ mem_session_summary({
 
 ---
 
+## Phase R — Extraction / Decommission (features that exist inside another feature)
+
+> **Trigger:** the user asks to EXTRACT existing code out of one feature into its own feature (`clinical_history` is the canonical example), or to decommission legacy code that a new feature replaces. The standard A→D flow assumes greenfield; Phase R formalizes the two extra steps that greenfield does not have: (1) a pre-flight refactor that moves shared contracts into shared/core, and (2) a post-build decommission that removes the legacy code.
+
+> **Rule:** Phase R NEVER duplicates shared code. Entities that live in `shared/models/` or wire DTOs that live in `core/` are REUSED — the extracted feature must not create new entity/DTO files for them.
+
+### R.0 — Pre-flight: shared transport contract (GREEN mandatory)
+
+Run BEFORE Phase A. Goal: give both the old and the new feature a shared contract so neither imports the other (D.11 rule).
+
+1. If the legacy feature parses wire DTOs that the new feature also needs (e.g. a login envelope that embeds the domain payload), **MOVE those DTOs** to a shared transport-contract module: `core/network/contracts/` (barrel `_contracts.lib.dart`). Add any response wrapper DTO (e.g. `*_list_response_dto.dart`).
+2. If the old feature owns a DTO→Entity mapper the new feature also needs, **move it once** to the contracts module (e.g. `core/network/contracts/*_mapper.dart`). The old feature then delegates to it — it must no longer own the mapping logic.
+3. Repoint consumers (`LoginResponseDto`, `AuthMapper`, `_dtos.lib.dart`, `_network.lib.dart`) and move the corresponding tests (e.g. `test/core/network/contracts/`).
+4. Improve shared helpers if the extraction needs them (e.g. add optional `onRemoteSuccess` write-through to `fetchOrFallback`).
+5. **GATE:** `flutter analyze` = 0 AND full `flutter test` = 0 → commit this refactor ALONE (it must be behavior-neutral GREEN).
+
+### R.1 — Build the extracted feature
+
+Proceed with the normal Phase A → B → C → D flow for the new feature, with these adaptations:
+- **D.1 (entities):** SKIP creating entity files. Entities are REUSED from `shared/models/` (document in `domain.md` / `generated_api_contract.md` Section 1 with `reused: true`). Do NOT run build_runner for entities.
+- **D.0.6:** the feature typically reuses existing wrappers (`IDioWrapper`, shared stores). Document them as GROUP 2 in `## Wrapper API`.
+- **D.10b (nav):** rewire the existing route to the new screen; pass cross-feature callbacks (e.g. `onLogout`) via the composition root (`app_router.dart`/`router_provider.dart`) so the feature NEVER imports another feature.
+- All other gates (D.0.1–D.0.5b HARD STOP, RED→GREEN per layer, D.10.5 audit, D.10.6 device execution, D.11) apply unchanged.
+
+### R.2 — Decommission (explicit removal phase, NOT ad-hoc)
+
+After the new feature is GREEN and wired, remove the legacy code in ONE cohesive unit:
+
+1. **Delete legacy UI/assets:** old screen file + its golden test + goldens + screenshots + any README image reference. **GOLDEN GUARD: before deleting a legacy screen's golden test, verify the replacement screen already has its own golden test (D.8.5) with committed fixtures — goldens must NEVER be removed without a replacement, or the new screen silently loses visual regression coverage.**
+2. **Strip the old feature's state/model ownership:** remove fields no longer needed from its state (e.g. `AuthState.loaded` dropping `clinicalHistory`), the notifier wiring, and any read-path the old feature no longer needs (e.g. `restoreSession` no longer reading the clinical store). Keep only what the old feature still owns (e.g. login-envelope parsing + cache hydration write).
+3. **Restore UX regressions introduced by the removal:** if the deleted screen was the ONLY listener for a cross-feature error (e.g. `AuthFailure`), move that concern to the app shell (composition root) — e.g. a global `ref.listen` + `ScaffoldMessengerKey` in `main.dart` — so error surfacing stays decoupled from feature screens.
+4. **Fix consumer tests:** update the old feature's integration/BDD/widget tests (remove assertions on removed UI; override the new feature's repository provider with fakes so the new screen is deterministic in old-feature tests).
+5. **Document the dual contract:** note in the old feature's `contracts.md` which data remains in its payload only for bootstrap/hydration vs. the new feature's dedicated endpoint as the source of truth.
+6. **GATE:** `flutter analyze` = 0, full unit/widget `flutter test` = 0, AND re-run BOTH integration suites on device (the old feature's and the new feature's) — no deferral.
+
+### R.3 — Commit discipline
+
+- R.0 is its OWN green commit (behavior-neutral refactor).
+- The extracted feature build is committed atomically (feature + tests), then nav wiring + consumer-test adaptation, then the decommission as a separate commit.
+- Follow Conventional Commits and `super-commit` atomic style: `feat(core)`, `feat(<feature>)`, `refactor(<old_feature>): decommission ... and <shell fix>`.
+
+---
+
 ## Critical Rules — Never Violate
 
 | Rule | Correct | Wrong |
 |------|---------|-------|
 | Package import | `ref.watch(<name>Provider)` or wrapper's provider | direct `package:fl_chart/...` |
 | Injectable services | `ref.watch(httpServiceProvider)` | direct `CustomFunction` / static locator |
-| Repository error | `guard()` from `shared/error/result_guard.dart` | raw try/catch |
+| Repository error | `guard()` from `shared/error/result_guard.dart` (repository wraps datasources; usecase wraps shared ports) | raw try/catch |
 | Notifier error | `state = State.failure(error)` passes `AppError`; UI uses `localizeError()` | `failure.message` directly |
-| GoRouter | `ref.read(goRouterProvider).go(...)` | direct `package:go_router/...` |
+| GoRouter | `ref.read(appNavigatorProvider).go(AppRoute.x)` | direct `package:go_router/...` |
 | Freezed entity | `@freezed abstract class` + `const Foo._()` | missing `._()` |
 | Freezed state | `@freezed sealed class` (NO `._()`) | sealed state with `._()` |
 | Entity barrel | import entities directly (no barrel for @freezed) | `library`+`part` barrel |
@@ -1016,13 +1087,14 @@ mem_session_summary({
 | 6 | Presentation stubs ran RED | app-agent-spec-dev-supervisor |
 | 7 | Integration test written and analyze-only RED before nav wiring (D.9) | app-agent-spec-dev-supervisor |
 | 8 | BDD tests pass (gherkart) | flutter test |
-| 9 | D.10.5 DirectImport-Auditor returns 0 direct package imports | Orchestrator grep |
-| 10 | <package>_wrapper.dart for every pub package used | Wrapper-Auditor D.10.5 |
-| 11 | D.10.6 Integration test EXECUTED on device — ALL GREEN (no deferral) | bash `flutter test ... -d <device>` |
-| 12 | flutter analyze = 0 issues | flutter analyze |
-| 13 | flutter test = 0 failures | flutter test |
-| 14 | MD/* updated | app-agent-update-md |
-| 15 | Engram session summary saved | mem_session_summary |
+| 9 | Golden tests GREEN (screen golden test + committed fixtures + `flutter test --tags golden`) — if feature has screens | Supervisor D.8.5 |
+| 10 | D.10.5 DirectImport-Auditor returns 0 direct package imports | Orchestrator grep |
+| 11 | <package>_wrapper.dart for every pub package used | Wrapper-Auditor D.10.5 |
+| 12 | D.10.6 Integration test EXECUTED on device — ALL GREEN (no deferral) | bash `flutter test ... -d <device>` |
+| 13 | flutter analyze = 0 issues | flutter analyze |
+| 14 | flutter test = 0 failures | flutter test |
+| 15 | MD/* updated + feature screen documented in README Screenshots + golden fixtures listed in MD | app-agent-update-md |
+| 16 | Engram session summary saved | mem_session_summary |
 
 **If ANY criterion is not verified → the feature is NOT complete.**
 
@@ -1074,9 +1146,9 @@ grep -rn "import 'package:" lib/features/<name>/ \
   | grep -v "package:go_router" \
   | grep -v "package:clean_architecture_sdd_harness/"
 
-# 2. Barrel files exist
-ls lib/features/<name>/presentation/widgets/_widgets.lib.dart
-ls lib/features/<name>/presentation/widgets/_widgets.dart
+# 2. Widget files exist (standalone)
+ls lib/features/<name>/presentation/widgets/
+# must NOT contain _widgets.lib.dart / _widgets.dart (no barrel, no facade)
 
 # 3. All test tiers present
 ls test/features/<name>/
@@ -1088,7 +1160,7 @@ grep -rn "throw UnimplementedError" lib/features/<name>/
 
 # 5. Navigation wired
 grep "<name>" lib/app/router/app_router.dart
-grep "<name>" lib/app/router/app_route.dart
+grep "<name>" lib/shared/router/app_route.dart
 
 # 6. Analyze clean
 # Run commands
@@ -1098,6 +1170,10 @@ flutter analyze
 # Run commands
 flutter test test/features/<name>/
 flutter test test/bdd/<name>_bdd_test.dart
+
+# 8. Golden tests GREEN (if feature has screens)
+ls test/features/<name>/presentation/screens/goldens/
+flutter test --tags golden
 ```
 
 **If any check fails → the feature is NOT complete.**

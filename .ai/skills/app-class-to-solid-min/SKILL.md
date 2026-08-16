@@ -1,6 +1,6 @@
 ---
 name: app-class-to-solid-min
-description: Applies DI + Riverpod + Interface pattern to a Dart service class inside lib/core/services/. Produces abstract interface → concrete implementation → barrel entry → Riverpod Provider → _providers.lib.dart export. Enforces SOLID fully. Use whenever the user passes a service class and asks to apply SOLID, DI, Riverpod, interface, refactor, "apply interface", "transform this service", or any similar request targeting a class in core/services/.
+description: Applies DI + Riverpod + Interface pattern to a Dart service class inside lib/core/services/. Produces abstract interface → concrete implementation → barrel entry → Riverpod Provider (en `*_providers.dart` en `core/`). Enforces SOLID fully. Use whenever the user passes a service class and asks to apply SOLID, DI, Riverpod, interface, refactor, "apply interface", "transform this service", or any similar request targeting a class in core/services/.
 ---
 
 # class_to_solid_min
@@ -12,8 +12,7 @@ Transform one **service class** from `lib/core/services/` into the DI + Riverpod
 ```
 abstract interface class I<Name>Service          ← contract
 class <Name>Service implements I<Name>  ← concrete implementation
-<name>ServiceProvider = Provider<I<Name>>  ← Riverpod provider
-<name>Provider ← export in _providers.lib.dart
+<name>ServiceProvider = Provider<I<Name>Service>  ← Riverpod provider (en `core/services/<domain>/<name>_provider.dart`, Rule 20)
 ```
 
 ---
@@ -32,7 +31,7 @@ Read these files before touching anything:
 ```
 lib/core/services/<domain>/<name>_service.dart
 lib/core/services/_services.lib.dart
-lib/app/di/_providers.lib.dart   ← check if a provider already exists
+lib/core/services/<domain>/<name>_provider.dart   ← check if a provider already exists
 ```
 
 ---
@@ -40,6 +39,8 @@ lib/app/di/_providers.lib.dart   ← check if a provider already exists
 ## Step 1 — Modify `<name>_service.dart`
 
 Rename the existing file to `i_<name>_service.dart` for the interface and create or keep `<name>_service.dart` for the implementation. The interface and impl may also live in the same file (convention: `<domain>/<name>_wrapper.dart`).
+
+> **Separación DI/implementación (Rule 20):** los Riverpod providers van en un archivo `*_providers.dart` dedicado (p. ej. `core/services/auth/token_providers.dart`), nunca embebidos en la clase de servicio/impl.
 
 **Pattern**:
 
@@ -68,28 +69,56 @@ Rules:
 - No comments of any kind (`//`, `/* */`, `///`).
 - Files are standalone libraries in `lib/core/services/<domain>/` — they are NOT `part of` any barrel.
 
-**Real example — `auth/secure_credential_store.dart`:**
+**Real example — `ICredentialStore` / `SecureCredentialStore`:**
+
+Cross-cutting contracts live in `lib/shared/interfaces/` (pure Dart) and are exported by `_interfaces.lib.dart` (Rule 26). The impl stays in `core/services/`:
+
+```dart
+// lib/shared/interfaces/i_credential_store.dart  (exported by _interfaces.lib.dart)
+abstract interface class ICredentialStore {
+  Future<void> saveCredentials({
+    required String email,
+    required String passwordHash,
+  });
+  Future<({String email, String passwordHash})?> readCredentials();
+  Future<void> deleteCredentials();
+}
+```
 
 ```dart
 // lib/core/services/auth/secure_credential_store.dart
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-abstract interface class ICredentialStore {
-  Future<void> save(String token);
-  Future<String?> read();
-  Future<void> delete();
-}
+import 'package:clean_architecture_sdd_harness/core/services/storage/secure_storage_wrapper.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 
 class SecureCredentialStore implements ICredentialStore {
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
-  static const String _key = 'myapp_auth_token';
+  const SecureCredentialStore({required ISecureStorageWrapper storage}) : _storage = storage;
+
+  final ISecureStorageWrapper _storage;
+  static const String _emailKey = 'tudesarrollador_login_email';
+  static const String _passwordHashKey = 'tudesarrollador_login_pwhash';
 
   @override
-  Future<void> save(String token) => _storage.write(key: _key, value: token);
+  Future<void> saveCredentials({
+    required String email,
+    required String passwordHash,
+  }) async {
+    await _storage.write(key: _emailKey, value: email);
+    await _storage.write(key: _passwordHashKey, value: passwordHash);
+  }
+
   @override
-  Future<String?> read() => _storage.read(key: _key);
+  Future<({String email, String passwordHash})?> readCredentials() async {
+    final email = await _storage.read(key: _emailKey);
+    final pwhash = await _storage.read(key: _passwordHashKey);
+    if (email == null || pwhash == null) return null;
+    return (email: email, passwordHash: pwhash);
+  }
+
   @override
-  Future<void> delete() => _storage.delete(key: _key);
+  Future<void> deleteCredentials() async {
+    await _storage.delete(key: _emailKey);
+    await _storage.delete(key: _passwordHashKey);
+  }
 }
 ```
 
@@ -97,12 +126,12 @@ class SecureCredentialStore implements ICredentialStore {
 
 ## Step 2 — Create Riverpod provider
 
-Create a provider file in `lib/app/di/services/` (or the appropriate subdirectory):
+Create a provider file in `lib/core/services/<domain>/` (or the appropriate subdirectory):
 
 **For injectable services** (must be mockable in tests):
 
 ```dart
-// lib/app/di/services/<name>_provider.dart
+// lib/core/services/<domain>/<name>_provider.dart
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:clean_architecture_sdd_harness/core/services/<domain>/i_<name>_service.dart';
 import 'package:clean_architecture_sdd_harness/core/services/<domain>/<name>_service.dart';
@@ -119,18 +148,12 @@ After creating the file, run:
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-Register the provider in `lib/app/di/_providers.lib.dart` (add `export '<name>_provider.dart';`).
-
-Export the provider through `lib/app/di/_providers.lib.dart`:
-
-```dart
-export 'services/<name>_provider.dart';
-```
+Register the provider in its `core/` source file (e.g. `lib/core/services/<domain>/<name>_provider.dart`). `app/` y los tests importan el provider directamente desde `core/` (no hay barrel en `app/di/`). Feature DI imports core provider files DIRECTLY — never `app/` (one-way dependency, Rule 11).
 
 For pure utilities, create a simple provider without a dedicated facade:
 
 ```dart
-// lib/app/di/services/<name>_provider.dart
+// lib/core/services/<domain>/<name>_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:clean_architecture_sdd_harness/core/services/<domain>/i_<name>_service.dart';
 import 'package:clean_architecture_sdd_harness/core/services/<domain>/<name>_service.dart';
@@ -140,16 +163,22 @@ final <name>ServiceProvider = Provider<I<Name>Service>((ref) => <Name>Service())
 
 ---
 
-## Step 3 — Update barrel file
+## Step 3 — Update barrel files
 
-Add the interface file and implementation file to `lib/core/services/_services.lib.dart`:
+Add ONLY the implementation file to `lib/core/services/_services.lib.dart`:
 
 ```dart
-export '<domain>/i_<name>_service.dart';
 export '<domain>/<name>_service.dart';
 ```
 
-(If both are in the same file, only one `export` line is needed.)
+(If the interface and impl are in the same file, only one `export` line is needed.)
+
+> **Rule 26 — never re-export shared interfaces:** `_services.lib.dart` must NOT `export` files from `shared/interfaces/` (e.g. `i_credential_store.dart`, `i_token_verifier.dart`). Each folder's barrel owns its symbols. `shared/interfaces/` is imported exclusively through `_interfaces.lib.dart`.
+
+**Where does the interface go?**
+- **Cross-cutting contract** (consumed by 2+ bounded contexts or by `core/`): `lib/shared/interfaces/i_<name>_service.dart`, exported by `_interfaces.lib.dart`.
+- **Feature-local contract**: stays inside the feature's `domain/`, never in any barrel.
+- The impl always lives in `lib/core/services/<domain>/` (or the feature's `infrastructure/` for feature contracts).
 
 ---
 
@@ -176,10 +205,10 @@ await service.someMethod();
 await ref.read(<name>ServiceProvider).someMethod();
 ```
 
-Add the app/di barrel import if not present:
+Add the provider import from its `core/` source file if not present:
 
 ```dart
-import 'package:clean_architecture_sdd_harness/app/di/_providers.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/services/<domain>/<name>_provider.dart';
 ```
 
 ### 4b — Infrastructure classes (datasources, repositories — no `ref`)
@@ -245,7 +274,7 @@ After `flutter analyze` returns clean, output this table:
 
 | Principle | ✓/✗ | Justification |
 |---|---|---|
-| **S** Single Responsibility | ✅ | `I<Name>Service` defines the contract; `<Name>Service` implements it; `_providers.lib.dart` exports it. |
+| **S** Single Responsibility | ✅ | `I<Name>Service` defines the contract; `<Name>Service` implements it; el provider vive en `core/services/<domain>/<name>_provider.dart` (Rule 20: DI separado de la implementación). |
 | **O** Open/Closed | ✅ | You can create `Mock<Name>Service implements I<Name>Service` without touching existing code. |
 | **L** Liskov Substitution | ✅ | Any implementation of `I<Name>Service` is interchangeable where the provider is used. |
 | **I** Interface Segregation | ✅ | The interface declares only the methods its consumers actually need. |
@@ -260,9 +289,9 @@ Fill each row with actual evidence from the generated code, not generic text.
 - **No comments** in any generated or modified file (`//`, `/* */`, `///` all forbidden).
 - **No `.bak` files** — never create backup copies.
 - **No new packages** — the pattern uses only `flutter_riverpod`, which is already a dependency.
-- `_services.lib.dart` in `lib/core/services/` may need to be updated with new exports.
-- The provider file goes in `lib/app/di/services/` for services or the appropriate subdirectory.
-- Injectable services must be exported through `lib/app/di/_providers.lib.dart`.
+- `_services.lib.dart` in `lib/core/services/` may need to be updated with new exports — impls only, NEVER shared interfaces (Rule 26).
+- The provider file goes in `lib/core/services/<domain>/` for services or the appropriate subdirectory.
+- Injectable services must expose a Riverpod provider from their `core/` source file (feature DI imports it directly).
 
 ---
 
@@ -274,6 +303,6 @@ Fill each row with actual evidence from the generated code, not generic text.
 mem_save(
   title: "SOLID-min applied: <ClassName>",
   type: "decision",
-  content: "**What**: Applied DI + Riverpod + Interface to <ClassName> in core/services. **Why**: <motivation>. **Where**: lib/core/services/<domain>/<name>_service.dart, lib/app/di/services/<name>_provider.dart. **Learned**: <any consumer update gotchas or analyze errors fixed>"
+  content: "**What**: Applied DI + Riverpod + Interface to <ClassName> in core/services. **Why**: <motivation>. **Where**: lib/core/services/<domain>/<name>_service.dart, lib/core/services/<domain>/<name>_provider.dart. **Learned**: <any consumer update gotchas or analyze errors fixed>"
 )
 ```
