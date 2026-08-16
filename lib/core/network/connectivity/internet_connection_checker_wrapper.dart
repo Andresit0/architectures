@@ -10,4 +10,9 @@ class InternetConnectionCheckerWrapper
     final result = await InternetConnection().internetStatus;
     return result == InternetStatus.connected;
   }
+
+  @override
+  Stream<bool> get onStatusChange => InternetConnection().onStatusChange.map(
+    (status) => status == InternetStatus.connected,
+  );
 }

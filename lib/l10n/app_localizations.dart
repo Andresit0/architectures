@@ -98,10 +98,10 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
-  /// App title for window/task switcher. Currently unused -- reserved for future splash screen, about dialog, or AppBar.
+  /// App title shown in the login screen and OS task switcher.
   ///
   /// In en, this message translates to:
-  /// **'Clean Architecture App'**
+  /// **'Clinical History'**
   String get appTitle;
 
   /// No description provided for @loginButton.
@@ -152,17 +152,89 @@ abstract class AppLocalizations {
   /// **'Clinical History'**
   String get clinicalHistory;
 
-  /// No description provided for @welcomeUser.
+  /// No description provided for @clinicalHistoryEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Welcome, {name}'**
-  String welcomeUser(String name);
+  /// **'No clinical history records yet.'**
+  String get clinicalHistoryEmpty;
+
+  /// No description provided for @clinicalHistoryRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get clinicalHistoryRetry;
+
+  /// Number of clinical history records shown in the list header.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No records} =1{1 record} other{{count} records}}'**
+  String clinicalHistoryCount(int count);
+
+  /// No description provided for @clinicalHistoryDetailsProfessional.
+  ///
+  /// In en, this message translates to:
+  /// **'Professional'**
+  String get clinicalHistoryDetailsProfessional;
+
+  /// No description provided for @clinicalHistoryDetailsExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Show encounter details'**
+  String get clinicalHistoryDetailsExpand;
+
+  /// No description provided for @clinicalHistoryDetailsCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide encounter details'**
+  String get clinicalHistoryDetailsCollapse;
+
+  /// No description provided for @clinicalHistoryDetailsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get clinicalHistoryDetailsSummary;
+
+  /// No description provided for @clinicalHistoryDetailsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get clinicalHistoryDetailsDescription;
+
+  /// No description provided for @clinicalHistoryDetailsDiagnosis.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnosis'**
+  String get clinicalHistoryDetailsDiagnosis;
+
+  /// No description provided for @clinicalHistoryDetailsObservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Observations'**
+  String get clinicalHistoryDetailsObservations;
+
+  /// No description provided for @clinicalHistoryDetailsAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get clinicalHistoryDetailsAttachments;
 
   /// No description provided for @logout.
   ///
   /// In en, this message translates to:
   /// **'Logout'**
   String get logout;
+
+  /// No description provided for @routeNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found'**
+  String get routeNotFound;
+
+  /// No description provided for @routeNotFoundGoHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to start'**
+  String get routeNotFoundGoHome;
 
   /// No description provided for @errorUnknown.
   ///
@@ -176,11 +248,23 @@ abstract class AppLocalizations {
   /// **'No internet connection'**
   String get errorNetwork;
 
+  /// No description provided for @errorTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The server took too long to respond'**
+  String get errorTimeout;
+
   /// No description provided for @errorServer.
   ///
   /// In en, this message translates to:
   /// **'Server is under maintenance'**
   String get errorServer;
+
+  /// No description provided for @errorDeviceSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'This device is not supported for security reasons'**
+  String get errorDeviceSecurity;
 
   /// No description provided for @errorInvalidCredentials.
   ///
@@ -211,6 +295,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Password is required'**
   String get errorEmptyPassword;
+
+  /// No description provided for @offlineBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection — showing saved data'**
+  String get offlineBanner;
+
+  /// No description provided for @deviceSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported device'**
+  String get deviceSecurityTitle;
+
+  /// No description provided for @deviceSecurityMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your device has been modified. For security reasons, this app cannot be used on jailbroken or rooted devices.'**
+  String get deviceSecurityMessage;
 }
 
 class _AppLocalizationsDelegate

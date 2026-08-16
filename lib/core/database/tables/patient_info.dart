@@ -1,14 +1,7 @@
-import 'package:clean_architecture_sdd_harness/core/database/app_database_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/database/serializers/patient_serializer.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sembast/sembast.dart';
-
-abstract class IPatientInfoStore {
-  Future<void> save(PatientEntity patient);
-  Future<PatientEntity?> load();
-  Future<void> delete();
-}
 
 class PatientInfo implements IPatientInfoStore {
   PatientInfo({required Future<Database> database}) : _db = database;
@@ -20,8 +13,10 @@ class PatientInfo implements IPatientInfoStore {
   @override
   Future<void> save(PatientEntity patient) async {
     final db = await _db;
-    await _store.delete(db);
-    await _store.add(db, PatientSerializer.toMap(patient));
+    await db.transaction((txn) async {
+      await _store.delete(txn);
+      await _store.add(txn, PatientSerializer.toMap(patient));
+    });
   }
 
   @override
@@ -40,8 +35,3 @@ class PatientInfo implements IPatientInfoStore {
     await _store.delete(db);
   }
 }
-
-final patientInfoStoreProvider = Provider<IPatientInfoStore>((ref) {
-  final appDb = ref.watch(appDatabaseProvider);
-  return PatientInfo(database: appDb.database.then((isDb) => isDb.db));
-});

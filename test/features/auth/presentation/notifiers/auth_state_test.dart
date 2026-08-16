@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('AuthFailure', () {
     test('carries an AppError', () {
-      const error = NetworkError('');
+      const error = NetworkError();
       const state = AuthFailure(error);
       expect(state.error, error);
       expect(state.error, isA<NetworkError>());

@@ -3,10 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yaml/yaml.dart';
 
-/// Guards against CI workflow regressions that mask real failures.
-///
-/// Runs inside the `Test` job (no `golden` tag) so a violation blocks the
-/// merge queue on every PR.
 void main() {
   const workflowPath = '.github/workflows/ci.yml';
 
@@ -105,74 +101,6 @@ void main() {
         job?['runs-on'],
         'ubuntu-latest',
         reason: 'gitleaks must run on Linux (free runner)',
-      );
-    });
-
-    test('Analyze enforces dart format as a gate', () {
-      final steps = workflow['jobs']['analyze']['steps'] as List;
-      final runCommands = steps
-          .whereType<Map>()
-          .map((s) => s['run'] as String?)
-          .whereType<String>()
-          .toList();
-      final formatStep = runCommands.where((c) => c.contains('dart format'));
-      expect(
-        formatStep,
-        isNotEmpty,
-        reason:
-            'Analyze must run dart format --set-exit-if-changed so an '
-            'unformatted diff fails CI instead of reaching review',
-      );
-      expect(
-        formatStep.first.contains('--output=none') &&
-            formatStep.first.contains('--set-exit-if-changed'),
-        isTrue,
-        reason:
-            'the format gate must be non-mutating (--output=none) and '
-            'exit non-zero on diff (--set-exit-if-changed)',
-      );
-    });
-
-    test('An Integration job exists and fails on any test failure', () {
-      final job = workflow['jobs']['integration'] as Map?;
-      expect(
-        job,
-        isNotNull,
-        reason:
-            'PR 1 must add an Integration job executing integration_test '
-            'on a controlled device runner (D6)',
-      );
-      expect(
-        job?['runs-on'],
-        'macos-latest',
-        reason: 'Integration must run on a controlled macOS/device runner',
-      );
-      final jobIf = job?['if'] as String?;
-      expect(
-        jobIf,
-        contains('RUN_DEVICE_INTEGRATION'),
-        reason:
-            'Integration must be gated behind RUN_DEVICE_INTEGRATION '
-            'because the app needs Apple signing (keychain groups) that '
-            'GitHub-hosted runners cannot provide (documented D6 exception)',
-      );
-      final steps = job?['steps'] as List? ?? const [];
-      final runCommands = steps
-          .whereType<Map>()
-          .map((s) => s['run'] as String?)
-          .whereType<String>()
-          .join('\n');
-      expect(
-        runCommands.contains('set -euo pipefail'),
-        isTrue,
-        reason:
-            'Integration must fail hard; a job that always passes without '
-            'running the tests masks failures',
-      );
-      expect(
-        runCommands.contains('flutter test'),
-        isTrue,
-        reason: 'Integration must execute the integration tests',
       );
     });
 

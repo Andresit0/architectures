@@ -125,12 +125,12 @@ return failure(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)?  loaded,TResult Function( AppError error)?  failure,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  initial,TResult Function()?  loading,TResult Function( PatientEntity patient,  TokenEntity token)?  loaded,TResult Function( AppError error)?  failure,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AuthInitial() when initial != null:
 return initial();case AuthLoading() when loading != null:
 return loading();case AuthLoaded() when loaded != null:
-return loaded(_that.patient,_that.token,_that.clinicalHistory);case AuthFailure() when failure != null:
+return loaded(_that.patient,_that.token);case AuthFailure() when failure != null:
 return failure(_that.error);case _:
   return orElse();
 
@@ -149,12 +149,12 @@ return failure(_that.error);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)  loaded,required TResult Function( AppError error)  failure,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  initial,required TResult Function()  loading,required TResult Function( PatientEntity patient,  TokenEntity token)  loaded,required TResult Function( AppError error)  failure,}) {final _that = this;
 switch (_that) {
 case AuthInitial():
 return initial();case AuthLoading():
 return loading();case AuthLoaded():
-return loaded(_that.patient,_that.token,_that.clinicalHistory);case AuthFailure():
+return loaded(_that.patient,_that.token);case AuthFailure():
 return failure(_that.error);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -169,12 +169,12 @@ return failure(_that.error);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( PatientEntity patient,  TokenEntity token,  List<ClinicalHistoryEntity>? clinicalHistory)?  loaded,TResult? Function( AppError error)?  failure,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  initial,TResult? Function()?  loading,TResult? Function( PatientEntity patient,  TokenEntity token)?  loaded,TResult? Function( AppError error)?  failure,}) {final _that = this;
 switch (_that) {
 case AuthInitial() when initial != null:
 return initial();case AuthLoading() when loading != null:
 return loading();case AuthLoaded() when loaded != null:
-return loaded(_that.patient,_that.token,_that.clinicalHistory);case AuthFailure() when failure != null:
+return loaded(_that.patient,_that.token);case AuthFailure() when failure != null:
 return failure(_that.error);case _:
   return null;
 
@@ -279,20 +279,11 @@ class _$AuthLoadingCopyWithImpl<$Res>
 
 
 class AuthLoaded implements AuthState {
-  const AuthLoaded({required this.patient, required this.token, final  List<ClinicalHistoryEntity>? clinicalHistory = null}): _clinicalHistory = clinicalHistory;
+  const AuthLoaded({required this.patient, required this.token});
   
 
  final  PatientEntity patient;
  final  TokenEntity token;
- final  List<ClinicalHistoryEntity>? _clinicalHistory;
-@JsonKey() List<ClinicalHistoryEntity>? get clinicalHistory {
-  final value = _clinicalHistory;
-  if (value == null) return null;
-  if (_clinicalHistory is EqualUnmodifiableListView) return _clinicalHistory;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(value);
-}
-
 
 /// Create a copy of AuthState
 /// with the given fields replaced by the non-null parameter values.
@@ -304,16 +295,16 @@ $AuthLoadedCopyWith<AuthLoaded> get copyWith => _$AuthLoadedCopyWithImpl<AuthLoa
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthLoaded&&(identical(other.patient, patient) || other.patient == patient)&&(identical(other.token, token) || other.token == token)&&const DeepCollectionEquality().equals(other._clinicalHistory, _clinicalHistory));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthLoaded&&(identical(other.patient, patient) || other.patient == patient)&&(identical(other.token, token) || other.token == token));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,patient,token,const DeepCollectionEquality().hash(_clinicalHistory));
+int get hashCode => Object.hash(runtimeType,patient,token);
 
 @override
 String toString() {
-  return 'AuthState.loaded(patient: $patient, token: $token, clinicalHistory: $clinicalHistory)';
+  return 'AuthState.loaded(patient: $patient, token: $token)';
 }
 
 
@@ -324,7 +315,7 @@ abstract mixin class $AuthLoadedCopyWith<$Res> implements $AuthStateCopyWith<$Re
   factory $AuthLoadedCopyWith(AuthLoaded value, $Res Function(AuthLoaded) _then) = _$AuthLoadedCopyWithImpl;
 @useResult
 $Res call({
- PatientEntity patient, TokenEntity token, List<ClinicalHistoryEntity>? clinicalHistory
+ PatientEntity patient, TokenEntity token
 });
 
 
@@ -341,12 +332,11 @@ class _$AuthLoadedCopyWithImpl<$Res>
 
 /// Create a copy of AuthState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? patient = null,Object? token = null,Object? clinicalHistory = freezed,}) {
+@pragma('vm:prefer-inline') $Res call({Object? patient = null,Object? token = null,}) {
   return _then(AuthLoaded(
 patient: null == patient ? _self.patient : patient // ignore: cast_nullable_to_non_nullable
 as PatientEntity,token: null == token ? _self.token : token // ignore: cast_nullable_to_non_nullable
-as TokenEntity,clinicalHistory: freezed == clinicalHistory ? _self._clinicalHistory : clinicalHistory // ignore: cast_nullable_to_non_nullable
-as List<ClinicalHistoryEntity>?,
+as TokenEntity,
   ));
 }
 

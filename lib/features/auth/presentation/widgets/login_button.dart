@@ -1,4 +1,6 @@
-part of '_widgets.lib.dart';
+import 'package:flutter/material.dart';
+
+import 'package:clean_architecture_sdd_harness/design_system/theme/app_colors.dart';
 
 class LoginButton extends StatelessWidget {
   final void Function()? onPressed;

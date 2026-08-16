@@ -8,25 +8,21 @@ import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_ent
 
 void main() {
   group('TokenEntity', () {
-    const entity = TokenEntity(type: 'Bearer', key: 'sample-jwt-token');
+    const entity = TokenEntity(key: 'sample-jwt-token');
 
     test('equality works correctly', () {
-      expect(
-        entity,
-        equals(const TokenEntity(type: 'Bearer', key: 'sample-jwt-token')),
-      );
+      expect(entity, equals(const TokenEntity(key: 'sample-jwt-token')));
     });
 
     test('copyWith creates modified copy', () {
       final copy = entity.copyWith(key: 'new-token');
       expect(copy.key, 'new-token');
-      expect(copy.type, 'Bearer');
     });
   });
 
   group('LoginResponseEntity', () {
     const patient = PatientEntity(id: '1', name: 'John Doe');
-    const token = TokenEntity(type: 'Bearer', key: 'token');
+    const token = TokenEntity(key: 'token');
     const service = ClinicalHistoryServiceEntity(
       code: 'GEN',
       name: 'General Medicine',

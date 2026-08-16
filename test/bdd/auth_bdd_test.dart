@@ -9,13 +9,14 @@ import 'package:clean_architecture_sdd_harness/core/config/app_environment.dart'
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_state.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/screens/login_screen.dart';
+import 'package:clean_architecture_sdd_harness/features/clinical_history/di/clinical_history_provider.dart';
+import 'package:clean_architecture_sdd_harness/features/clinical_history/domain/repositories/i_clinical_history_repository.dart';
+import 'package:clean_architecture_sdd_harness/features/clinical_history/presentation/screens/clinical_history_screen.dart';
 import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/models/clinical_history/clinical_history_entity.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/token_entity.dart';
-
-// ---------------------------------------------------------------------------
-// Shared spy state — survives notifier instances across container rebuilds
-// ---------------------------------------------------------------------------
 
 class _SharedSpy {
   int loginCallCount = 0;
@@ -32,10 +33,6 @@ class _SharedSpy {
     lastLoginRememberMe = false;
   }
 }
-
-// ---------------------------------------------------------------------------
-// Spy Notifier — tracks calls via shared state
-// ---------------------------------------------------------------------------
 
 class _SpyAuthNotifier extends AuthNotifier {
   _SpyAuthNotifier(this._initialState, this._spy);
@@ -64,9 +61,15 @@ class _SpyAuthNotifier extends AuthNotifier {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helper Widget Builders
-// ---------------------------------------------------------------------------
+class _FakeClinicalHistoryRepository implements IClinicalHistoryRepository {
+  @override
+  Future<Result<List<ClinicalHistoryEntity>>> loadClinicalHistories() async =>
+      const Success(<ClinicalHistoryEntity>[]);
+
+  @override
+  Future<Result<List<ClinicalHistoryEntity>>>
+  refreshClinicalHistories() async => const Success(<ClinicalHistoryEntity>[]);
+}
 
 ProviderContainer? _lastContainer;
 
@@ -76,21 +79,22 @@ Widget _buildScreen(AuthState state, _SharedSpy spy) {
     overrides: [
       authProvider.overrideWith(() => _SpyAuthNotifier(state, spy)),
       environmentProvider.overrideWith((ref) => const ProductionEnvironment()),
+      clinicalHistoryRepositoryProvider.overrideWith(
+        (ref) => _FakeClinicalHistoryRepository(),
+      ),
     ],
   );
   return UncontrolledProviderScope(
     container: _lastContainer!,
-    child: const MaterialApp(
+    child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: LoginScreen(),
+      home: state is AuthLoaded
+          ? const ClinicalHistoryScreen()
+          : const LoginScreen(),
     ),
   );
 }
-
-// ---------------------------------------------------------------------------
-// Scenario State
-// ---------------------------------------------------------------------------
 
 class _ScenarioState {
   final spy = _SharedSpy();
@@ -106,21 +110,9 @@ class _ScenarioState {
 
 final _s = _ScenarioState();
 
-// ---------------------------------------------------------------------------
-// Test Fixtures
-// ---------------------------------------------------------------------------
-
 const _tPatient = PatientEntity(id: '1', name: 'John Doe');
-const _tToken = TokenEntity(type: 'Bearer', key: 'jwt_token_123');
-const _tLoaded = AuthLoaded(
-  patient: _tPatient,
-  token: _tToken,
-  clinicalHistory: [],
-);
-
-// ---------------------------------------------------------------------------
-// main — Gherkart StepRegistry + runBddTests
-// ---------------------------------------------------------------------------
+const _tToken = TokenEntity(key: 'jwt_token_123');
+const _tLoaded = AuthLoaded(patient: _tPatient, token: _tToken);
 
 Future<void> main() async {
   setUp(() {
@@ -128,17 +120,11 @@ Future<void> main() async {
   });
 
   final registry = StepRegistry<WidgetTester>.fromMap({
-    // ═══════════════════════════════════════════════
-    // Background
-    // ═══════════════════════════════════════════════
     'the app is installed and the user has network connectivity'
         .mapper(): (tester, ctx) async {
       _s.reset();
     },
 
-    // ═══════════════════════════════════════════════
-    // Given Steps
-    // ═══════════════════════════════════════════════
     'the user is on the login screen'.mapper(): (tester, ctx) async {
       _s.currentState = const AuthInitial();
       await tester.pumpWidget(_buildScreen(_s.currentState, _s.spy));
@@ -178,9 +164,6 @@ Future<void> main() async {
       await tester.pump();
     },
 
-    // ═══════════════════════════════════════════════
-    // When Steps
-    // ═══════════════════════════════════════════════
     'the user enters valid email and password and taps login'
         .mapper(): (tester, ctx) async {
       await tester.enterText(find.byType(TextField).first, 'test@example.com');
@@ -226,6 +209,8 @@ Future<void> main() async {
 
     'the user taps the logout button'.mapper(): (tester, ctx) async {
       _s.spy.logoutCallCount++;
+      _s.currentState = const AuthInitial();
+      await tester.pumpWidget(_buildScreen(_s.currentState, _s.spy));
       await tester.pump();
     },
 
@@ -238,16 +223,11 @@ Future<void> main() async {
       await tester.pump();
     },
 
-    // ═══════════════════════════════════════════════
-    // Then Steps — verify behavior via spy
-    // ═══════════════════════════════════════════════
     'the system POSTs email and passwordHash to /user/login'
         .mapper(): (tester, ctx) async {
       if (_s.spy.loginCallCount > 0) {
-        // Manual login flow — verified by spy
         expect(_s.spy.lastLoginEmail, 'test@example.com');
       } else {
-        // Auto re-login flow (via interceptor) — simulate successful outcome
         _s.currentState = _tLoaded;
         await tester.pumpWidget(_buildScreen(_s.currentState, _s.spy));
         await tester.pump();
@@ -307,22 +287,18 @@ Future<void> main() async {
     },
 
     'the system POSTs to /user/refreshtoken with the current token as Bearer'
-        .mapper(): (tester, ctx) async {
-      // Handled by AuthInterceptor — verified in interceptor unit tests
-    },
+            .mapper():
+        (tester, ctx) async {},
 
     'the system stores the new token'.mapper(): (tester, ctx) async {
-      // Auto-refresh is handled by AuthInterceptor (tested separately)
       _s.currentState = _tLoaded;
       await tester.pumpWidget(_buildScreen(_s.currentState, _s.spy));
       await tester.pump();
       expect(_s.currentState, isA<AuthLoaded>());
     },
 
-    'the system POSTs to /user/refreshtoken and receives 401'
-        .mapper(): (tester, ctx) async {
-      // Handled by AuthInterceptor — verified in interceptor unit tests
-    },
+    'the system POSTs to /user/refreshtoken and receives 401'.mapper():
+        (tester, ctx) async {},
 
     'the system POSTs email and passwordHash to /user/login and also receives 401'
         .mapper(): (tester, ctx) async {

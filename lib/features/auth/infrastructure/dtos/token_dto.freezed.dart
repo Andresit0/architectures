@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TokenDto {
 
- String get type; String get key;
+ String get key;
 /// Create a copy of TokenDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $TokenDtoCopyWith<TokenDto> get copyWith => _$TokenDtoCopyWithImpl<TokenDto>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TokenDto&&(identical(other.type, type) || other.type == type)&&(identical(other.key, key) || other.key == key));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TokenDto&&(identical(other.key, key) || other.key == key));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,type,key);
+int get hashCode => Object.hash(runtimeType,key);
 
 @override
 String toString() {
-  return 'TokenDto(type: $type, key: $key)';
+  return 'TokenDto(key: $key)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $TokenDtoCopyWith<$Res>  {
   factory $TokenDtoCopyWith(TokenDto value, $Res Function(TokenDto) _then) = _$TokenDtoCopyWithImpl;
 @useResult
 $Res call({
- String type, String key
+ String key
 });
 
 
@@ -65,10 +65,9 @@ class _$TokenDtoCopyWithImpl<$Res>
 
 /// Create a copy of TokenDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? key = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? key = null,}) {
   return _then(_self.copyWith(
-type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
+key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -154,10 +153,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  String key)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TokenDto() when $default != null:
-return $default(_that.type,_that.key);case _:
+return $default(_that.key);case _:
   return orElse();
 
 }
@@ -175,10 +174,10 @@ return $default(_that.type,_that.key);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  String key)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key)  $default,) {final _that = this;
 switch (_that) {
 case _TokenDto():
-return $default(_that.type,_that.key);case _:
+return $default(_that.key);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -195,10 +194,10 @@ return $default(_that.type,_that.key);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  String key)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key)?  $default,) {final _that = this;
 switch (_that) {
 case _TokenDto() when $default != null:
-return $default(_that.type,_that.key);case _:
+return $default(_that.key);case _:
   return null;
 
 }
@@ -210,10 +209,9 @@ return $default(_that.type,_that.key);case _:
 @JsonSerializable()
 
 class _TokenDto implements TokenDto {
-  const _TokenDto({required this.type, required this.key});
+  const _TokenDto({required this.key});
   factory _TokenDto.fromJson(Map<String, dynamic> json) => _$TokenDtoFromJson(json);
 
-@override final  String type;
 @override final  String key;
 
 /// Create a copy of TokenDto
@@ -229,16 +227,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TokenDto&&(identical(other.type, type) || other.type == type)&&(identical(other.key, key) || other.key == key));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TokenDto&&(identical(other.key, key) || other.key == key));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,type,key);
+int get hashCode => Object.hash(runtimeType,key);
 
 @override
 String toString() {
-  return 'TokenDto(type: $type, key: $key)';
+  return 'TokenDto(key: $key)';
 }
 
 
@@ -249,7 +247,7 @@ abstract mixin class _$TokenDtoCopyWith<$Res> implements $TokenDtoCopyWith<$Res>
   factory _$TokenDtoCopyWith(_TokenDto value, $Res Function(_TokenDto) _then) = __$TokenDtoCopyWithImpl;
 @override @useResult
 $Res call({
- String type, String key
+ String key
 });
 
 
@@ -266,10 +264,9 @@ class __$TokenDtoCopyWithImpl<$Res>
 
 /// Create a copy of TokenDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? key = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? key = null,}) {
   return _then(_TokenDto(
-type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
-as String,key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
+key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

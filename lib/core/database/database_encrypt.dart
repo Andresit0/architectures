@@ -4,8 +4,6 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
-// ignore: implementation_imports
-import 'package:sembast/src/api/v2/sembast.dart';
 
 Uint8List _randBytes(int length) {
   final secureRandom = Random.secure();
@@ -76,9 +74,5 @@ class _EncryptCodec extends Codec<Object?, String> {
   Converter<Object?, String> get encoder => _encoder;
 }
 
-const _encryptCodecSignature = 'encrypt';
-
-SembastCodec getEncryptSembastCodec({required String password}) => SembastCodec(
-  signature: _encryptCodecSignature,
-  codec: _EncryptCodec(_generateEncryptPassword(password)),
-);
+Codec<Object?, String> buildEncryptCodec(String password) =>
+    _EncryptCodec(_generateEncryptPassword(password));

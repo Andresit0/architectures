@@ -1,40 +1,69 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/email.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+
+Email _valid(String v) => (Email.result(v) as Success<Email>).data;
 
 void main() {
-  group('Email', () {
-    test('create with valid email returns Email instance', () {
-      final email = Email.create('test@example.com');
-      expect(email, isA<Email>());
-      expect(email.value, 'test@example.com');
+  group('Email.result', () {
+    test('returns Success with Email for a valid address', () {
+      expect(Email.result('test@example.com').isSuccess, isTrue);
+      expect(_valid('test@example.com').value, 'test@example.com');
     });
 
-    test('create with empty email throws FormatException', () {
-      expect(() => Email.create(''), throwsA(isA<FormatException>()));
+    test(
+      'returns Failure with ValidationError field=email for empty string',
+      () {
+        final result = Email.result('');
+        final error = (result as Failure<Email>).error;
+        expect(error, isA<ValidationError>());
+        expect((error as ValidationError).field, 'email');
+      },
+    );
+
+    test('returns Failure for email without @', () {
+      expect(Email.result('notanemail').isSuccess, isFalse);
     });
 
-    test('create with email without @ throws FormatException', () {
-      expect(() => Email.create('notanemail'), throwsA(isA<FormatException>()));
+    test('regex accepts standard addresses', () {
+      const valid = [
+        'user@example.com',
+        'first.last@example.co',
+        'user+tag@example.org',
+        'user_name@example.io',
+      ];
+      for (final email in valid) {
+        expect(
+          Email.result(email).isSuccess,
+          isTrue,
+          reason: '$email should be valid',
+        );
+      }
     });
 
-    test('tryCreate returns null for empty string', () {
-      expect(Email.tryCreate(''), isNull);
-    });
-
-    test('tryCreate returns null for string without @', () {
-      expect(Email.tryCreate('invalid'), isNull);
-    });
-
-    test('tryCreate returns Email for valid email', () {
-      final email = Email.tryCreate('test@example.com');
-      expect(email, isNotNull);
-      expect(email!.value, 'test@example.com');
+    test('regex rejects malformed addresses', () {
+      const invalid = [
+        'plainaddress',
+        'missing-at.example.com',
+        'missing-domain@',
+        '@example.com',
+        'user@.com',
+        'user@example',
+        'user name@example.com',
+      ];
+      for (final email in invalid) {
+        expect(
+          Email.result(email).isSuccess,
+          isFalse,
+          reason: '$email should be invalid',
+        );
+      }
     });
 
     test('equality works correctly', () {
-      final email1 = Email.create('test@example.com');
-      final email2 = Email.create('test@example.com');
-      final email3 = Email.create('other@example.com');
+      final email1 = _valid('test@example.com');
+      final email2 = _valid('test@example.com');
+      final email3 = _valid('other@example.com');
 
       expect(email1, equals(email2));
       expect(email1, isNot(equals(email3)));

@@ -10,43 +10,41 @@ void main() {
       wrapper = const JwtWrapper();
     });
 
-    group('verifySignature', () {
+    group('decodePayload', () {
       const secret = 'my_secret_key';
-      const differentSecret = 'different_secret';
-      late String validToken;
 
-      setUp(() {
-        validToken = JWT({'sub': '123'}).sign(SecretKey(secret));
+      test('should return the payload claims for a valid token', () {
+        final token = JWT({
+          'sub': '123',
+          'role': 'admin',
+        }).sign(SecretKey(secret));
+
+        final result = wrapper.decodePayload(token);
+
+        expect(result, isNotNull);
+        expect(result?['sub'], '123');
+        expect(result?['role'], 'admin');
       });
 
-      test(
-        'should return true for a valid token signed with correct secret',
-        () {
-          final result = wrapper.verifySignature(validToken, secret);
+      test('should return null for a malformed token', () {
+        expect(wrapper.decodePayload('not.a.jwt'), isNull);
+      });
 
-          expect(result, isTrue);
-        },
-      );
-
-      test('should return false for a tampered token', () {
+      test('should decode a tampered signature (decode does not verify)', () {
+        final validToken = JWT({'sub': '123'}).sign(SecretKey(secret));
         final parts = validToken.split('.');
-        final tamperedToken = '${parts[0]}.tamperedPayload.${parts[2]}';
+        final tamperedSignature = '${parts[0]}.${parts[1]}.AAAA';
 
-        final result = wrapper.verifySignature(tamperedToken, secret);
+        final result = wrapper.decodePayload(tamperedSignature);
 
-        expect(result, isFalse);
+        expect(result, isNotNull);
+        expect(result?['sub'], '123');
       });
 
-      test('should return false for a token signed with different secret', () {
-        final result = wrapper.verifySignature(validToken, differentSecret);
+      test('should return null when the payload is not a JSON object', () {
+        final token = JWT('plain-string-payload').sign(SecretKey(secret));
 
-        expect(result, isFalse);
-      });
-
-      test('should return false for an invalid token format', () {
-        final result = wrapper.verifySignature('not.a.jwt', secret);
-
-        expect(result, isFalse);
+        expect(wrapper.decodePayload(token), isNull);
       });
     });
   });

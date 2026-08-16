@@ -9,14 +9,12 @@ part of 'token_dto.dart';
 // **************************************************************************
 
 _TokenDto _$TokenDtoFromJson(Map<String, dynamic> json) =>
-    _TokenDto(type: json['type'] as String, key: json['key'] as String);
+    _TokenDto(key: json['key'] as String);
 
 abstract final class _$TokenDtoJsonKeys {
-  static const String type = 'type';
   static const String key = 'key';
 }
 
 Map<String, dynamic> _$TokenDtoToJson(_TokenDto instance) => <String, dynamic>{
-  'type': instance.type,
   'key': instance.key,
 };

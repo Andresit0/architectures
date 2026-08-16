@@ -1,31 +1,23 @@
+import 'package:clean_architecture_sdd_harness/core/network/contracts/_contracts.lib.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/infrastructure/dtos/_dtos.lib.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TokenDto', () {
-    final validJson = {'type': 'Bearer', 'key': 'some-jwt-token'};
+    final validJson = {'key': 'some-jwt-token'};
 
     test('fromJson creates TokenDto from valid JSON', () {
       final dto = TokenDto.fromJson(validJson);
-      expect(dto.type, 'Bearer');
       expect(dto.key, 'some-jwt-token');
     });
 
-    test('fromJson throws when field is missing', () {
-      expect(
-        () => TokenDto.fromJson({'type': 'Bearer'}),
-        throwsA(isA<Object>()),
-      );
-      expect(
-        () => TokenDto.fromJson({'key': 'some-jwt-token'}),
-        throwsA(isA<Object>()),
-      );
+    test('fromJson throws when required field is missing', () {
+      expect(() => TokenDto.fromJson({}), throwsA(isA<Object>()));
     });
 
     test('toJson roundtrip produces same values', () {
       final dto = TokenDto.fromJson(validJson);
       final json = dto.toJson();
-      expect(json['type'], 'Bearer');
       expect(json['key'], 'some-jwt-token');
       final restored = TokenDto.fromJson(json);
       expect(restored, dto);
@@ -135,7 +127,6 @@ void main() {
 
       final dto = LoginResponseDto.fromJson(json);
       expect(dto.patient.id, 'p-1');
-      expect(dto.token.type, 'Bearer');
       expect(dto.clinicalHistory.length, 1);
       expect(dto.clinicalHistory.first.id, 'ch-1');
     });
@@ -176,7 +167,6 @@ void main() {
       final dto = LoginResponseDto.fromJson(json);
       final jsonOut = dto.toJson();
 
-      // Verify toJson preserves values
       expect(jsonOut['patient']['id'], '1');
       expect(jsonOut['token']['key'], 'jwt_token');
       final historyList = jsonOut['clinical_history'] as List;
@@ -186,7 +176,6 @@ void main() {
         'ENC-001',
       );
 
-      // Verify full roundtrip
       final restored = LoginResponseDto.fromJson(jsonOut);
       expect(restored, dto);
     });

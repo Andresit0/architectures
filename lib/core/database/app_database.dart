@@ -1,8 +1,8 @@
-import 'package:clean_architecture_sdd_harness/core/database/database_encrypt.dart';
+import 'package:clean_architecture_sdd_harness/core/database/i_app_database.dart';
 import 'package:clean_architecture_sdd_harness/core/database/secure_storage_key_service.dart';
+import 'package:clean_architecture_sdd_harness/core/database/sembast_codec.dart';
 import 'package:clean_architecture_sdd_harness/core/database/sembast_db_wrapper.dart';
 import 'package:clean_architecture_sdd_harness/core/services/_services.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_app_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sembast/sembast_io.dart';
 import 'package:sembast_web/sembast_web.dart';
@@ -29,37 +29,33 @@ class AppDatabase implements IAppDatabase {
     return _databaseFuture!;
   }
 
+  Future<String> _dbName() async {
+    if (kIsWeb || _databaseFactory != null) return 'app_database.db';
+    final dir = await _pathProvider!.getApplicationDocumentsDirectory();
+    return '${dir.path}/app_database.db';
+  }
+
   Future<ISembastDb> _openDatabase() async {
-    final factory = _factory;
-    if (_databaseFactory != null) {
-      final db = await factory.openDatabase('app_database.db');
-      _rawDatabase = db;
-      return SembastDbWrapper(db);
-    }
     final password = await _resolveKey();
     final codec = getEncryptSembastCodec(password: password);
-    if (kIsWeb) {
-      final db = await factory.openDatabase('app_database.db', codec: codec);
-      _rawDatabase = db;
-      return SembastDbWrapper(db);
-    }
-    final dir = await _pathProvider!.getApplicationDocumentsDirectory();
+    final name = await _dbName();
     try {
-      final db = await factory.openDatabase(
-        '${dir.path}/app_database.db',
-        codec: codec,
-      );
+      final db = await _factory.openDatabase(name, codec: codec);
       _rawDatabase = db;
       return SembastDbWrapper(db);
-    } catch (_) {
-      await factory.deleteDatabase('${dir.path}/app_database.db');
-      final db = await factory.openDatabase(
-        '${dir.path}/app_database.db',
-        codec: codec,
-      );
-      _rawDatabase = db;
-      return SembastDbWrapper(db);
+    } on DatabaseException catch (e) {
+      if (e.code != DatabaseException.errInvalidCodec) rethrow;
+      return _recoverDatabase(name, codec);
+    } on FormatException {
+      return _recoverDatabase(name, codec);
     }
+  }
+
+  Future<ISembastDb> _recoverDatabase(String name, SembastCodec codec) async {
+    await _factory.deleteDatabase(name);
+    final db = await _factory.openDatabase(name, codec: codec);
+    _rawDatabase = db;
+    return SembastDbWrapper(db);
   }
 
   Future<String> _resolveKey() async {
@@ -73,14 +69,9 @@ class AppDatabase implements IAppDatabase {
   @override
   Future<void> resetDatabase() async {
     _databaseFuture = null;
-    _rawDatabase?.close();
+    await _rawDatabase?.close();
     _rawDatabase = null;
-    final factory = _factory;
-    if (_databaseFactory != null || kIsWeb) {
-      await factory.deleteDatabase('app_database.db');
-    } else {
-      final dir = await _pathProvider!.getApplicationDocumentsDirectory();
-      await factory.deleteDatabase('${dir.path}/app_database.db');
-    }
+    await _factory.deleteDatabase(await _dbName());
+    await _effectiveKeyService.deleteKey();
   }
 }

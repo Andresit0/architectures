@@ -19,7 +19,7 @@ void main() {
 
     test('update(false) sets not authenticated and notifies', () {
       final observer = AuthObserver();
-      observer.update(true); // first set true
+      observer.update(true);
       bool notified = false;
       observer.addListener(() => notified = true);
       observer.update(false);
@@ -31,7 +31,7 @@ void main() {
       final observer = AuthObserver();
       int notifyCount = 0;
       observer.addListener(() => notifyCount++);
-      observer.update(false); // already false from initial state
+      observer.update(false);
       expect(
         notifyCount,
         0,

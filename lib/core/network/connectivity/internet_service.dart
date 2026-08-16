@@ -1,10 +1,11 @@
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_connectivity_checker.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:clean_architecture_sdd_harness/core/network/connectivity/i_internet_connection_checker_wrapper.dart';
 import 'package:clean_architecture_sdd_harness/core/network/connectivity/internet_connection_checker_wrapper.dart';
 import 'package:clean_architecture_sdd_harness/core/network/connectivity/server_reachability_strategy.dart';
 
 abstract interface class IInternetService implements IConnectivityChecker {
   Future<bool> isServerReachable();
+  Stream<bool> get onStatusChange;
 }
 
 class InternetService implements IInternetService {
@@ -21,6 +22,12 @@ class InternetService implements IInternetService {
 
   @override
   Future<bool> isConnected() => _connectionChecker.checkConnectivity();
+
+  @override
+  Stream<bool> get onStatusChange async* {
+    yield await isConnected();
+    yield* _connectionChecker.onStatusChange;
+  }
 
   @override
   Future<bool> isServerReachable() async {

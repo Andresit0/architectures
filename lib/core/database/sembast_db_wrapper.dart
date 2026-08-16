@@ -1,4 +1,4 @@
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_app_database.dart';
+import 'package:clean_architecture_sdd_harness/core/database/i_app_database.dart';
 import 'package:sembast/sembast.dart';
 
 class SembastDbWrapper implements ISembastDb {

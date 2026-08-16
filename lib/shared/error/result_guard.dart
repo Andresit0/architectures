@@ -10,32 +10,34 @@ Future<Result<T>> guard<T>(Future<T> Function() fn) async {
     return Success(data);
   } on ApiException catch (e, stackTrace) {
     return Failure(
-      ApiError.technical(statusCode: e.statusCode, stackTrace: stackTrace),
-    );
-  } on NoConnectionException catch (_, stackTrace) {
-    return Failure(NetworkError.technical(stackTrace: stackTrace));
-  } on ServerUnreachableException catch (_, stackTrace) {
-    return Failure(ServerUnreachableError.technical(stackTrace: stackTrace));
-  } on UnexpectedResponseException catch (e, stackTrace) {
-    return Failure(
-      UnexpectedError.technical(
-        technicalMessage: e.details,
+      ApiError(
+        technicalMessage: 'HTTP ${e.statusCode}',
         stackTrace: stackTrace,
       ),
     );
-  } on DeviceSecurityException catch (e, stackTrace) {
-    return Failure(DeviceSecurityError(e.message, stackTrace: stackTrace));
-  } on AppTimeoutException catch (_, stackTrace) {
-    return Failure(NetworkError.technical(stackTrace: stackTrace));
-  } on TimeoutException catch (_, stackTrace) {
-    return Failure(NetworkError.technical(stackTrace: stackTrace));
-  } on Error catch (e, stackTrace) {
+  } on NoConnectionException catch (_, stackTrace) {
+    return Failure(NetworkError(stackTrace: stackTrace));
+  } on ServerUnreachableException catch (_, stackTrace) {
+    return Failure(ServerUnreachableError(stackTrace: stackTrace));
+  } on UnexpectedResponseException catch (e, stackTrace) {
     return Failure(
-      UnexpectedError.technical(technicalMessage: '$e', stackTrace: stackTrace),
+      UnexpectedError(technicalMessage: e.details, stackTrace: stackTrace),
+    );
+  } on DeviceSecurityException catch (e, stackTrace) {
+    return Failure(
+      DeviceSecurityError(technicalMessage: e.message, stackTrace: stackTrace),
+    );
+  } on AppTimeoutException catch (e, stackTrace) {
+    return Failure(
+      TimeoutError(technicalMessage: e.message, stackTrace: stackTrace),
+    );
+  } on TimeoutException catch (e, stackTrace) {
+    return Failure(
+      TimeoutError(technicalMessage: e.message, stackTrace: stackTrace),
     );
   } on Exception catch (e, stackTrace) {
     return Failure(
-      UnexpectedError.technical(technicalMessage: '$e', stackTrace: stackTrace),
+      UnexpectedError(technicalMessage: '$e', stackTrace: stackTrace),
     );
   }
 }

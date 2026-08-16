@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:clean_architecture_sdd_harness/shared/exceptions/unexpected_response_exception.dart';
+import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/http_response.dart';
 import 'package:dio/dio.dart';
 
@@ -25,52 +25,54 @@ class DioResponseParser implements IDioResponseParser {
       return HttpSuccess(statusCode: response.statusCode);
     }
 
-    if (type == 'bytes' &&
-        response.statusCode != null &&
-        response.statusCode! >= 200 &&
-        response.statusCode! < 300) {
-      final data = response.data;
-      if (data is List<int>) {
-        return HttpSuccess(statusCode: response.statusCode);
+    final statusCode = response.statusCode;
+
+    if (type == 'bytes' && _is2xx(statusCode)) {
+      if (response.data is List<int>) {
+        return HttpSuccess(statusCode: statusCode);
       }
       throw UnexpectedResponseException(
-        'Respuesta no es bytes: ${data.runtimeType}',
+        'Expected a bytes body, got ${response.data.runtimeType}',
       );
     }
 
-    if (type == 'image' &&
-        response.statusCode != null &&
-        response.statusCode! >= 200 &&
-        response.statusCode! < 300) {
-      return HttpSuccess(statusCode: response.statusCode);
+    if (type == 'image' && _is2xx(statusCode)) {
+      return HttpSuccess(statusCode: statusCode);
     }
 
-    if (response.statusCode != null &&
-        response.statusCode! >= 200 &&
-        response.statusCode! < 300) {
-      final respString = response.data is List<int>
-          ? utf8.decode(response.data as List<int>)
-          : response.toString();
-      final responseBody = jsonDecode(respString);
-      if (responseBody is List) {
-        return HttpSuccess(statusCode: response.statusCode);
+    if (!_is2xx(statusCode)) {
+      throw UnexpectedResponseException(
+        'Non-2xx status $statusCode must be handled before parsing',
+      );
+    }
+
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      return HttpSuccess(data: data, statusCode: statusCode);
+    }
+    if (data is List<int>) {
+      final decoded = jsonDecode(utf8.decode(data));
+      if (decoded is Map<String, dynamic>) {
+        return HttpSuccess(data: decoded, statusCode: statusCode);
       }
-      return HttpSuccess(
-        data: responseBody as Map<String, dynamic>,
-        statusCode: response.statusCode,
-      );
+      return HttpSuccess(statusCode: statusCode);
+    }
+    if (data is String) {
+      final decoded = jsonDecode(data);
+      if (decoded is Map<String, dynamic>) {
+        return HttpSuccess(data: decoded, statusCode: statusCode);
+      }
+      return HttpSuccess(statusCode: statusCode);
+    }
+    if (data is List) {
+      return HttpSuccess(statusCode: statusCode);
     }
 
-    if (response.statusCode != null && response.statusCode! >= 400) {
-      final rawData = response.data;
-      final mapData = rawData is Map<String, dynamic> ? rawData : null;
-      return HttpFailure(
-        statusCode: response.statusCode!,
-        data: mapData,
-        message: mapData?['message'] as String?,
-      );
-    }
-
-    return HttpSuccess(statusCode: response.statusCode);
+    throw UnexpectedResponseException(
+      'Unexpected body type: ${data.runtimeType}',
+    );
   }
+
+  bool _is2xx(int? statusCode) =>
+      statusCode != null && statusCode >= 200 && statusCode < 300;
 }
