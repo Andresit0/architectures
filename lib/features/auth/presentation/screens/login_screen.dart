@@ -23,7 +23,9 @@ class LoginScreen extends ConsumerWidget {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
-              content: Text(localizeError(next.error, AppLocalizations.of(context)!)),
+              content: Text(
+                localizeError(next.error, AppLocalizations.of(context)!),
+              ),
               backgroundColor: AppColors.red,
               duration: const Duration(seconds: 4),
             ),
@@ -69,11 +71,13 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    ref.read(authProvider.notifier).login(
-      _emailController.text.trim(),
-      _passwordController.text,
-      rememberMe: ref.read(rememberMeProvider),
-    );
+    ref
+        .read(authProvider.notifier)
+        .login(
+          _emailController.text.trim(),
+          _passwordController.text,
+          rememberMe: ref.read(rememberMeProvider),
+        );
   }
 
   @override
@@ -90,11 +94,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(
-                  Icons.account_circle,
-                  size: 72,
-                  color: AppColors.primary,
-                ),
+                Icon(Icons.account_circle, size: 72, color: AppColors.primary),
                 const SizedBox(height: 8),
                 Text(
                   ref.watch(appNameProvider),
@@ -108,9 +108,9 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                 Text(
                   AppLocalizations.of(context)!.loginTitle,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.gray,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.gray),
                 ),
                 const SizedBox(height: 40),
                 CustomAuthWidgets.createEmailFormField(
@@ -133,7 +133,9 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                       value: ref.watch(rememberMeProvider),
                       onChanged: isLoading
                           ? null
-                          : (v) => ref.read(rememberMeProvider.notifier).set(v ?? false),
+                          : (v) => ref
+                                .read(rememberMeProvider.notifier)
+                                .set(v ?? false),
                     ),
                     Text(AppLocalizations.of(context)!.rememberMe),
                   ],

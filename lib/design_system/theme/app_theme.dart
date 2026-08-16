@@ -5,9 +5,7 @@ class AppTheme {
   AppTheme._();
 
   static final ThemeData material3 = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-    ),
+    colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
     useMaterial3: true,
   );
 }

@@ -14,18 +14,12 @@ final internetServiceProvider = Provider<IInternetService>((ref) {
             dio: Dio()
               ..options.connectTimeout = const Duration(seconds: 5)
               ..options.receiveTimeout = const Duration(seconds: 5),
-            baseUri: Uri(
-              scheme: 'https',
-              host: env.host,
-              port: env.port,
-            ),
+            baseUri: Uri(scheme: 'https', host: env.host, port: env.port),
           )
-        : NativeSocketReachability(
-            host: env.host,
-            port: env.port,
-          ),
+        : NativeSocketReachability(host: env.host, port: env.port),
   );
 });
 
 final connectivityCheckerProvider = Provider<IConnectivityChecker>(
-    (ref) => ref.watch(internetServiceProvider));
+  (ref) => ref.watch(internetServiceProvider),
+);

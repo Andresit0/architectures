@@ -10,8 +10,5 @@ class RetryPolicy {
   });
 
   static const standard = RetryPolicy();
-  static const idempotent = RetryPolicy(
-    maxRetries: 2,
-    retryOnTimeout: true,
-  );
+  static const idempotent = RetryPolicy(maxRetries: 2, retryOnTimeout: true);
 }

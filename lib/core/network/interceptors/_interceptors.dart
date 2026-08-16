@@ -10,11 +10,10 @@ class CustomInterceptors {
     required Dio internalDio,
     required VoidCallback onForceLogout,
     IRetryPolicy? retryPolicy,
-  }) =>
-      AuthInterceptor(
-        onRetry: onRetry,
-        internalDio: internalDio,
-        onForceLogout: onForceLogout,
-        retryPolicy: retryPolicy,
-      );
+  }) => AuthInterceptor(
+    onRetry: onRetry,
+    internalDio: internalDio,
+    onForceLogout: onForceLogout,
+    retryPolicy: retryPolicy,
+  );
 }

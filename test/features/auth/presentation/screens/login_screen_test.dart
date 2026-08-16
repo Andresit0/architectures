@@ -19,7 +19,11 @@ class _FakeAuthNotifier extends AuthNotifier {
   AuthState build() => _initial;
 
   @override
-  Future<void> login(String email, String password, {bool rememberMe = false}) async {
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     loginCalled = true;
   }
 }
@@ -29,9 +33,7 @@ ProviderContainer? _lastContainer;
 Widget _buildScreen(AuthState state) {
   _lastContainer?.dispose();
   _lastContainer = ProviderContainer(
-    overrides: [
-      authProvider.overrideWith(() => _FakeAuthNotifier(state)),
-    ],
+    overrides: [authProvider.overrideWith(() => _FakeAuthNotifier(state))],
   );
   return UncontrolledProviderScope(
     container: _lastContainer!,
@@ -124,9 +126,7 @@ void main() {
   });
 
   testWidgets('login_screen_shows_form_when_not_loading', (tester) async {
-    await tester.pumpWidget(
-      _buildScreen(const AuthFailure(NetworkError(''))),
-    );
+    await tester.pumpWidget(_buildScreen(const AuthFailure(NetworkError(''))));
     await tester.pump();
 
     expect(find.byType(TextField), findsNWidgets(2));
@@ -162,9 +162,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: ProviderContainer(
-          overrides: [
-            authProvider.overrideWith(() => notifier),
-          ],
+          overrides: [authProvider.overrideWith(() => notifier)],
         ),
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -192,9 +190,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: ProviderContainer(
-          overrides: [
-            authProvider.overrideWith(() => notifier),
-          ],
+          overrides: [authProvider.overrideWith(() => notifier)],
         ),
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

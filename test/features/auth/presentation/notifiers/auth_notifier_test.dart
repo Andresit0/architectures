@@ -15,15 +15,15 @@ import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifi
 import 'package:clean_architecture_sdd_harness/features/auth/di/auth_provider.dart';
 
 class _MockLoginUseCase extends Mock implements LoginUseCase {}
-class _MockRestoreSessionUseCase extends Mock implements RestoreSessionUseCase {}
+
+class _MockRestoreSessionUseCase extends Mock
+    implements RestoreSessionUseCase {}
+
 class _MockAuthRepository extends Mock implements IAuthRepository {}
 
 void main() {
   final mockPatient = const PatientEntity(id: '1', name: 'John Doe');
-  final mockToken = const TokenEntity(
-    type: 'Bearer',
-    key: 'jwt_token_123',
-  );
+  final mockToken = const TokenEntity(type: 'Bearer', key: 'jwt_token_123');
   final mockLoginResponse = LoginResponseEntity(
     patient: mockPatient,
     token: mockToken,
@@ -41,9 +41,12 @@ void main() {
     mockRestoreSessionUseCase = _MockRestoreSessionUseCase();
     mockAuthRepo = _MockAuthRepository();
 
-    when(() => mockAuthRepo.clearSession()).thenAnswer((_) async => const Success(null));
-    when(() => mockRestoreSessionUseCase.call())
-        .thenAnswer((_) async => const Success(null));
+    when(
+      () => mockAuthRepo.clearSession(),
+    ).thenAnswer((_) async => const Success(null));
+    when(
+      () => mockRestoreSessionUseCase.call(),
+    ).thenAnswer((_) async => const Success(null));
     when(
       () => mockLoginUseCase.call(
         email: any(named: 'email'),
@@ -56,9 +59,7 @@ void main() {
       overrides: [
         loginUseCaseProvider.overrideWith((ref) => mockLoginUseCase),
         clearSessionUseCaseProvider.overrideWith(
-          (ref) => ClearSessionUseCase(
-            repository: mockAuthRepo,
-          ),
+          (ref) => ClearSessionUseCase(repository: mockAuthRepo),
         ),
         restoreSessionUseCaseProvider.overrideWith(
           (ref) => mockRestoreSessionUseCase,
@@ -82,11 +83,13 @@ void main() {
     group('login', () {
       test('login_calls_loginUseCase', () async {
         await notifier.login('test@example.com', 'password');
-        verify(() => mockLoginUseCase.call(
-          email: any(named: 'email'),
-          password: any(named: 'password'),
-          rememberMe: any(named: 'rememberMe'),
-        )).called(1);
+        verify(
+          () => mockLoginUseCase.call(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+            rememberMe: any(named: 'rememberMe'),
+          ),
+        ).called(1);
       });
 
       test('login_sets_loading_state', () async {
@@ -112,7 +115,9 @@ void main() {
             password: any(named: 'password'),
             rememberMe: any(named: 'rememberMe'),
           ),
-        ).thenAnswer((_) async => const Failure(NetworkError('No internet connection')));
+        ).thenAnswer(
+          (_) async => const Failure(NetworkError('No internet connection')),
+        );
 
         await notifier.login('test@example.com', 'password');
         final state = container.read(authProvider);
@@ -128,13 +133,13 @@ void main() {
         expect(container.read(authProvider), const AuthState.loading());
         await future;
       });
-
     });
 
     group('restoreSession', () {
       test('restoreSession_success_sets_loaded_state', () async {
-        when(() => mockRestoreSessionUseCase.call())
-            .thenAnswer((_) async => Success(mockLoginResponse));
+        when(
+          () => mockRestoreSessionUseCase.call(),
+        ).thenAnswer((_) async => Success(mockLoginResponse));
 
         await notifier.restoreSession();
         final state = container.read(authProvider);
@@ -144,23 +149,24 @@ void main() {
       });
 
       test('restoreSession_null_data_keeps_initial_state', () async {
-        when(() => mockRestoreSessionUseCase.call())
-            .thenAnswer((_) async => const Success(null));
+        when(
+          () => mockRestoreSessionUseCase.call(),
+        ).thenAnswer((_) async => const Success(null));
 
         await notifier.restoreSession();
         expect(container.read(authProvider), const AuthState.initial());
       });
 
       test('restoreSession_failure_sets_AuthFailure', () async {
-        when(() => mockRestoreSessionUseCase.call())
-            .thenAnswer((_) async => const Failure(NetworkError('No internet connection')));
+        when(() => mockRestoreSessionUseCase.call()).thenAnswer(
+          (_) async => const Failure(NetworkError('No internet connection')),
+        );
 
         await notifier.restoreSession();
         final state = container.read(authProvider);
         expect(state, isA<AuthFailure>());
         expect((state as AuthFailure).error, isA<NetworkError>());
       });
-
     });
 
     group('logout', () {
@@ -178,15 +184,15 @@ void main() {
       });
 
       test('logout_failure_sets_AuthFailure', () async {
-        when(() => mockAuthRepo.clearSession())
-            .thenAnswer((_) async => const Failure(NetworkError('No internet connection')));
+        when(() => mockAuthRepo.clearSession()).thenAnswer(
+          (_) async => const Failure(NetworkError('No internet connection')),
+        );
 
         await notifier.logout();
         final state = container.read(authProvider);
         expect(state, isA<AuthFailure>());
         expect((state as AuthFailure).error, isA<NetworkError>());
       });
-
     });
   });
 }

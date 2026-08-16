@@ -9,7 +9,6 @@ abstract interface class ISecureStorageWrapper {
 }
 
 class SecureStorageWrapper implements ISecureStorageWrapper {
-
   const SecureStorageWrapper({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
   final FlutterSecureStorage _storage;

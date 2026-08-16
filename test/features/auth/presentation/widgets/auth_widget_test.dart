@@ -15,9 +15,7 @@ class _FakeNotifier extends AuthNotifier {
 }
 
 ProviderContainer _createContainer() => ProviderContainer(
-  overrides: [
-    authProvider.overrideWith(() => _FakeNotifier()),
-  ],
+  overrides: [authProvider.overrideWith(() => _FakeNotifier())],
 );
 
 Widget _buildTestApp(Widget child) {
@@ -75,9 +73,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(const LoginScreen()));
       await tester.pump();
 
-      final emailField = tester.widget<TextField>(
-        find.byType(TextField).first,
-      );
+      final emailField = tester.widget<TextField>(find.byType(TextField).first);
       expect(emailField.keyboardType, TextInputType.emailAddress);
     });
 
@@ -87,9 +83,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(const LoginScreen()));
       await tester.pump();
 
-      final button = tester.widget<ElevatedButton>(
-        find.byType(ElevatedButton),
-      );
+      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
       expect(button.onPressed, isNotNull);
     });
 

@@ -4,7 +4,8 @@ import 'package:clean_architecture_sdd_harness/core/services/_services.lib.dart'
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockJailbreakDetection extends Mock implements IJailbreakDetectionWrapper {}
+class MockJailbreakDetection extends Mock
+    implements IJailbreakDetectionWrapper {}
 
 void main() {
   late MockJailbreakDetection mockDetection;
@@ -14,12 +15,11 @@ void main() {
   });
 
   group('AppInitializer.configurePlatform', () {
-    testWidgets('configures portrait orientation without error', (tester) async {
+    testWidgets('configures portrait orientation without error', (
+      tester,
+    ) async {
       await tester.pump();
-      expect(
-        () => AppInitializer.configurePlatform(),
-        returnsNormally,
-      );
+      expect(() => AppInitializer.configurePlatform(), returnsNormally);
     });
   });
 

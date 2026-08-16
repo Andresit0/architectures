@@ -7,7 +7,5 @@ abstract interface class IAuthRemoteDatasource {
     required String passwordHash,
   });
 
-  Future<TokenEntity> refreshToken({
-    required String token,
-  });
+  Future<TokenEntity> refreshToken({required String token});
 }

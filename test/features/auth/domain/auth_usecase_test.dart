@@ -13,7 +13,9 @@ import 'package:clean_architecture_sdd_harness/shared/interfaces/i_password_hash
 import 'package:clean_architecture_sdd_harness/shared/interfaces/i_token_store.dart';
 
 class _MockAuthRepository extends Mock implements IAuthRepository {}
+
 class _MockPasswordHasher extends Mock implements IPasswordHasher {}
+
 class _MockTokenStore extends Mock implements ITokenStore {}
 
 void main() {
@@ -27,14 +29,13 @@ void main() {
     registerFallbackValue(Email.create('test@test.com'));
     registerFallbackValue(PasswordHash.create('somehash'));
     registerFallbackValue('');
-    registerFallbackValue(LoginResponseEntity(
-      patient: PatientEntity(id: '', name: ''),
-      token: TokenEntity(
-        type: '',
-        key: '',
+    registerFallbackValue(
+      LoginResponseEntity(
+        patient: PatientEntity(id: '', name: ''),
+        token: TokenEntity(type: '', key: ''),
+        clinicalHistory: [],
       ),
-      clinicalHistory: [],
-    ));
+    );
   });
 
   setUp(() {
@@ -47,22 +48,19 @@ void main() {
       passwordHasher: mockPasswordHasher,
       tokenStore: mockTokenStore,
     );
-    refreshTokenUseCase = RefreshTokenUseCase(
-      repository: mockRepo,
-    );
+    refreshTokenUseCase = RefreshTokenUseCase(repository: mockRepo);
   });
 
   group('LoginUseCase', () {
     test('login_calls_repository_and_returns_data_on_success', () async {
       const response = LoginResponseEntity(
         patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(
-          type: 'Bearer',
-          key: 'token123',
-        ),
+        token: TokenEntity(type: 'Bearer', key: 'token123'),
         clinicalHistory: [],
       );
-      when(() => mockPasswordHasher.hash(any())).thenAnswer((_) async => 'hashed_password');
+      when(
+        () => mockPasswordHasher.hash(any()),
+      ).thenAnswer((_) async => 'hashed_password');
       when(
         () => mockRepo.login(
           email: any(named: 'email'),
@@ -83,13 +81,17 @@ void main() {
     });
 
     test('login_calls_repository_and_returns_failure_on_error', () async {
-      when(() => mockPasswordHasher.hash(any())).thenAnswer((_) async => 'hashed_password');
+      when(
+        () => mockPasswordHasher.hash(any()),
+      ).thenAnswer((_) async => 'hashed_password');
       when(
         () => mockRepo.login(
           email: any(named: 'email'),
           passwordHash: any(named: 'passwordHash'),
         ),
-      ).thenAnswer((_) async => const Failure(NetworkError('No internet connection')));
+      ).thenAnswer(
+        (_) async => const Failure(NetworkError('No internet connection')),
+      );
 
       final result = await loginUseCase(
         email: 'test@example.com',
@@ -106,13 +108,12 @@ void main() {
     test('login_rememberMe_calls_saveSession_on_success', () async {
       const response = LoginResponseEntity(
         patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(
-          type: 'Bearer',
-          key: 'token123',
-        ),
+        token: TokenEntity(type: 'Bearer', key: 'token123'),
         clinicalHistory: [],
       );
-      when(() => mockPasswordHasher.hash(any())).thenAnswer((_) async => 'hashed_password');
+      when(
+        () => mockPasswordHasher.hash(any()),
+      ).thenAnswer((_) async => 'hashed_password');
       when(
         () => mockRepo.login(
           email: any(named: 'email'),
@@ -134,23 +135,24 @@ void main() {
       );
 
       expect(result.isSuccess, isTrue);
-      verify(() => mockRepo.saveSession(
-        data: any(named: 'data'),
-        email: any(named: 'email'),
-        passwordHash: any(named: 'passwordHash'),
-      )).called(1);
+      verify(
+        () => mockRepo.saveSession(
+          data: any(named: 'data'),
+          email: any(named: 'email'),
+          passwordHash: any(named: 'passwordHash'),
+        ),
+      ).called(1);
     });
 
     test('login_saves_token_on_success', () async {
       const response = LoginResponseEntity(
         patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(
-          type: 'Bearer',
-          key: 'token123',
-        ),
+        token: TokenEntity(type: 'Bearer', key: 'token123'),
         clinicalHistory: [],
       );
-      when(() => mockPasswordHasher.hash(any())).thenAnswer((_) async => 'hashed_password');
+      when(
+        () => mockPasswordHasher.hash(any()),
+      ).thenAnswer((_) async => 'hashed_password');
       when(
         () => mockRepo.login(
           email: any(named: 'email'),
@@ -159,10 +161,7 @@ void main() {
       ).thenAnswer((_) async => const Success(response));
       when(() => mockTokenStore.save(any())).thenAnswer((_) async {});
 
-      await loginUseCase(
-        email: 'test@example.com',
-        password: 'password123',
-      );
+      await loginUseCase(email: 'test@example.com', password: 'password123');
 
       verify(() => mockTokenStore.save('token123')).called(1);
     });
@@ -170,13 +169,12 @@ void main() {
     test('login_saves_token_without_rememberMe', () async {
       const response = LoginResponseEntity(
         patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(
-          type: 'Bearer',
-          key: 'token123',
-        ),
+        token: TokenEntity(type: 'Bearer', key: 'token123'),
         clinicalHistory: [],
       );
-      when(() => mockPasswordHasher.hash(any())).thenAnswer((_) async => 'hashed_password');
+      when(
+        () => mockPasswordHasher.hash(any()),
+      ).thenAnswer((_) async => 'hashed_password');
       when(
         () => mockRepo.login(
           email: any(named: 'email'),
@@ -198,10 +196,7 @@ void main() {
 
   group('RefreshTokenUseCase', () {
     test('refreshToken_calls_repository_and_returns_data_on_success', () async {
-      const token = TokenEntity(
-        type: 'Bearer',
-        key: 'newToken',
-      );
+      const token = TokenEntity(type: 'Bearer', key: 'newToken');
       when(
         () => mockRepo.refreshToken(token: any(named: 'token')),
       ).thenAnswer((_) async => const Success(token));
@@ -215,20 +210,25 @@ void main() {
       );
     });
 
-    test('refreshToken_calls_repository_and_returns_failure_on_error', () async {
-      when(
-        () => mockRepo.refreshToken(token: any(named: 'token')),
-      ).thenAnswer((_) async => const Failure(ApiError(
-        'The server returned an error. Please try again later.',
-      )));
+    test(
+      'refreshToken_calls_repository_and_returns_failure_on_error',
+      () async {
+        when(
+          () => mockRepo.refreshToken(token: any(named: 'token')),
+        ).thenAnswer(
+          (_) async => const Failure(
+            ApiError('The server returned an error. Please try again later.'),
+          ),
+        );
 
-      final result = await refreshTokenUseCase(token: 'oldToken');
+        final result = await refreshTokenUseCase(token: 'oldToken');
 
-      expect(result.isSuccess, isFalse);
-      result.fold(
-        onSuccess: (_) => fail('should be Failure'),
-        onFailure: (error) => expect(error, isA<ApiError>()),
-      );
-    });
+        expect(result.isSuccess, isFalse);
+        result.fold(
+          onSuccess: (_) => fail('should be Failure'),
+          onFailure: (error) => expect(error, isA<ApiError>()),
+        );
+      },
+    );
   });
 }

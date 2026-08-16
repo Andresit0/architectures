@@ -4,10 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Exceptions from shared/exceptions/', () {
     test('ApiException from new location', () {
-      expect(
-        () => throw const ApiException(500),
-        throwsA(isA<ApiException>()),
-      );
+      expect(() => throw const ApiException(500), throwsA(isA<ApiException>()));
     });
 
     test('DeviceSecurityException from new location', () {
@@ -44,7 +41,5 @@ void main() {
         throwsA(isA<UnexpectedResponseException>()),
       );
     });
-
-
   });
 }

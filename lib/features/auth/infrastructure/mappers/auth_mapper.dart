@@ -8,22 +8,18 @@ class AuthMapper {
       LoginResponseEntity(
         patient: patientFromDto(dto.patient),
         token: tokenFromDto(dto.token),
-        clinicalHistory:
-            dto.clinicalHistory.map(clinicalHistoryFromDto).toList(),
+        clinicalHistory: dto.clinicalHistory
+            .map(clinicalHistoryFromDto)
+            .toList(),
       );
 
-  static TokenEntity tokenFromDto(TokenDto dto) => TokenEntity(
-        type: dto.type,
-        key: dto.key,
-      );
+  static TokenEntity tokenFromDto(TokenDto dto) =>
+      TokenEntity(type: dto.type, key: dto.key);
 
-  static PatientEntity patientFromDto(PatientDto dto) => PatientEntity(
-        id: dto.id,
-        name: dto.name,
-      );
+  static PatientEntity patientFromDto(PatientDto dto) =>
+      PatientEntity(id: dto.id, name: dto.name);
 
-  static ClinicalHistoryEntity clinicalHistoryFromDto(
-          ClinicalHistoryDto dto) =>
+  static ClinicalHistoryEntity clinicalHistoryFromDto(ClinicalHistoryDto dto) =>
       ClinicalHistoryEntity(
         id: dto.id,
         encounterNumber: dto.encounterNumber,
@@ -45,50 +41,40 @@ class AuthMapper {
       );
 
   static ClinicalHistoryServiceEntity serviceFromDto(
-          ClinicalHistoryServiceDto dto) =>
-      ClinicalHistoryServiceEntity(
-        code: dto.code,
-        name: dto.name,
-        category: dto.category,
-      );
+    ClinicalHistoryServiceDto dto,
+  ) => ClinicalHistoryServiceEntity(
+    code: dto.code,
+    name: dto.name,
+    category: dto.category,
+  );
 
   static ClinicalHistoryFacilityEntity facilityFromDto(
-          ClinicalHistoryFacilityDto dto) =>
-      ClinicalHistoryFacilityEntity(
-        id: dto.id,
-        name: dto.name,
-        city: dto.city,
-      );
+    ClinicalHistoryFacilityDto dto,
+  ) =>
+      ClinicalHistoryFacilityEntity(id: dto.id, name: dto.name, city: dto.city);
 
   static ClinicalHistoryProfessionalEntity professionalFromDto(
-          ClinicalHistoryProfessionalDto dto) =>
-      ClinicalHistoryProfessionalEntity(
-        id: dto.id,
-        fullname: dto.fullname,
-        specialty: dto.specialty,
-      );
+    ClinicalHistoryProfessionalDto dto,
+  ) => ClinicalHistoryProfessionalEntity(
+    id: dto.id,
+    fullname: dto.fullname,
+    specialty: dto.specialty,
+  );
 
   static ClinicalHistoryDiagnosisEntity diagnosisFromDto(
-          ClinicalHistoryDiagnosisDto dto) =>
-      ClinicalHistoryDiagnosisEntity(
-        code: dto.code,
-        name: dto.name,
-      );
+    ClinicalHistoryDiagnosisDto dto,
+  ) => ClinicalHistoryDiagnosisEntity(code: dto.code, name: dto.name);
 
   static ClinicalHistoryAttachmentEntity attachmentFromDto(
-          ClinicalHistoryAttachmentDto dto) =>
-      ClinicalHistoryAttachmentEntity(
-        id: dto.id,
-        type: dto.type,
-        name: dto.name,
-        sizeBytes: dto.sizeBytes,
-        url: dto.url,
-      );
+    ClinicalHistoryAttachmentDto dto,
+  ) => ClinicalHistoryAttachmentEntity(
+    id: dto.id,
+    type: dto.type,
+    name: dto.name,
+    sizeBytes: dto.sizeBytes,
+    url: dto.url,
+  );
 
-  static ClinicalHistoryStateEntity stateFromDto(
-          ClinicalHistoryStateDto dto) =>
-      ClinicalHistoryStateEntity(
-        code: dto.code,
-        label: dto.label,
-      );
+  static ClinicalHistoryStateEntity stateFromDto(ClinicalHistoryStateDto dto) =>
+      ClinicalHistoryStateEntity(code: dto.code, label: dto.label);
 }

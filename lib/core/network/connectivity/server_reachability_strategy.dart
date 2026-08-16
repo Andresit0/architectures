@@ -12,7 +12,6 @@ abstract class IServerReachabilityStrategy {
 }
 
 class NativeSocketReachability extends IServerReachabilityStrategy {
-
   const NativeSocketReachability({
     required this.host,
     required this.port,
@@ -35,11 +34,7 @@ class NativeSocketReachability extends IServerReachabilityStrategy {
 }
 
 class HttpReachability extends IServerReachabilityStrategy {
-
-  const HttpReachability({
-    required this._dio,
-    required this._baseUri,
-  });
+  const HttpReachability({required this._dio, required this._baseUri});
   final Dio _dio;
   final Uri _baseUri;
 

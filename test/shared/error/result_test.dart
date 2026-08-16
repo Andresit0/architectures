@@ -41,12 +41,16 @@ void main() {
       expect(failure.error.technicalMessage, contains('boom'));
     });
 
-    test('catches Error (not just Exception) and wraps in UnexpectedError',
-        () async {
-      final result = await guard<int>(() async => throw ArgumentError('bad arg'));
-      expect(result, isA<Failure<int>>());
-      final failure = result as Failure<int>;
-      expect(failure.error, isA<UnexpectedError>());
-    });
+    test(
+      'catches Error (not just Exception) and wraps in UnexpectedError',
+      () async {
+        final result = await guard<int>(
+          () async => throw ArgumentError('bad arg'),
+        );
+        expect(result, isA<Failure<int>>());
+        final failure = result as Failure<int>;
+        expect(failure.error, isA<UnexpectedError>());
+      },
+    );
   });
 }

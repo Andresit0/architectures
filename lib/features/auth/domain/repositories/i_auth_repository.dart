@@ -10,9 +10,7 @@ abstract interface class IAuthRepository {
     required PasswordHash passwordHash,
   });
 
-  Future<Result<TokenEntity>> refreshToken({
-    required String token,
-  });
+  Future<Result<TokenEntity>> refreshToken({required String token});
 
   Future<Result<void>> saveSession({
     required LoginResponseEntity data,

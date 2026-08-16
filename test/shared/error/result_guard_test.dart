@@ -41,10 +41,7 @@ void main() {
         });
 
         expect(result, isA<Failure<int>>());
-        expect(
-          (result as Failure<int>).error,
-          isA<ServerUnreachableError>(),
-        );
+        expect((result as Failure<int>).error, isA<ServerUnreachableError>());
       },
     );
 
@@ -68,10 +65,7 @@ void main() {
         });
 
         expect(result, isA<Failure<int>>());
-        expect(
-          (result as Failure<int>).error,
-          isA<DeviceSecurityError>(),
-        );
+        expect((result as Failure<int>).error, isA<DeviceSecurityError>());
       },
     );
 
@@ -87,14 +81,16 @@ void main() {
       },
     );
 
-    test('should return Failure with NetworkError on raw TimeoutException',
-        () async {
-      final result = await guard<int>(() async {
-        throw TimeoutException('timed out');
-      });
-      expect(result, isA<Failure<int>>());
-      expect((result as Failure<int>).error, isA<NetworkError>());
-    });
+    test(
+      'should return Failure with NetworkError on raw TimeoutException',
+      () async {
+        final result = await guard<int>(() async {
+          throw TimeoutException('timed out');
+        });
+        expect(result, isA<Failure<int>>());
+        expect((result as Failure<int>).error, isA<NetworkError>());
+      },
+    );
 
     test(
       'should return Failure with UnexpectedError on generic exception',
@@ -108,16 +104,13 @@ void main() {
       },
     );
 
-    test(
-      'guard returns ApiError without localizer',
-      () async {
-        final result = await guard<int>(
-          () async => throw const ApiException(400),
-        );
+    test('guard returns ApiError without localizer', () async {
+      final result = await guard<int>(
+        () async => throw const ApiException(400),
+      );
 
-        expect(result, isA<Failure<int>>());
-        expect((result as Failure<int>).error, isA<ApiError>());
-      },
-    );
+      expect(result, isA<Failure<int>>());
+      expect((result as Failure<int>).error, isA<ApiError>());
+    });
   });
 }

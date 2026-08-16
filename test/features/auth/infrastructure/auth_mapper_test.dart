@@ -52,10 +52,7 @@ void main() {
               summary: 'Summary',
               description: 'Description',
               diagnosis: [
-                ClinicalHistoryDiagnosisDto(
-                  code: 'D01',
-                  name: 'Diagnosis 1',
-                ),
+                ClinicalHistoryDiagnosisDto(code: 'D01', name: 'Diagnosis 1'),
               ],
               observations: ['Obs 1'],
               attachments: [
@@ -67,10 +64,7 @@ void main() {
                   url: 'https://example.com/report.pdf',
                 ),
               ],
-              state: ClinicalHistoryStateDto(
-                code: 'active',
-                label: 'Active',
-              ),
+              state: ClinicalHistoryStateDto(code: 'active', label: 'Active'),
             ),
           ],
         );
@@ -215,10 +209,7 @@ void main() {
       });
 
       test('stateFromDto mapea correctamente', () {
-        final dto = ClinicalHistoryStateDto(
-          code: 'active',
-          label: 'Active',
-        );
+        final dto = ClinicalHistoryStateDto(code: 'active', label: 'Active');
         final entity = AuthMapper.stateFromDto(dto);
         expect(entity.code, 'active');
         expect(entity.label, 'Active');
@@ -231,8 +222,11 @@ void main() {
           'lib/features/auth/infrastructure/mappers/auth_mapper.dart',
         );
         final source = sourceFile.readAsStringSync();
-        expect(source.contains('.fromJson'), isFalse,
-            reason: 'El mapper no debe contener ninguna llamada a .fromJson');
+        expect(
+          source.contains('.fromJson'),
+          isFalse,
+          reason: 'El mapper no debe contener ninguna llamada a .fromJson',
+        );
       });
     });
   });

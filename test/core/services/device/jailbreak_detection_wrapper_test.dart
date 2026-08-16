@@ -2,7 +2,8 @@ import 'package:clean_architecture_sdd_harness/core/services/_services.lib.dart'
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockJailbreakDetectionWrapper extends Mock implements IJailbreakDetectionWrapper {}
+class MockJailbreakDetectionWrapper extends Mock
+    implements IJailbreakDetectionWrapper {}
 
 void main() {
   group('IJailbreakDetectionWrapper interface', () {

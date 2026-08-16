@@ -16,7 +16,9 @@ import '../infrastructure/repositories/auth_repository_impl.dart';
 
 part 'auth_provider.g.dart';
 
-final appNameProvider = Provider<String>((ref) => ref.watch(environmentProvider).appName);
+final appNameProvider = Provider<String>(
+  (ref) => ref.watch(environmentProvider).appName,
+);
 
 @riverpod
 IAuthRemoteDatasource authRemoteDatasource(Ref ref) =>
@@ -24,38 +26,35 @@ IAuthRemoteDatasource authRemoteDatasource(Ref ref) =>
 
 @riverpod
 ILocalAuthDatasource localAuthDatasource(Ref ref) => LocalAuthDatasourceImpl(
-      patientInfo: ref.watch(patientInfoStoreProvider),
-      clinicalHistory: ref.watch(clinicalHistoryStoreProvider),
-      tokenStore: ref.watch(tokenStoreProvider),
-      credentialStore: ref.watch(credentialStoreProvider),
-      tokenVerifier: ref.watch(tokenVerifierProvider),
-      appDatabase: ref.watch(appDatabaseProvider),
-      internetService: ref.watch(internetServiceProvider),
-    );
+  patientInfo: ref.watch(patientInfoStoreProvider),
+  clinicalHistory: ref.watch(clinicalHistoryStoreProvider),
+  tokenStore: ref.watch(tokenStoreProvider),
+  credentialStore: ref.watch(credentialStoreProvider),
+  tokenVerifier: ref.watch(tokenVerifierProvider),
+  appDatabase: ref.watch(appDatabaseProvider),
+  internetService: ref.watch(internetServiceProvider),
+);
 
 @riverpod
 IAuthRepository authRepository(Ref ref) => AuthRepositoryImpl(
-      remoteDatasource: ref.watch(authRemoteDatasourceProvider),
-      localDatasource: ref.watch(localAuthDatasourceProvider),
-    );
+  remoteDatasource: ref.watch(authRemoteDatasourceProvider),
+  localDatasource: ref.watch(localAuthDatasourceProvider),
+);
 
 @riverpod
 LoginUseCase loginUseCase(Ref ref) => LoginUseCase(
-      repository: ref.watch(authRepositoryProvider),
-      passwordHasher: ref.watch(passwordHasherProvider),
-      tokenStore: ref.watch(tokenStoreProvider),
-    );
-
-
-@riverpod
-ClearSessionUseCase clearSessionUseCase(Ref ref) => ClearSessionUseCase(
-      repository: ref.watch(authRepositoryProvider),
-    );
-
-@riverpod
-RefreshTokenUseCase refreshTokenUseCase(Ref ref) => RefreshTokenUseCase(
   repository: ref.watch(authRepositoryProvider),
+  passwordHasher: ref.watch(passwordHasherProvider),
+  tokenStore: ref.watch(tokenStoreProvider),
 );
+
+@riverpod
+ClearSessionUseCase clearSessionUseCase(Ref ref) =>
+    ClearSessionUseCase(repository: ref.watch(authRepositoryProvider));
+
+@riverpod
+RefreshTokenUseCase refreshTokenUseCase(Ref ref) =>
+    RefreshTokenUseCase(repository: ref.watch(authRepositoryProvider));
 
 @riverpod
 RestoreSessionUseCase restoreSessionUseCase(Ref ref) => RestoreSessionUseCase(

@@ -13,11 +13,11 @@ void main() {
 
   setUp(() {
     mockRepo = _MockAuthRepository();
-    useCase = ClearSessionUseCase(
-      repository: mockRepo,
-    );
+    useCase = ClearSessionUseCase(repository: mockRepo);
 
-    when(() => mockRepo.clearSession()).thenAnswer((_) async => const Success(null));
+    when(
+      () => mockRepo.clearSession(),
+    ).thenAnswer((_) async => const Success(null));
   });
 
   group('ClearSessionUseCase', () {
@@ -29,10 +29,13 @@ void main() {
     });
 
     test('returns Failure when repository fails', () async {
-      when(() => mockRepo.clearSession())
-          .thenAnswer((_) async => const Failure(UnexpectedError(
+      when(() => mockRepo.clearSession()).thenAnswer(
+        (_) async => const Failure(
+          UnexpectedError(
             'An unexpected error occurred. Please try again later.',
-          )));
+          ),
+        ),
+      );
 
       final result = await useCase();
 

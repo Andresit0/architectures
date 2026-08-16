@@ -8,21 +8,14 @@ import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_ent
 
 void main() {
   group('TokenEntity', () {
-    const entity = TokenEntity(
-      type: 'Bearer',
-      key: 'sample-jwt-token',
-    );
+    const entity = TokenEntity(type: 'Bearer', key: 'sample-jwt-token');
 
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const TokenEntity(
-          type: 'Bearer',
-          key: 'sample-jwt-token',
-        )),
+        equals(const TokenEntity(type: 'Bearer', key: 'sample-jwt-token')),
       );
     });
-
 
     test('copyWith creates modified copy', () {
       final copy = entity.copyWith(key: 'new-token');
@@ -33,10 +26,7 @@ void main() {
 
   group('LoginResponseEntity', () {
     const patient = PatientEntity(id: '1', name: 'John Doe');
-    const token = TokenEntity(
-      type: 'Bearer',
-      key: 'token',
-    );
+    const token = TokenEntity(type: 'Bearer', key: 'token');
     const service = ClinicalHistoryServiceEntity(
       code: 'GEN',
       name: 'General Medicine',
@@ -76,14 +66,15 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const LoginResponseEntity(
-          patient: patient,
-          token: token,
-          clinicalHistory: clinicalHistory,
-        )),
+        equals(
+          const LoginResponseEntity(
+            patient: patient,
+            token: token,
+            clinicalHistory: clinicalHistory,
+          ),
+        ),
       );
     });
-
 
     test('copyWith creates modified copy', () {
       final modifiedPatient = PatientEntity(id: '2', name: 'Jane Doe');
@@ -91,7 +82,5 @@ void main() {
       expect(copy.patient.id, '2');
       expect(copy.token.key, 'token');
     });
-
-
   });
 }

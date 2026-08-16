@@ -3,10 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TokenDto', () {
-    final validJson = {
-      'type': 'Bearer',
-      'key': 'some-jwt-token',
-    };
+    final validJson = {'type': 'Bearer', 'key': 'some-jwt-token'};
 
     test('fromJson creates TokenDto from valid JSON', () {
       final dto = TokenDto.fromJson(validJson);
@@ -36,10 +33,7 @@ void main() {
   });
 
   group('PatientDto', () {
-    final validJson = {
-      'id': 'patient-1',
-      'name': 'John Doe',
-    };
+    final validJson = {'id': 'patient-1', 'name': 'John Doe'};
 
     test('fromJson creates PatientDto from valid JSON', () {
       final dto = PatientDto.fromJson(validJson);
@@ -122,16 +116,8 @@ void main() {
           {
             'id': 'ch-1',
             'encounter_number': 'ENC-001',
-            'service': {
-              'code': 'SVC01',
-              'name': 'General',
-              'category': 'A',
-            },
-            'facility': {
-              'id': 'fac-1',
-              'name': 'Hospital',
-              'city': 'City',
-            },
+            'service': {'code': 'SVC01', 'name': 'General', 'category': 'A'},
+            'facility': {'id': 'fac-1', 'name': 'Hospital', 'city': 'City'},
             'professional': null,
             'encounter_date': '2024-01-15',
             'created_at': null,
@@ -157,10 +143,7 @@ void main() {
     test('toJson roundtrip produces same values', () {
       final json = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'ch1',
@@ -198,7 +181,10 @@ void main() {
       expect(jsonOut['token']['key'], 'jwt_token');
       final historyList = jsonOut['clinical_history'] as List;
       expect(historyList.length, 1);
-      expect((historyList[0] as Map<String, dynamic>)['encounter_number'], 'ENC-001');
+      expect(
+        (historyList[0] as Map<String, dynamic>)['encounter_number'],
+        'ENC-001',
+      );
 
       // Verify full roundtrip
       final restored = LoginResponseDto.fromJson(jsonOut);

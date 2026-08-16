@@ -47,7 +47,11 @@ class _SpyAuthNotifier extends AuthNotifier {
   AuthState build() => _initialState;
 
   @override
-  Future<void> login(String email, String password, {bool rememberMe = false}) async {
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     _spy.loginCallCount++;
     _spy.lastLoginEmail = email;
     _spy.lastLoginPassword = password;
@@ -70,9 +74,7 @@ Widget _buildScreen(AuthState state, _SharedSpy spy) {
   _lastContainer?.dispose();
   _lastContainer = ProviderContainer(
     overrides: [
-      authProvider.overrideWith(
-        () => _SpyAuthNotifier(state, spy),
-      ),
+      authProvider.overrideWith(() => _SpyAuthNotifier(state, spy)),
       environmentProvider.overrideWith((ref) => const ProductionEnvironment()),
     ],
   );
@@ -109,10 +111,7 @@ final _s = _ScenarioState();
 // ---------------------------------------------------------------------------
 
 const _tPatient = PatientEntity(id: '1', name: 'John Doe');
-const _tToken = TokenEntity(
-  type: 'Bearer',
-  key: 'jwt_token_123',
-);
+const _tToken = TokenEntity(type: 'Bearer', key: 'jwt_token_123');
 const _tLoaded = AuthLoaded(
   patient: _tPatient,
   token: _tToken,
@@ -132,8 +131,8 @@ Future<void> main() async {
     // ═══════════════════════════════════════════════
     // Background
     // ═══════════════════════════════════════════════
-    'the app is installed and the user has network connectivity'.mapper():
-        (tester, ctx) async {
+    'the app is installed and the user has network connectivity'
+        .mapper(): (tester, ctx) async {
       _s.reset();
     },
 
@@ -158,22 +157,22 @@ Future<void> main() async {
       await tester.pump();
     },
 
-    'the user has an expired stored token and stored credentials'.mapper():
-        (tester, ctx) async {
+    'the user has an expired stored token and stored credentials'
+        .mapper(): (tester, ctx) async {
       _s.currentState = const AuthInitial();
       await tester.pumpWidget(_buildScreen(_s.currentState, _s.spy));
       await tester.pump();
     },
 
-    'the user has no stored token and no stored credentials'.mapper():
-        (tester, ctx) async {
+    'the user has no stored token and no stored credentials'
+        .mapper(): (tester, ctx) async {
       _s.currentState = const AuthInitial();
       await tester.pumpWidget(_buildScreen(_s.currentState, _s.spy));
       await tester.pump();
     },
 
-    'the user is authenticated and viewing /clinical_history'.mapper():
-        (tester, ctx) async {
+    'the user is authenticated and viewing /clinical_history'
+        .mapper(): (tester, ctx) async {
       _s.currentState = _tLoaded;
       await tester.pumpWidget(_buildScreen(_s.currentState, _s.spy));
       await tester.pump();
@@ -182,8 +181,8 @@ Future<void> main() async {
     // ═══════════════════════════════════════════════
     // When Steps
     // ═══════════════════════════════════════════════
-    'the user enters valid email and password and taps login'.mapper():
-        (tester, ctx) async {
+    'the user enters valid email and password and taps login'
+        .mapper(): (tester, ctx) async {
       await tester.enterText(find.byType(TextField).first, 'test@example.com');
       await tester.enterText(find.byType(TextField).last, 'validPass1');
       await tester.pump();
@@ -191,8 +190,8 @@ Future<void> main() async {
       await tester.pump();
     },
 
-    'the user enters invalid email or password and taps login'.mapper():
-        (tester, ctx) async {
+    'the user enters invalid email or password and taps login'
+        .mapper(): (tester, ctx) async {
       await tester.enterText(find.byType(TextField).first, 'wrong@email.com');
       await tester.enterText(find.byType(TextField).last, 'wrong1');
       await tester.pump();
@@ -200,8 +199,8 @@ Future<void> main() async {
       await tester.pump();
     },
 
-    'the user taps login and there is no network connectivity'.mapper():
-        (tester, ctx) async {
+    'the user taps login and there is no network connectivity'
+        .mapper(): (tester, ctx) async {
       await tester.enterText(find.byType(TextField).first, 'test@example.com');
       await tester.enterText(find.byType(TextField).last, 'password123');
       await tester.pump();
@@ -242,8 +241,8 @@ Future<void> main() async {
     // ═══════════════════════════════════════════════
     // Then Steps — verify behavior via spy
     // ═══════════════════════════════════════════════
-    'the system POSTs email and passwordHash to /user/login'.mapper():
-        (tester, ctx) async {
+    'the system POSTs email and passwordHash to /user/login'
+        .mapper(): (tester, ctx) async {
       if (_s.spy.loginCallCount > 0) {
         // Manual login flow — verified by spy
         expect(_s.spy.lastLoginEmail, 'test@example.com');
@@ -256,29 +255,30 @@ Future<void> main() async {
       }
     },
 
-    'the system stores the token in secure storage'.mapper():
-        (tester, ctx) async {
+    'the system stores the token in secure storage'
+        .mapper(): (tester, ctx) async {
       expect(_s.spy.loginCallCount, greaterThan(0));
     },
 
-    'the system stores patient and clinical history in sembast'.mapper():
-        (tester, ctx) async {
+    'the system stores patient and clinical history in sembast'
+        .mapper(): (tester, ctx) async {
       expect(_s.spy.loginCallCount, greaterThan(0));
     },
 
-    'the system navigates to /clinical_history'.mapper():
-        (tester, ctx) async {
-      expect(_s.currentState is AuthLoaded || _s.spy.loginCallCount > 0,
-          isTrue,
-          reason: 'Expected navigation via AuthLoaded or successful login');
+    'the system navigates to /clinical_history'.mapper(): (tester, ctx) async {
+      expect(
+        _s.currentState is AuthLoaded || _s.spy.loginCallCount > 0,
+        isTrue,
+        reason: 'Expected navigation via AuthLoaded or successful login',
+      );
     },
 
     'the system receives HTTP 401'.mapper(): (tester, ctx) async {
       expect(_s.spy.loginCallCount, greaterThan(0));
     },
 
-    'the system shows "Invalid credentials" error'.mapper():
-        (tester, ctx) async {
+    'the system shows "Invalid credentials" error'
+        .mapper(): (tester, ctx) async {
       expect(_s.spy.loginCallCount, greaterThan(0));
     },
 
@@ -287,8 +287,7 @@ Future<void> main() async {
       expect(find.byType(TextField), findsNWidgets(2));
     },
 
-    'the system shows a network failure message'.mapper():
-        (tester, ctx) async {
+    'the system shows a network failure message'.mapper(): (tester, ctx) async {
       expect(_s.spy.loginCallCount, greaterThan(0));
     },
 
@@ -298,8 +297,8 @@ Future<void> main() async {
       expect(_s.spy.lastLoginRememberMe, isTrue);
     },
 
-    'the system navigates directly to /clinical_history'.mapper():
-        (tester, ctx) async {
+    'the system navigates directly to /clinical_history'
+        .mapper(): (tester, ctx) async {
       expect(find.text('Clinical History'), findsAtLeastNWidgets(1));
     },
 
@@ -320,8 +319,8 @@ Future<void> main() async {
       expect(_s.currentState, isA<AuthLoaded>());
     },
 
-    'the system POSTs to /user/refreshtoken and receives 401'.mapper():
-        (tester, ctx) async {
+    'the system POSTs to /user/refreshtoken and receives 401'
+        .mapper(): (tester, ctx) async {
       // Handled by AuthInterceptor — verified in interceptor unit tests
     },
 
@@ -331,9 +330,11 @@ Future<void> main() async {
     },
 
     'the system clears secure storage'.mapper(): (tester, ctx) async {
-      expect(_s.currentState is AuthInitial || _s.spy.logoutCallCount > 0,
-          isTrue,
-          reason: 'Expected state reset or explicit logout');
+      expect(
+        _s.currentState is AuthInitial || _s.spy.logoutCallCount > 0,
+        isTrue,
+        reason: 'Expected state reset or explicit logout',
+      );
     },
 
     'the user sees the login screen'.mapper(): (tester, ctx) async {
@@ -344,8 +345,8 @@ Future<void> main() async {
       expect(_s.spy.logoutCallCount, greaterThan(0));
     },
 
-    'the system does NOT store email or passwordHash in secure storage'.mapper():
-        (tester, ctx) async {
+    'the system does NOT store email or passwordHash in secure storage'
+        .mapper(): (tester, ctx) async {
       expect(_s.spy.loginCallCount, greaterThan(0));
       expect(_s.spy.lastLoginRememberMe, isFalse);
     },
@@ -356,24 +357,21 @@ Future<void> main() async {
     registry: registry,
     source: FileSystemSource(),
     adapter: TestAdapter<WidgetTester>(
-      testFunction: (
-        String name, {
-        List<String>? tags,
-        bool skip = false,
-        Future<void> Function(WidgetTester)? callback,
-      }) {
-        testWidgets(
-          name,
-          (tester) async {
-            await callback!(tester);
-            await tester.pumpWidget(const SizedBox.shrink());
-            await tester.pump();
-            _s.reset();
-            await tester.pump();
+      testFunction:
+          (
+            String name, {
+            List<String>? tags,
+            bool skip = false,
+            Future<void> Function(WidgetTester)? callback,
+          }) {
+            testWidgets(name, (tester) async {
+              await callback!(tester);
+              await tester.pumpWidget(const SizedBox.shrink());
+              await tester.pump();
+              _s.reset();
+              await tester.pump();
+            }, skip: skip);
           },
-          skip: skip,
-        );
-      },
       group: group,
       setUpAll: setUpAll,
       tearDownAll: tearDownAll,

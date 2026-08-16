@@ -29,10 +29,7 @@ void main() {
     test('login_success_returns_LoginResponseEntity', () async {
       final responseJson = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'ch1',
@@ -87,10 +84,7 @@ void main() {
     test('login_calls_dio', () async {
       final responseJson = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[],
       };
       when(
@@ -102,10 +96,7 @@ void main() {
         ),
       ).thenAnswer((_) async => HttpResponse(data: responseJson));
 
-      await datasource.login(
-        email: 'test@example.com',
-        passwordHash: 'hash',
-      );
+      await datasource.login(email: 'test@example.com', passwordHash: 'hash');
 
       verify(
         () => mockDio.post(
@@ -128,20 +119,14 @@ void main() {
       ).thenThrow(const ApiException(401));
 
       expect(
-        () => datasource.login(
-          email: 'test@example.com',
-          passwordHash: 'hash',
-        ),
+        () => datasource.login(email: 'test@example.com', passwordHash: 'hash'),
         throwsA(isA<ApiException>()),
       );
     });
 
     test('refreshToken_success_returns_TokenEntity', () async {
       final responseJson = <String, dynamic>{
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'new_jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'new_jwt_token'},
       };
       when(
         () => mockDio.post(
@@ -182,10 +167,7 @@ void main() {
     test('login_passes_EndpointSla_login', () async {
       final responseJson = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[],
       };
       when(
@@ -197,10 +179,7 @@ void main() {
         ),
       ).thenAnswer((_) async => HttpResponse(data: responseJson));
 
-      await datasource.login(
-        email: 'test@example.com',
-        passwordHash: 'hash',
-      );
+      await datasource.login(email: 'test@example.com', passwordHash: 'hash');
 
       verify(
         () => mockDio.post(

@@ -4,23 +4,21 @@ import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/han
 import 'package:flutter/foundation.dart' show VoidCallback;
 
 class AuthInterceptorImpl implements IAuthInterceptorProvider {
-  const AuthInterceptorImpl({
-    required this.handle401UseCase,
-  });
+  const AuthInterceptorImpl({required this.handle401UseCase});
 
   final Handle401UseCase handle401UseCase;
 
   @override
-  void setupAuthInterceptor(IDioWrapper dioWrapper, {required VoidCallback onForceLogout}) {
-    dioWrapper.addAuthInterceptor(
-      () async {
-        final result = await handle401UseCase();
-        return switch (result) {
-          Success(data: final retryResult) => retryResult,
-          Failure() => const RetryFailed(),
-        };
-      },
-      onForceLogout: onForceLogout,
-    );
+  void setupAuthInterceptor(
+    IDioWrapper dioWrapper, {
+    required VoidCallback onForceLogout,
+  }) {
+    dioWrapper.addAuthInterceptor(() async {
+      final result = await handle401UseCase();
+      return switch (result) {
+        Success(data: final retryResult) => retryResult,
+        Failure() => const RetryFailed(),
+      };
+    }, onForceLogout: onForceLogout);
   }
 }

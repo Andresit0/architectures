@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import '../../../helpers/mocks.dart';
 
 class _MockCredentialStore extends Mock implements ICredentialStore {}
+
 class _MockRefreshTokenUseCase extends Mock implements RefreshTokenUseCase {}
 
 void main() {
@@ -54,8 +55,9 @@ void main() {
   test('returns_RetrySuccess_when_token_refreshed', () async {
     when(() => mockTokenStore.read()).thenAnswer((_) async => 'old');
     const tokenEntity = TokenEntity(type: 'bearer', key: 'new');
-    when(() => mockRefreshTokenUseCase(token: 'old'))
-        .thenAnswer((_) async => const Success(tokenEntity));
+    when(
+      () => mockRefreshTokenUseCase(token: 'old'),
+    ).thenAnswer((_) async => const Success(tokenEntity));
     when(() => mockTokenStore.save('new')).thenAnswer((_) async {});
 
     final result = await useCase();
@@ -67,45 +69,59 @@ void main() {
     expect(retryResult, isA<RetrySuccess>());
     expect((retryResult as RetrySuccess).token, 'new');
     verify(() => mockTokenStore.save('new')).called(1);
-    verifyNever(() => mockAuthRepository.login(email: any(named: 'email'), passwordHash: any(named: 'passwordHash')));
-  });
-
-  test('returns_RetrySuccess_with_reLogin_when_refresh_fails_and_creds_exist', () async {
-    when(() => mockTokenStore.read()).thenAnswer((_) async => 'old');
-    when(() => mockRefreshTokenUseCase(token: 'old'))
-        .thenAnswer((_) async => const Failure(NetworkError.technical()));
-    when(() => mockCredentialStore.readCredentials())
-        .thenAnswer((_) async => (email: 'test@example.com', passwordHash: 'hash'));
-    const patient = PatientEntity(name: 'test', id: '1');
-    const token = TokenEntity(type: 'bearer', key: 'reLoginToken');
-    const loginResponse = LoginResponseEntity(
-      patient: patient,
-      token: token,
-      clinicalHistory: [],
+    verifyNever(
+      () => mockAuthRepository.login(
+        email: any(named: 'email'),
+        passwordHash: any(named: 'passwordHash'),
+      ),
     );
-    when(() => mockAuthRepository.login(
-      email: any(named: 'email'),
-      passwordHash: any(named: 'passwordHash'),
-    )).thenAnswer((_) async => const Success(loginResponse));
-    when(() => mockTokenStore.save('reLoginToken')).thenAnswer((_) async {});
-
-    final result = await useCase();
-
-    final retryResult = switch (result) {
-      Success(data: final data) => data,
-      Failure() => throw 'Expected Success',
-    };
-    expect(retryResult, isA<RetrySuccess>());
-    expect((retryResult as RetrySuccess).token, 'reLoginToken');
-    verify(() => mockTokenStore.save('reLoginToken')).called(1);
   });
+
+  test(
+    'returns_RetrySuccess_with_reLogin_when_refresh_fails_and_creds_exist',
+    () async {
+      when(() => mockTokenStore.read()).thenAnswer((_) async => 'old');
+      when(
+        () => mockRefreshTokenUseCase(token: 'old'),
+      ).thenAnswer((_) async => const Failure(NetworkError.technical()));
+      when(() => mockCredentialStore.readCredentials()).thenAnswer(
+        (_) async => (email: 'test@example.com', passwordHash: 'hash'),
+      );
+      const patient = PatientEntity(name: 'test', id: '1');
+      const token = TokenEntity(type: 'bearer', key: 'reLoginToken');
+      const loginResponse = LoginResponseEntity(
+        patient: patient,
+        token: token,
+        clinicalHistory: [],
+      );
+      when(
+        () => mockAuthRepository.login(
+          email: any(named: 'email'),
+          passwordHash: any(named: 'passwordHash'),
+        ),
+      ).thenAnswer((_) async => const Success(loginResponse));
+      when(() => mockTokenStore.save('reLoginToken')).thenAnswer((_) async {});
+
+      final result = await useCase();
+
+      final retryResult = switch (result) {
+        Success(data: final data) => data,
+        Failure() => throw 'Expected Success',
+      };
+      expect(retryResult, isA<RetrySuccess>());
+      expect((retryResult as RetrySuccess).token, 'reLoginToken');
+      verify(() => mockTokenStore.save('reLoginToken')).called(1);
+    },
+  );
 
   test('returns_RetryFailed_when_refresh_fails_and_no_creds', () async {
     when(() => mockTokenStore.read()).thenAnswer((_) async => 'old');
-    when(() => mockRefreshTokenUseCase(token: 'old'))
-        .thenAnswer((_) async => const Failure(NetworkError.technical()));
-    when(() => mockCredentialStore.readCredentials())
-        .thenAnswer((_) async => null);
+    when(
+      () => mockRefreshTokenUseCase(token: 'old'),
+    ).thenAnswer((_) async => const Failure(NetworkError.technical()));
+    when(
+      () => mockCredentialStore.readCredentials(),
+    ).thenAnswer((_) async => null);
 
     final result = await useCase();
 

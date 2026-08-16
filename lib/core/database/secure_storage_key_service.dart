@@ -11,7 +11,6 @@ abstract class IDatabaseKeyService {
 }
 
 class DatabaseKeyService implements IDatabaseKeyService {
-
   DatabaseKeyService({ISecureStorageWrapper? storage})
     : _storage = storage ?? const SecureStorageWrapper();
   final ISecureStorageWrapper _storage;

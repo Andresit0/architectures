@@ -10,17 +10,11 @@ void main() {
     });
 
     test('create with empty email throws FormatException', () {
-      expect(
-        () => Email.create(''),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => Email.create(''), throwsA(isA<FormatException>()));
     });
 
     test('create with email without @ throws FormatException', () {
-      expect(
-        () => Email.create('notanemail'),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => Email.create('notanemail'), throwsA(isA<FormatException>()));
     });
 
     test('tryCreate returns null for empty string', () {

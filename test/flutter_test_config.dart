@@ -41,7 +41,7 @@ Future<void> _loadFont(String family, String path) async {
 
 class _TolerantGoldenFileComparator extends LocalFileComparator {
   _TolerantGoldenFileComparator(super.testFile, {required this.tolerance})
-      : assert(tolerance >= 0 && tolerance <= 1);
+    : assert(tolerance >= 0 && tolerance <= 1);
 
   final double tolerance;
 

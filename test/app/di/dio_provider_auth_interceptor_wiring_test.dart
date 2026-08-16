@@ -15,23 +15,32 @@ class MockCredentialStore extends Mock implements ICredentialStore {}
 
 void main() {
   group('DioProvider auth interceptor wiring', () {
-    test('httpServiceProvider correctly wires setupAuthInterceptor through provider chain', () {
-      final container = ProviderContainer(overrides: [
-        internetServiceProvider.overrideWithValue(MockInternetService()),
-        handle401UseCaseProvider.overrideWith((ref) => Handle401UseCase(
-          tokenStore: MockTokenStore(),
-          connectivityChecker: MockConnectivityChecker(),
-          credentialStore: MockCredentialStore(),
-          repository: MockAuthRepository(),
-          refreshTokenUseCase: RefreshTokenUseCase(repository: MockAuthRepository()),
-        )),
-      ]);
+    test(
+      'httpServiceProvider correctly wires setupAuthInterceptor through provider chain',
+      () {
+        final container = ProviderContainer(
+          overrides: [
+            internetServiceProvider.overrideWithValue(MockInternetService()),
+            handle401UseCaseProvider.overrideWith(
+              (ref) => Handle401UseCase(
+                tokenStore: MockTokenStore(),
+                connectivityChecker: MockConnectivityChecker(),
+                credentialStore: MockCredentialStore(),
+                repository: MockAuthRepository(),
+                refreshTokenUseCase: RefreshTokenUseCase(
+                  repository: MockAuthRepository(),
+                ),
+              ),
+            ),
+          ],
+        );
 
-      final dioWrapper = container.read(httpServiceProvider);
+        final dioWrapper = container.read(httpServiceProvider);
 
-      expect(dioWrapper, isA<DioWrapper>());
+        expect(dioWrapper, isA<DioWrapper>());
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
   });
 }

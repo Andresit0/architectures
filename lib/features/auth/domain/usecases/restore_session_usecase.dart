@@ -53,10 +53,7 @@ class RestoreSessionUseCase {
         await _credentialStore.saveToken(tokenData.key);
         return Success(
           localData.copyWith(
-            token: TokenEntity(
-              type: tokenData.type,
-              key: tokenData.key,
-            ),
+            token: TokenEntity(type: tokenData.type, key: tokenData.key),
           ),
         );
       } else {

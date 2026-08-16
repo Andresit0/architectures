@@ -5,7 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('clinicalHistoryStoreProvider', () {
     test('should be a Provider<IClinicalHistoryStore>', () {
-      expect(clinicalHistoryStoreProvider, isA<Provider<IClinicalHistoryStore>>());
+      expect(
+        clinicalHistoryStoreProvider,
+        isA<Provider<IClinicalHistoryStore>>(),
+      );
     });
   });
 }

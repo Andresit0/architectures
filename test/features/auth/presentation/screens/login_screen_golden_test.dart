@@ -22,7 +22,11 @@ class _FakeAuthNotifier extends AuthNotifier {
   AuthState build() => _initial;
 
   @override
-  Future<void> login(String email, String password, {bool rememberMe = false}) async {}
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {}
 }
 
 class _FakeRememberMeNotifier extends RememberMeNotifier {
@@ -50,7 +54,6 @@ Widget _buildScreen(AuthState state) {
 }
 
 void main() {
-
   testGoldens('LoginScreen golden test — initial state', (tester) async {
     await tester.pumpWidget(_buildScreen(const AuthInitial()));
     await tester.pump();

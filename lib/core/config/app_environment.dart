@@ -6,6 +6,7 @@ sealed class AppEnvironment {
   String get appName;
   String get host;
   int get port;
+
   /// Whether this is a production environment.
   /// Available for analytics, crash reporting, and feature flags.
   bool get isProduction;
@@ -25,9 +26,10 @@ sealed class AppEnvironment {
   static final AppEnvironment current = _select();
 
   static AppEnvironment _select() {
-    return switch (
-      const String.fromEnvironment('ENVIRONMENT', defaultValue: 'dev')
-    ) {
+    return switch (const String.fromEnvironment(
+      'ENVIRONMENT',
+      defaultValue: 'dev',
+    )) {
       'staging' => const StagingEnvironment(),
       'production' || 'prod' => const ProductionEnvironment(),
       _ => const DevEnvironment(),
@@ -37,33 +39,51 @@ sealed class AppEnvironment {
 
 class DevEnvironment extends AppEnvironment {
   const DevEnvironment();
-  @override String get appName => 'Clinical History (Dev)';
   @override
-  String get host => const String.fromEnvironment('API_HOST', defaultValue: 'localhost');
-  @override int get port => 5111;
-  @override bool get isProduction => false;
-  @override List<String> get pinnedCertificates => const [];
-  @override Locale get defaultLocale => const Locale('es');
+  String get appName => 'Clinical History (Dev)';
+  @override
+  String get host =>
+      const String.fromEnvironment('API_HOST', defaultValue: 'localhost');
+  @override
+  int get port => 5111;
+  @override
+  bool get isProduction => false;
+  @override
+  List<String> get pinnedCertificates => const [];
+  @override
+  Locale get defaultLocale => const Locale('es');
 }
 
 class StagingEnvironment extends AppEnvironment {
   const StagingEnvironment();
-  @override String get appName => 'Clinical History (Staging)';
-  @override String get host => 'staging.example.com';
-  @override int get port => 443;
-  @override bool get isProduction => false;
   @override
-  List<String> get pinnedCertificates => AppEnvironment._readPinnedCertificates();
-  @override Locale get defaultLocale => const Locale('es');
+  String get appName => 'Clinical History (Staging)';
+  @override
+  String get host => 'staging.example.com';
+  @override
+  int get port => 443;
+  @override
+  bool get isProduction => false;
+  @override
+  List<String> get pinnedCertificates =>
+      AppEnvironment._readPinnedCertificates();
+  @override
+  Locale get defaultLocale => const Locale('es');
 }
 
 class ProductionEnvironment extends AppEnvironment {
   const ProductionEnvironment();
-  @override String get appName => 'Clinical History';
-  @override String get host => 'api.example.com';
-  @override int get port => 443;
-  @override bool get isProduction => true;
   @override
-  List<String> get pinnedCertificates => AppEnvironment._readPinnedCertificates();
-  @override Locale get defaultLocale => const Locale('es');
+  String get appName => 'Clinical History';
+  @override
+  String get host => 'api.example.com';
+  @override
+  int get port => 443;
+  @override
+  bool get isProduction => true;
+  @override
+  List<String> get pinnedCertificates =>
+      AppEnvironment._readPinnedCertificates();
+  @override
+  Locale get defaultLocale => const Locale('es');
 }

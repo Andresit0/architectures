@@ -16,9 +16,10 @@ abstract class IClinicalHistoryStore {
 }
 
 class ClinicalHistory implements IClinicalHistoryStore {
-
   ClinicalHistory({required Future<Database> database}) : _db = database;
-  final StoreRef<int, Map<String, Object?>> _store = intMapStoreFactory.store('clinical_histories');
+  final StoreRef<int, Map<String, Object?>> _store = intMapStoreFactory.store(
+    'clinical_histories',
+  );
   final Future<Database> _db;
 
   @override
@@ -76,7 +77,11 @@ class ClinicalHistory implements IClinicalHistoryStore {
   Future<void> update(ClinicalHistoryEntity entity) async {
     final db = await _db;
     final finder = Finder(filter: Filter.equals('id', entity.id));
-    await _store.update(db, ClinicalHistorySerializer.toMap(entity), finder: finder);
+    await _store.update(
+      db,
+      ClinicalHistorySerializer.toMap(entity),
+      finder: finder,
+    );
   }
 
   @override
@@ -84,14 +89,16 @@ class ClinicalHistory implements IClinicalHistoryStore {
     final db = await _db;
     for (final entity in entities) {
       final finder = Finder(filter: Filter.equals('id', entity.id));
-      await _store.update(db, ClinicalHistorySerializer.toMap(entity), finder: finder);
+      await _store.update(
+        db,
+        ClinicalHistorySerializer.toMap(entity),
+        finder: finder,
+      );
     }
   }
 }
 
 final clinicalHistoryStoreProvider = Provider<IClinicalHistoryStore>((ref) {
   final appDb = ref.watch(appDatabaseProvider);
-  return ClinicalHistory(
-    database: appDb.database.then((isDb) => isDb.db),
-  );
+  return ClinicalHistory(database: appDb.database.then((isDb) => isDb.db));
 });
