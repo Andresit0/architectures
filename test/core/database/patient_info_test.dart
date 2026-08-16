@@ -1,5 +1,6 @@
 import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
-import 'package:clean_architecture_sdd_harness/core/database/_database.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/database/tables/patient_info.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sembast/sembast_memory.dart';
 

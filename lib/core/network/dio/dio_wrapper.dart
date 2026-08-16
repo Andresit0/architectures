@@ -1,10 +1,6 @@
 import 'dart:async' show TimeoutException;
 
-import 'package:clean_architecture_sdd_harness/shared/exceptions/api_exception.dart';
-import 'package:clean_architecture_sdd_harness/shared/exceptions/no_connection_exception.dart';
-import 'package:clean_architecture_sdd_harness/shared/exceptions/server_unreachable_exception.dart';
-import 'package:clean_architecture_sdd_harness/shared/exceptions/timeout_exception.dart';
-import 'package:clean_architecture_sdd_harness/shared/exceptions/unexpected_response_exception.dart';
+import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
 import 'package:clean_architecture_sdd_harness/core/network/connectivity/internet_service.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/dio_multipart_builder.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/dio_response_parser.dart';
@@ -14,7 +10,7 @@ import 'package:clean_architecture_sdd_harness/core/network/interceptors/_interc
 import 'package:clean_architecture_sdd_harness/core/network/security/certificate_pinner.dart';
 import 'package:clean_architecture_sdd_harness/core/network/timeouts/_timeouts.lib.dart';
 import 'package:clean_architecture_sdd_harness/core/network/utils/uri_utils.dart';
-import 'package:clean_architecture_sdd_harness/shared/error/retry_result.dart';
+import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show VoidCallback;
 
@@ -82,6 +78,7 @@ abstract class IDioWrapper {
   void addAuthInterceptor(
     Future<RetryResult> Function() onRetry, {
     required VoidCallback onForceLogout,
+    required Future<String?> Function() getToken,
   });
 }
 
@@ -115,6 +112,7 @@ class DioWrapper implements IDioWrapper {
   void addAuthInterceptor(
     Future<RetryResult> Function() onRetry, {
     required VoidCallback onForceLogout,
+    required Future<String?> Function() getToken,
   }) {
     final internalDio = Dio();
     _dio.interceptors.add(
@@ -122,6 +120,7 @@ class DioWrapper implements IDioWrapper {
         onRetry: onRetry,
         internalDio: internalDio,
         onForceLogout: onForceLogout,
+        getToken: getToken,
       ),
     );
   }
@@ -198,35 +197,7 @@ class DioWrapper implements IDioWrapper {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.sendTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
-        if (sla.retry.retryOnTimeout && attempt < sla.retry.maxRetries) {
-          await Future<void>.delayed(sla.retry.baseDelay);
-          return _request(
-            method: method,
-            uri: uri,
-            type: type,
-            headers: headers,
-            fields: fields,
-            fileList: fileList,
-            body: body,
-            returnDioResponse: returnDioResponse,
-            sla: sla,
-            attempt: attempt + 1,
-          );
-        }
-        throw AppTimeoutException(
-          endpoint: uri.toString(),
-          configuredTimeout: sla.timeout,
-          attemptNumber: attempt,
-        );
-      }
-      if (e.response != null) {
-        throw ApiException(e.response!.statusCode ?? 0);
-      }
-      throw NoConnectionException();
-    } on TimeoutException catch (_) {
-      if (sla.retry.retryOnTimeout && attempt < sla.retry.maxRetries) {
-        await Future<void>.delayed(sla.retry.baseDelay);
-        return _request(
+        return _retryOrTimeout(
           method: method,
           uri: uri,
           type: type,
@@ -236,17 +207,72 @@ class DioWrapper implements IDioWrapper {
           body: body,
           returnDioResponse: returnDioResponse,
           sla: sla,
-          attempt: attempt + 1,
+          attempt: attempt,
         );
       }
-      throw AppTimeoutException(
-        endpoint: uri.toString(),
-        configuredTimeout: sla.timeout,
-        attemptNumber: attempt,
+      if (e.response != null) {
+        throw ApiException(e.response!.statusCode ?? 0);
+      }
+      if (e.type == DioExceptionType.connectionError) {
+        throw NoConnectionException();
+      }
+      throw UnexpectedResponseException(
+        'Unhandled DioException type: ${e.type}',
       );
-    } catch (error) {
-      throw UnexpectedResponseException('Dio internal error: $error');
+    } on TimeoutException catch (_) {
+      return _retryOrTimeout(
+        method: method,
+        uri: uri,
+        type: type,
+        headers: headers,
+        fields: fields,
+        fileList: fileList,
+        body: body,
+        returnDioResponse: returnDioResponse,
+        sla: sla,
+        attempt: attempt,
+      );
+    } on Exception catch (error) {
+      throw switch (error) {
+        UnexpectedResponseException() ||
+        NoConnectionException() ||
+        ServerUnreachableException() => error,
+        _ => const UnexpectedResponseException('Unexpected internal error'),
+      };
     }
+  }
+
+  Future<HttpResponse<Map<String, dynamic>>> _retryOrTimeout({
+    required _HttpMethod method,
+    required Uri uri,
+    required String? type,
+    required Map<String, String>? headers,
+    required List<Map<String, String>>? fields,
+    required List<IMultipartFile>? fileList,
+    required Object? body,
+    required bool returnDioResponse,
+    required EndpointSla sla,
+    required int attempt,
+  }) async {
+    if (sla.retry.retryOnTimeout && attempt < sla.retry.maxRetries) {
+      await Future<void>.delayed(sla.retry.baseDelay);
+      return _request(
+        method: method,
+        uri: uri,
+        type: type,
+        headers: headers,
+        fields: fields,
+        fileList: fileList,
+        body: body,
+        returnDioResponse: returnDioResponse,
+        sla: sla,
+        attempt: attempt + 1,
+      );
+    }
+    throw AppTimeoutException(
+      message:
+          'The request timed out for $uri (timeout ${sla.timeout}, attempt $attempt)',
+    );
   }
 
   @override

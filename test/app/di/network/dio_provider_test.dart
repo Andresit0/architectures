@@ -1,17 +1,20 @@
-import 'package:clean_architecture_sdd_harness/app/di/network/dio_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/network/_network.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_credential_store.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/handle_401_usecase.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/refresh_token_usecase.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/di/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import '../../../helpers/mocks.dart';
 
 class MockInternetService extends Mock implements InternetService {}
 
-class MockCredentialStore extends Mock implements ICredentialStore {}
+class _FakeAuthInterceptor implements IAuthInterceptorProvider {
+  int setupCalls = 0;
+  IDioWrapper? lastDio;
+
+  @override
+  void setupAuthInterceptor(IDioWrapper dioWrapper) {
+    setupCalls++;
+    lastDio = dioWrapper;
+  }
+}
 
 void main() {
   group('httpServiceProvider', () {
@@ -19,17 +22,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           internetServiceProvider.overrideWithValue(MockInternetService()),
-          handle401UseCaseProvider.overrideWith(
-            (ref) => Handle401UseCase(
-              tokenStore: MockTokenStore(),
-              connectivityChecker: MockConnectivityChecker(),
-              credentialStore: MockCredentialStore(),
-              repository: MockAuthRepository(),
-              refreshTokenUseCase: RefreshTokenUseCase(
-                repository: MockAuthRepository(),
-              ),
-            ),
-          ),
+          authInterceptorProvider.overrideWithValue(_FakeAuthInterceptor()),
         ],
       );
 
@@ -44,17 +37,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           internetServiceProvider.overrideWithValue(MockInternetService()),
-          handle401UseCaseProvider.overrideWith(
-            (ref) => Handle401UseCase(
-              tokenStore: MockTokenStore(),
-              connectivityChecker: MockConnectivityChecker(),
-              credentialStore: MockCredentialStore(),
-              repository: MockAuthRepository(),
-              refreshTokenUseCase: RefreshTokenUseCase(
-                repository: MockAuthRepository(),
-              ),
-            ),
-          ),
+          authInterceptorProvider.overrideWithValue(_FakeAuthInterceptor()),
         ],
       );
 
@@ -71,17 +54,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           internetServiceProvider.overrideWithValue(MockInternetService()),
-          handle401UseCaseProvider.overrideWith(
-            (ref) => Handle401UseCase(
-              tokenStore: MockTokenStore(),
-              connectivityChecker: MockConnectivityChecker(),
-              credentialStore: MockCredentialStore(),
-              repository: MockAuthRepository(),
-              refreshTokenUseCase: RefreshTokenUseCase(
-                repository: MockAuthRepository(),
-              ),
-            ),
-          ),
+          authInterceptorProvider.overrideWithValue(_FakeAuthInterceptor()),
         ],
       );
 
@@ -100,17 +73,7 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             internetServiceProvider.overrideWithValue(MockInternetService()),
-            handle401UseCaseProvider.overrideWith(
-              (ref) => Handle401UseCase(
-                tokenStore: MockTokenStore(),
-                connectivityChecker: MockConnectivityChecker(),
-                credentialStore: MockCredentialStore(),
-                repository: MockAuthRepository(),
-                refreshTokenUseCase: RefreshTokenUseCase(
-                  repository: MockAuthRepository(),
-                ),
-              ),
-            ),
+            authInterceptorProvider.overrideWithValue(_FakeAuthInterceptor()),
           ],
         );
 

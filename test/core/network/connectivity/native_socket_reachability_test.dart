@@ -22,7 +22,7 @@ void main() {
 
     test('check returns false for unreachable host', () async {
       const reachability = NativeSocketReachability(
-        host: '192.0.2.1', // TEST-NET address, guaranteed unreachable
+        host: '192.0.2.1',
         port: 1,
         timeout: Duration(seconds: 1),
       );
@@ -31,7 +31,6 @@ void main() {
     });
 
     test('check returns false for refused connection', () async {
-      // Port 0 is invalid, should cause connection error
       const reachability = NativeSocketReachability(
         host: 'localhost',
         port: 0,

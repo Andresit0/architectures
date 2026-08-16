@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Clean Architecture App';
+  String get appTitle => 'Clinical History';
 
   @override
   String get loginButton => 'Login';
@@ -36,12 +36,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clinicalHistory => 'Clinical History';
 
   @override
-  String welcomeUser(String name) {
-    return 'Welcome, $name';
+  String get clinicalHistoryEmpty => 'No clinical history records yet.';
+
+  @override
+  String get clinicalHistoryRetry => 'Retry';
+
+  @override
+  String clinicalHistoryCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count records',
+      one: '1 record',
+      zero: 'No records',
+    );
+    return '$_temp0';
   }
 
   @override
+  String get clinicalHistoryDetailsProfessional => 'Professional';
+
+  @override
+  String get clinicalHistoryDetailsExpand => 'Show encounter details';
+
+  @override
+  String get clinicalHistoryDetailsCollapse => 'Hide encounter details';
+
+  @override
+  String get clinicalHistoryDetailsSummary => 'Summary';
+
+  @override
+  String get clinicalHistoryDetailsDescription => 'Description';
+
+  @override
+  String get clinicalHistoryDetailsDiagnosis => 'Diagnosis';
+
+  @override
+  String get clinicalHistoryDetailsObservations => 'Observations';
+
+  @override
+  String get clinicalHistoryDetailsAttachments => 'Attachments';
+
+  @override
   String get logout => 'Logout';
+
+  @override
+  String get routeNotFound => 'Page not found';
+
+  @override
+  String get routeNotFoundGoHome => 'Go to start';
 
   @override
   String get errorUnknown => 'An unexpected error occurred';
@@ -50,7 +93,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorNetwork => 'No internet connection';
 
   @override
+  String get errorTimeout => 'The server took too long to respond';
+
+  @override
   String get errorServer => 'Server is under maintenance';
+
+  @override
+  String get errorDeviceSecurity =>
+      'This device is not supported for security reasons';
 
   @override
   String get errorInvalidCredentials => 'Invalid email or password';
@@ -66,4 +116,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorEmptyPassword => 'Password is required';
+
+  @override
+  String get offlineBanner => 'No internet connection — showing saved data';
+
+  @override
+  String get deviceSecurityTitle => 'Unsupported device';
+
+  @override
+  String get deviceSecurityMessage =>
+      'Your device has been modified. For security reasons, this app cannot be used on jailbroken or rooted devices.';
 }

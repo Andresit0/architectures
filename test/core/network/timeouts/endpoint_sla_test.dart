@@ -57,8 +57,8 @@ void main() {
       expect(EndpointSla.standard.retry, RetryPolicy.standard);
     });
 
-    test('login uses RetryPolicy.idempotent', () {
-      expect(EndpointSla.login.retry, RetryPolicy.idempotent);
+    test('login uses RetryPolicy.standard (login is not idempotent)', () {
+      expect(EndpointSla.login.retry, RetryPolicy.standard);
     });
 
     test('upload uses RetryPolicy.idempotent', () {
@@ -77,12 +77,12 @@ void main() {
       expect(EndpointSla.urgent.retry.retryOnTimeout, false);
     });
 
-    test('login.retry.maxRetries is 2', () {
-      expect(EndpointSla.login.retry.maxRetries, 2);
+    test('login.retry.maxRetries is 0 (no retry on login)', () {
+      expect(EndpointSla.login.retry.maxRetries, 0);
     });
 
-    test('login.retry.retryOnTimeout is true', () {
-      expect(EndpointSla.login.retry.retryOnTimeout, true);
+    test('login.retry.retryOnTimeout is false', () {
+      expect(EndpointSla.login.retry.retryOnTimeout, false);
     });
   });
 }

@@ -1,4 +1,8 @@
-part of '_widgets.lib.dart';
+import 'package:flutter/material.dart';
+
+import 'package:clean_architecture_sdd_harness/design_system/theme/app_colors.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/email.dart';
+import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 
 class EmailFormField extends StatelessWidget {
   final TextEditingController? controller;
@@ -20,7 +24,7 @@ class EmailFormField extends StatelessWidget {
     if (value == null || value.isEmpty) {
       return l10n.errorEmptyEmail;
     }
-    if (!value.contains('@') || !value.contains('.')) {
+    if (!Email.result(value).isSuccess) {
       return l10n.errorInvalidEmail;
     }
     return null;

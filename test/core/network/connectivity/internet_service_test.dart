@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clean_architecture_sdd_harness/core/network/_network.lib.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -6,6 +8,17 @@ class FakeReachability implements IServerReachabilityStrategy {
   final bool result;
   @override
   Future<bool> check() async => result;
+}
+
+class _FakeConnectionChecker implements IInternetConnectionCheckerWrapper {
+  _FakeConnectionChecker(this.controller);
+  final StreamController<bool> controller;
+
+  @override
+  Future<bool> checkConnectivity() async => true;
+
+  @override
+  Stream<bool> get onStatusChange => controller.stream;
 }
 
 void main() {
@@ -32,5 +45,27 @@ void main() {
         expect(result1, equals(result2));
       },
     );
+  });
+
+  group('InternetService.onStatusChange', () {
+    test('yields current connectivity first, then stream updates', () async {
+      final controller = StreamController<bool>();
+      final service = InternetService(
+        strategy: FakeReachability(true),
+        connectionChecker: _FakeConnectionChecker(controller),
+      );
+
+      final values = <bool>[];
+      final sub = service.onStatusChange.listen(values.add);
+      await Future<void>.delayed(Duration.zero);
+
+      controller.add(false);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(values, [true, false]);
+
+      await sub.cancel();
+      await controller.close();
+    });
   });
 }

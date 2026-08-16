@@ -1,5 +1,5 @@
 import 'package:clean_architecture_sdd_harness/core/services/storage/secure_storage_wrapper.dart';
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_token_store.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 
 class SecureTokenStore implements ITokenStore {
   SecureTokenStore({required this._storage});

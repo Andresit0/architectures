@@ -1,7 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'clinical_history_dto.dart';
-import 'patient_dto.dart';
+import 'package:clean_architecture_sdd_harness/core/network/contracts/clinical_history_dto.dart';
+import 'package:clean_architecture_sdd_harness/core/network/contracts/patient_dto.dart';
+
 import 'token_dto.dart';
 
 part 'login_response_dto.freezed.dart';

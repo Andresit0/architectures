@@ -1,15 +1,37 @@
-import '../config/app_environment.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AppUries {
-  String get host => AppEnvironment.current.host;
-  int get port => AppEnvironment.current.port;
+import '../config/app_environment.dart';
+import '../config/environment_provider.dart';
+
+abstract interface class IEndpointConfig {
+  Uri get login;
+  Uri get refreshToken;
+  Uri get clinicalHistory;
+}
+
+class AppUris implements IEndpointConfig {
+  const AppUris({required this.env});
+
+  final AppEnvironment env;
+
+  static const String _userPath = '/user';
+
   Uri get _base => Uri(
-    scheme: AppEnvironment.current.useHttps ? 'https' : 'http',
-    host: host,
-    port: port,
+    scheme: env.useHttps ? 'https' : 'http',
+    host: env.host,
+    port: env.port,
   );
 
-  final String _userPath = '/user';
+  @override
   Uri get login => _base.replace(path: '$_userPath/login');
+
+  @override
   Uri get refreshToken => _base.replace(path: '$_userPath/refreshtoken');
+
+  @override
+  Uri get clinicalHistory => _base.replace(path: '$_userPath/clinical-history');
 }
+
+final appUriesProvider = Provider<IEndpointConfig>(
+  (ref) => AppUris(env: ref.watch(environmentProvider)),
+);

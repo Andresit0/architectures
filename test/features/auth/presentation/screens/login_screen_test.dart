@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/di/remember_me_provider.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/remember_me_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_state.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/screens/login_screen.dart';
 import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
@@ -126,7 +126,7 @@ void main() {
   });
 
   testWidgets('login_screen_shows_form_when_not_loading', (tester) async {
-    await tester.pumpWidget(_buildScreen(const AuthFailure(NetworkError(''))));
+    await tester.pumpWidget(_buildScreen(const AuthFailure(NetworkError())));
     await tester.pump();
 
     expect(find.byType(TextField), findsNWidgets(2));
@@ -182,29 +182,35 @@ void main() {
     expect(notifier.loginCalled, isTrue);
   });
 
-  testWidgets('login_screen_shows_error_snackbar_on_auth_failure_transition', (
-    tester,
-  ) async {
-    final notifier = _FakeAuthNotifier(const AuthInitial());
+  testWidgets(
+    'login_screen_does_NOT_show_snackbar_itself_snackbar_is_app_level',
+    (tester) async {
+      final notifier = _FakeAuthNotifier(const AuthInitial());
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: ProviderContainer(
-          overrides: [authProvider.overrideWith(() => notifier)],
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: ProviderContainer(
+            overrides: [authProvider.overrideWith(() => notifier)],
+          ),
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: LoginScreen(),
+          ),
         ),
-        child: const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: LoginScreen(),
-        ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    notifier.state = const AuthFailure(NetworkError(''));
-    await tester.pump();
+      notifier.state = const AuthFailure(NetworkError());
+      await tester.pump();
 
-    expect(find.text('No internet connection'), findsOneWidget);
-    expect(find.byType(SnackBar), findsOneWidget);
-  });
+      expect(
+        find.byType(SnackBar),
+        findsNothing,
+        reason:
+            'the login screen must not render the auth failure snackbar — '
+            'that is a single-writer responsibility of the app root (main.dart)',
+      );
+    },
+  );
 }

@@ -2,12 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sembast/sembast_memory.dart';
 
 import 'package:clean_architecture_sdd_harness/core/database/app_database.dart';
+import 'package:clean_architecture_sdd_harness/core/database/secure_storage_key_service.dart';
+
+import '../../helpers/mocks.dart';
 
 void main() {
   late AppDatabase appDb;
 
   setUp(() {
-    appDb = AppDatabase(databaseFactory: databaseFactoryMemory);
+    appDb = AppDatabase(
+      databaseFactory: newDatabaseFactoryMemory(),
+      keyService: DatabaseKeyService(storage: FakeSecureStorage()),
+    );
   });
 
   tearDown(() async {

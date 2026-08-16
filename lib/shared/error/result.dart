@@ -11,7 +11,7 @@ sealed class Result<T> {
   bool get isSuccess;
 }
 
-class Success<T> extends Result<T> {
+final class Success<T> extends Result<T> {
   const Success(this.data);
   final T data;
 

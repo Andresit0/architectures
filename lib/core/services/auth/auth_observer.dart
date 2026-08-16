@@ -1,8 +1,6 @@
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_authentication_observer.dart';
+import 'package:clean_architecture_sdd_harness/core/services/auth/i_authentication_observer.dart';
 import 'package:flutter/foundation.dart';
 
-/// Observes authentication state and notifies listeners.
-/// Used by [authenticationObserverProvider] and [GoRouter] for redirect guards.
 class AuthObserver extends ChangeNotifier implements IAuthenticationObserver {
   bool _isAuthenticated = false;
 
