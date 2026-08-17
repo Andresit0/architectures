@@ -40,6 +40,22 @@ updates:
       # minor/patch via the auto-merge workflow.
       - dependency-name: "flutter_jailbreak_detection_plus"
         update-types: ["version-update:semver-major"]
+      # intl is SDK-pinned: flutter_localizations (Flutter 3.44.0) pins intl
+      # exactly to 0.20.2. A bump to ^0.20.3 is unsatisfiable and breaks
+      # `flutter pub get`. Remove this ignore when the Flutter SDK bumps its pin.
+      - dependency-name: "intl"
+      # test is effectively SDK-pinned via test_api: flutter_test (Flutter
+      # 3.44.0) pins test_api 0.7.11 exactly, and test 1.31.1+ requires
+      # test_api 0.7.12. Remove this ignore when the Flutter SDK bumps its pin.
+      - dependency-name: "test"
+      # freezed 4.x is currently prerelease (4.0.0-dev.x). The codegen
+      # toolchain bump to analyzer 13 (build_runner 2.16 / riverpod 4.0.8)
+      # forces freezed 4.0.0-dev.3 — the ONLY freezed compatible with analyzer
+      # 13, since no stable freezed supports it. Enterprise policy: do not
+      # adopt prerelease-major codegen in production. Remove this ignore when
+      # freezed 4.0.0 stable ships (tracked in issue #62).
+      - dependency-name: "freezed"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

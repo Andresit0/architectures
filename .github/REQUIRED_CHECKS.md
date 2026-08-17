@@ -52,3 +52,34 @@ the authoritative gate.
   CI).
 - GitHub Actions are pinned to immutable SHAs (see `ci.yml`); Dependabot keeps
   them updated.
+
+## Dependency management
+
+The Flutter SDK pinned in CI (`3.44.0`) pins several transitive packages to
+**exact** versions. They must NOT be force-bumped — a constraint that excludes
+the SDK pin makes `flutter pub get` fail:
+
+| Package | Pin (Flutter 3.44.0) | Owned by |
+|---|---|---|
+| `intl` | `0.20.2` (exact) | `flutter_localizations` |
+| `test_api` | `0.7.11` (exact) | `flutter_test` |
+| `matcher` | `0.12.19` (exact) | `flutter_test` |
+| `meta` | `1.18.0` (exact) | `flutter_test` |
+| `vector_math` | `2.2.0` (exact) | `flutter_test` |
+
+Policies:
+
+- Dependabot ignores `intl` and `test` (see `.github/dependabot.yml`); it also
+  blocks `freezed` semver-major until freezed 4.0.0 stable ships (issue #62) —
+  the analyzer-13 toolchain has no stable freezed.
+- Dependabot reads `.github/dependabot.yml` from the **default branch**
+  (`main`); config changes land on `develop` but only take effect after the
+  next release promotes them to `main` (issue #63). Until then, regenerate
+  dependabot PRs are closed manually.
+- Any dependency PR must keep `flutter pub get` green on Flutter 3.44.0 and
+  pass the full required-check matrix. Never edit `pubspec.lock` by hand —
+  regenerate with `flutter pub get`.
+- Android `compileSdk`/`minSdk` are set explicitly in
+  `android/app/build.gradle.kts` when a plugin requires more than the Flutter
+  default (e.g. `flutter_secure_storage 11` requires `compileSdk 37` vs the
+  Flutter 3.44 default of 36).
