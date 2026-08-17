@@ -71,6 +71,8 @@ Wire DTOs that cross bounded contexts live in `lib/core/network/contracts/` (bar
 
 Currently it holds: the clinical-history wire contract (`ClinicalHistoryDto` + 6 sub-DTOs, `ClinicalHistoryListResponseDto`, `ClinicalHistoryMapper`) and `PatientDto` (shared patient wire shape used by the auth login envelope). Both **auth** (login envelope parsing) and **clinical_history** (GET /user/clinical-history) consume it.
 
+> **Guarda (Rule 29):** el CI falla si un `*.freezed.dart`/`*.g.dart` queda sin su fuente `*.dart` hermana en el mismo directorio. Al mover un contrato a `core/network/contracts/`, borra los generados de la carpeta de origen (p. ej. restos de una migración de DTOs).
+
 ### Configuration — via providers (DIP)
 
 `AppUries` (implementing `IEndpointConfig`) reads host/port/https from an injected `AppEnvironment`, exposed through `appUriesProvider` (`core/network/api_endpoints.dart`) bound to `environmentProvider`. Remote datasources receive `IEndpointConfig` by constructor (via feature DI) — no static `AppEnvironment.current` reads outside `core/config/` (architecture Rule 16).
