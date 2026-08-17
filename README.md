@@ -26,9 +26,9 @@ A production-oriented Flutter starter that enforces clean architecture conventio
 | State management | flutter_riverpod + riverpod_annotation (codegen) | ^3.3.1 / ^4.0.3 |
 | Models | freezed + json_serializable | ^3.1.0 / ^6.9.0 |
 | Networking | dio | ^5.11.0 |
-| Routing | go_router | ^17.2.2 |
+| Routing | go_router | ^17.5.0 |
 | Local storage | sembast (+ sembast_web) | ^3.7.5+2 |
-| Secure storage | flutter_secure_storage | ^10.0.0 |
+| Secure storage | flutter_secure_storage | ^11.0.0 |
 | Auth/crypto | dart_jsonwebtoken, bcrypt, encrypt | ^3.1.1 / ^1.2.0 / ^5.0.3 |
 | Device security | flutter_jailbreak_detection_plus | ^1.10.7 |
 | Testing | mocktail, golden_toolkit, gherkart (BDD) | ^1.0.4 / ^0.15.0 / ^0.2.1 |
@@ -59,6 +59,7 @@ Dependency rules (enforced by `test/architecture/dependency_rules_test.dart`):
 - `core/` is pure infrastructure; domain never depends on it.
 - Features never import external packages directly — only wrappers from `core/services/`.
 - No orphaned generated files — every `*.freezed.dart`/`*.g.dart` must have its sibling source (Rule 29).
+- **Dependency policy** — the Flutter SDK (3.44.0) pins `intl` (0.20.2), `test_api` (0.7.11), `matcher`, `meta`, `vector_math` to exact versions; never force-bump them (breaks `flutter pub get`). Dependabot ignores `intl`/`test`/`freezed-major` (see `.github/dependabot.yml`). Never adopt prerelease-major codegen in production (freezed 4.0.0-dev.x is deferred until stable — issue #62). See `MD/APP_COMMANDS.md` and `.github/REQUIRED_CHECKS.md`.
 
 Full details: [MD/APP_ARCHITECTURE.md](MD/APP_ARCHITECTURE.md)
 
@@ -132,14 +133,14 @@ Dependabot updates are grouped and auto-merged (patch/minor) via [auto-merge.yml
 
 ```
 main ────── TAG vX.Y.Z            production (default branch)
-  ▲  PR release/* | hotfix/*  (gate + 7 checks + 1 approval)
+  ▲  PR release/* | hotfix/*  (gate + 7 checks + 2 approvals in config; personal-account exception documented in .github/REPOSITORY_GOVERNANCE.md)
 develop ──●──●──●                integration (all changes land here)
   ▲
 feature/* | dependabot PRs
 ```
 
-- `develop` — protected: PR required, 6 checks, 0 approvals (dependabot auto-merges patch/minor).
-- `main` — protected: PR required, 7 checks (incl. Branch Source Gate), 1 approval; only `release/*` and `hotfix/*` may merge.
+- `develop` — protected: PR required, 6 checks, 0 approvals (personal-account exception: single maintainer cannot self-approve; the gate is the required-check matrix plus an explicit human merge after CI is green — see `.github/REPOSITORY_GOVERNANCE.md`). Dependabot auto-merges patch/minor after checks pass.
+- `main` — protected: PR required, 7 checks (incl. Branch Source Gate), 2 approvals in config; only `release/*` and `hotfix/*` may merge. The same personal-account exception applies until an org/second reviewer exists.
 - Feature branches are auto-deleted after merge; releases are tagged (`v1.0.0`).
 - Releases and hotfixes are back-merged to `develop`.
 

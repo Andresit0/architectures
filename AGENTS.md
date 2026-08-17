@@ -54,9 +54,16 @@ Default branch: `main` (production). Integration branch: `develop`. See README �
 
 * `feature/*` → PR → `develop` (checks) → merge
 * Dependabot (patch/minor) → PR → `develop` → checks → auto-merge
-* `release/*` → PR → `main` (gate + checks + 1 approval) → tag `vX.Y.Z` → back-merge → `develop`
+* `release/*` → PR → `main` (gate + checks + 2 approvals in config; personal-account exception documented in `.github/REPOSITORY_GOVERNANCE.md`) → tag `vX.Y.Z` → back-merge → `develop`
 * `hotfix/*` → PR → `main`, then back-merge → `develop`
 * Direct pushes to `main`/`develop` are blocked (branch protection, `enforce_admins`). All changes go through PRs.
+
+### Dependency management
+
+- The Flutter SDK pinned in CI (`3.44.0`) pins `intl` (0.20.2), `test_api` (0.7.11), `matcher`, `meta`, `vector_math` to **exact** versions. If a dependabot PR fails `flutter pub get` on `intl`/`test`, revert those constraint bumps — do not hand-edit the lock; regenerate with `flutter pub get`.
+- Never adopt prerelease-major codegen (e.g. `freezed 4.0.0-dev.x`) in production — the analyzer-13 toolchain has no stable freezed (issue #62).
+- Dependabot ignores `intl`, `test` and `freezed` (semver-major). Note: Dependabot reads `.github/dependabot.yml` from the **default branch (`main`)**; config changes on `develop` activate after the next release promotes them (issue #63).
+- Android `compileSdk`/`minSdk` are set explicitly when a plugin requires more than the Flutter default (e.g. `flutter_secure_storage 11` → `compileSdk 37`).
 
 
 ---

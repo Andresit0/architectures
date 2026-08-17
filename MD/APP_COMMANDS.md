@@ -27,6 +27,39 @@ flutter test --tags golden --update-goldens
 flutter run -d mac --dart-define-from-file=.env
 ```
 
+### Dependency upgrade procedure
+
+Use this sequence for any dependency bump (dependabot or manual PR):
+
+```bash
+# 1. Edit pubspec.yaml constraint(s) (never the lock by hand)
+# 2. Regenerate the lock — this fixes spurious SDK-pinned bumps (intl/test):
+flutter pub get
+# 3. If codegen toolchain changed (freezed/json_serializable/@riverpod):
+dart run build_runner build --delete-conflicting-outputs
+# 4. Regenerate localization if .arb changed:
+flutter gen-l10n
+# 5. Full battery (see below): format, analyze, tests, goldens, integration, builds
+```
+
+Caveats:
+
+- **Never force-bump SDK-pinned packages.** Flutter 3.44.0 pins `intl` (0.20.2),
+  `test_api` (0.7.11), `matcher`, `meta`, `vector_math` to exact versions. If
+  `flutter pub get` fails on `intl`/`test`, revert those constraints — do not
+  resolve by hand.
+- **Never adopt prerelease-major codegen** (`freezed 4.0.0-dev.x`) in
+  production — deferred until stable (issue #62). The analyzer-13 toolchain has
+  no stable freezed.
+- **Android platform**: if a plugin requires a higher SDK than the Flutter
+  default, set `compileSdk`/`minSdk` explicitly in
+  `android/app/build.gradle.kts` (e.g. `flutter_secure_storage 11` →
+  `compileSdk 37`).
+- Dependabot reads `.github/dependabot.yml` from the **default branch (`main`)**;
+  its ignore rules activate after the next release (issue #63).
+- Regenerated `.g.dart`/`.freezed.dart` files must be committed with their
+  source (Rule 29).
+
 ### Integration tests (need a connected device/emulator)
 
 ```bash
