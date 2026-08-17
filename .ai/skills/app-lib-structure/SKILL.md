@@ -118,7 +118,7 @@ lib/
 |---|---|---|
 | **Domain** | `features/<f>/domain/` | No Flutter imports. Pure Dart: interfaces (`i_*.dart`), entities, usecases, value_objects. Can import from `shared/` only. |
 | **DI (feature)** | `features/<f>/di/` | Feature-specific Riverpod providers (auth_provider) — migrated from `presentation/providers/`. UI-state providers (p. ej. `remember_me_provider`) viven en `presentation/notifiers/`. |
-| **Infrastructure** | `features/<f>/infrastructure/` | Implements domain interfaces. HTTP calls use `IDioWrapper` via constructor injection. |
+| **Infrastructure** | `features/<f>/infrastructure/` | Implements domain interfaces. HTTP calls use `IDioWrapper` via constructor injection. DTOs de un solo feature → `infrastructure/dtos/`; **shared wire contracts → `core/network/contracts/`** (barrel `_contracts.lib.dart`). |
 | **Presentation** | `features/<f>/presentation/` | Riverpod notifiers, screens, widgets. Providers are in `features/<f>/di/`. |
 | **core/** | `core/` | Infrastructure wrappers, database, error types, network, api_endpoints. Domain must NEVER import from `core/`. |
 | **shared/** | `shared/` | Domain abstractions (interfaces, exceptions, models) + utilities (router, functions). Domain-safe; can be imported by any layer. |

@@ -422,6 +422,8 @@ Rules:
 - `List<T>` with `@Default([])` instead of `List<T>?` nullable
 - Create `_dtos.lib.dart` barrel that exports all DTOs
 
+> **Si el DTO es un shared wire contract** (consumido por 2+ features, p. ej. clinical_history/patient), créalo en `core/network/contracts/` (barrel `_contracts.lib.dart`), NUNCA en `infrastructure/dtos/`. **Tras mover un DTO entre carpetas, borra los `.freezed.dart`/`.g.dart` de la carpeta de origen** — Rule 29 los detecta y hace fallar el CI.
+
 Run build_runner:
 ```bash
 dart run build_runner build
