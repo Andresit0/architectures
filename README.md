@@ -58,6 +58,7 @@ Dependency rules (enforced by `test/architecture/dependency_rules_test.dart`):
 - `domain/` imports only `shared/` — never `core/`, `app/`, or Flutter.
 - `core/` is pure infrastructure; domain never depends on it.
 - Features never import external packages directly — only wrappers from `core/services/`.
+- No orphaned generated files — every `*.freezed.dart`/`*.g.dart` must have its sibling source (Rule 29).
 
 Full details: [MD/APP_ARCHITECTURE.md](MD/APP_ARCHITECTURE.md)
 
