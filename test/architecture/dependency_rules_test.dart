@@ -855,51 +855,45 @@ void main() {
       }
     });
 
-    test(
-      'Rule 29: ningún *.freezed.dart / *.g.dart queda huérfano — su fuente '
-      'part-of debe existir y declararlo como part',
-      () {
-        final orphans = <String>[];
-        for (final file in Directory('lib')
-            .listSync(recursive: true)
-            .whereType<File>()) {
-          final path = file.path;
-          if (!path.endsWith('.freezed.dart') && !path.endsWith('.g.dart')) {
-            continue;
-          }
-          final partOf = file
-              .readAsStringSync()
-              .split('\n')
-              .map((l) => l.trim())
-              .firstWhere(
-                (l) => l.startsWith('part of '),
-                orElse: () => '',
-              );
-          if (partOf.isEmpty) {
-            orphans.add('$path — no declara "part of"');
-            continue;
-          }
-          final target = partOf
-              .replaceFirst('part of ', '')
-              .replaceAll("'", '')
-              .replaceAll(';', '')
-              .trim();
-          final source = File('${file.parent.path}/$target');
-          if (!source.existsSync()) {
-            orphans.add('$path → fuente part-of faltante: $target');
-            continue;
-          }
-          final generatedName = path.split('/').last;
-          if (!source.readAsStringSync().contains("part '$generatedName'")) {
-            orphans.add('$path → ${source.path} no lo declara como part');
-          }
+    test('Rule 29: ningún *.freezed.dart / *.g.dart queda huérfano — su fuente '
+        'part-of debe existir y declararlo como part', () {
+      final orphans = <String>[];
+      for (final file in Directory(
+        'lib',
+      ).listSync(recursive: true).whereType<File>()) {
+        final path = file.path;
+        if (!path.endsWith('.freezed.dart') && !path.endsWith('.g.dart')) {
+          continue;
         }
-        expect(
-          orphans,
-          isEmpty,
-          reason: 'Archivos generados huérfanos:\n${orphans.join('\n')}',
-        );
-      },
-    );
+        final partOf = file
+            .readAsStringSync()
+            .split('\n')
+            .map((l) => l.trim())
+            .firstWhere((l) => l.startsWith('part of '), orElse: () => '');
+        if (partOf.isEmpty) {
+          orphans.add('$path — no declara "part of"');
+          continue;
+        }
+        final target = partOf
+            .replaceFirst('part of ', '')
+            .replaceAll("'", '')
+            .replaceAll(';', '')
+            .trim();
+        final source = File('${file.parent.path}/$target');
+        if (!source.existsSync()) {
+          orphans.add('$path → fuente part-of faltante: $target');
+          continue;
+        }
+        final generatedName = path.split('/').last;
+        if (!source.readAsStringSync().contains("part '$generatedName'")) {
+          orphans.add('$path → ${source.path} no lo declara como part');
+        }
+      }
+      expect(
+        orphans,
+        isEmpty,
+        reason: 'Archivos generados huérfanos:\n${orphans.join('\n')}',
+      );
+    });
   });
 }
