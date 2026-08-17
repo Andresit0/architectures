@@ -17,11 +17,15 @@
    ```
    If a device/controlled runner is available (D6), also run
    `integration_test/*_test.dart` on the device.
+   Note: `flutter pub get` re-resolves the lock against the pinned Flutter SDK
+   (3.44.0) — never hand-edit `pubspec.lock`.
 3. Create `release/X.Y.Z` from `develop`.
 4. Open a PR from `release/X.Y.Z` to `main` only. The Branch Source Gate
    (`branch-source-gate`) rejects any non-`release/*` / `hotfix/*` head.
-5. Wait for CI + required approvals (2 reviewers incl. a Code Owner for
-   sensitive changes).
+5. Wait for CI + required approvals. Target state: 2 reviewers incl. a Code
+   Owner for sensitive changes. **Personal-account exception:** single
+   maintainer cannot self-approve, so the operational gate is the required-check
+   matrix plus the explicit human merge (see `.github/REPOSITORY_GOVERNANCE.md`).
 6. Merge; the release pipeline tags `vX.Y.Z` and deploys from the merged
    commit (never from a local worktree).
 7. Back-merge `release/X.Y.Z` to `develop`.

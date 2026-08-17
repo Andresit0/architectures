@@ -388,6 +388,35 @@ plataforma empresarial. En ese caso se requiere una excepción documentada,
 auto-merge solo después de checks verdes y un control humano equivalente. La
 configuración real de GitHub, no `README.md`, es la fuente de verdad.
 
+**Estado vigente (excepción de cuenta personal activa):** este repositorio se
+mantiene con un solo humano, y GitHub bloquea la auto-aprobación. Por eso
+`develop` opera con **0 aprobaciones requeridas** (config real) y `main` con 2
+en config; el gate operativo es la matriz de required checks más el merge
+humano explícito tras CI verde. El target de la tabla (≥1 reviewer en
+`develop`, ≥2 en `main`) se activa cuando exista un segundo revisor/org — ver
+`.github/REPOSITORY_GOVERNANCE.md`.
+
+### 4.5 Política de dependencias
+
+- **Pins del SDK:** el Flutter SDK pinneado en CI (`3.44.0`) fija versiones
+  exactas (`intl 0.20.2` vía `flutter_localizations`; `test_api 0.7.11`,
+  `matcher`, `meta`, `vector_math` vía `flutter_test`). Un constraint que las
+  excluya rompe `flutter pub get`. Nunca editar el lock a mano; regenerar con
+  `flutter pub get`.
+- **No prerelease major de codegen:** el toolchain analyzer 13 (`build_runner
+  2.16`, `riverpod_generator 4.0.8`) no tiene `freezed` estable compatible
+  (3.2.5 exige analyzer <11; 3.2.6-dev.1 <13); solo `freezed 4.0.0-dev.3`
+  (prerelease) lo soporta. Se difiere hasta que `freezed 4.0.0` estable exista
+  (issue #62). El estado actual (analyzer 12 + freezed 3.2.6-dev.1 + riverpod
+  4.0.4) es el último estado coherente sin prerelease y queda congelado.
+- **Dependabot:** ignora `intl`, `test` y `freezed` (semver-major) — ver
+  `.github/dependabot.yml`. Dependabot lee la config desde la **rama default
+  (`main`)**; los cambios en `develop` solo se activan tras una release que los
+  promueva (issue #63). Hasta entonces, los PRs regenerados se cierran
+  manualmente.
+- **compileSdk/minSdk:** se fijan explícitamente cuando un plugin exige más que
+  el default de Flutter (p. ej. `flutter_secure_storage 11` → `compileSdk 37`).
+
 La configuración externa de branch protection, reviewers y merge queue es una
 precondición para abrir PR 1. PR 1 versiona el workflow, `CODEOWNERS` y la
 política; no puede proteger retroactivamente su propio merge. Si la organización

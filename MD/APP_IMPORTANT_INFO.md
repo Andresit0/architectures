@@ -104,6 +104,7 @@ flutter gen-l10n
 20. **`.env` or configuration files with secrets never go to the repository.** Use `.gitignore` and CI/CD server variables.
 21. **PR titles and commits follow Conventional Commits (`type(scope): subject`) in English, imperative mood.** The repo squash-merges with `squash_merge_commit_title: PR_TITLE`, so **the PR title becomes the commit on `develop`/`main`** — never use a `PR {N}:` prefix or stack numbering (see `super-pull-request.md`, Step 3.6.5).
 22. **Branches are type-prefixed (git-flow compatible), without stack numbers:** `feature/*`, `fix/*`, `chore/*`, `docs/*`, `ci/*`, `test/*`, `build/*`, `refactor/*` toward `develop`; `release/*` and `hotfix/*` merge only to `main` (enforced by the CI `branch-source-gate`). Stacked PRs are linked via a tracked branch list, not by numbered branch names.
+28. **Dependency policy.** Never force-bump SDK-pinned packages (Flutter 3.44.0: `intl 0.20.2`, `test_api 0.7.11`, `matcher`, `meta`, `vector_math` exact) — a constraint that excludes the pin breaks `flutter pub get`. Never adopt prerelease-major codegen (`freezed 4.0.0-dev.x`) — deferred until stable (issue #62). Regenerate the lock with `flutter pub get`, never edit it by hand. Dependabot ignores `intl`/`test`/`freezed-major` and reads its config from the default branch `main` (issue #63). Set `compileSdk`/`minSdk` explicitly in `android/app/build.gradle.kts` when a plugin requires more than the Flutter default.
 
 ### 2.5 Quality rules
 
