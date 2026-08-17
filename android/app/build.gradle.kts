@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.clean_architecture_sdd_harness"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage 11 requires Android SDK 37 (Flutter 3.44 default is 36).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -19,7 +20,8 @@ android {
         applicationId = "com.example.clean_architecture_sdd_harness"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // flutter_secure_storage 11 requires minSdk 24 (explicit for clarity).
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
