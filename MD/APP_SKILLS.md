@@ -43,6 +43,7 @@ Every new feature starts with a specification, not code.
 **Reference examples:**
 - `lib/features/auth/spec/` — auth
 - `lib/features/clinical_history/spec/` — clinical_history
+- `lib/features/lab_results/spec/` — lab_results
 
 **How spec files feed coding agents:**
 

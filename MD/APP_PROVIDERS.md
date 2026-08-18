@@ -18,6 +18,7 @@ All global providers are **non-autoDispose** (alive for the lifetime of the `Pro
 | `internetStatusProvider` | `core/network/connectivity/connectivity_providers.dart` | `StreamProvider<bool>` | Reactive internet status for the offline banner (emits current status immediately; `null` until first emission = treat as online) |
 | *(removed)* `errorPropagation` | *(removed)* | Error propagation replaced by `localizeError()` in `l10n/error_localizer.dart` — UI layer calls `localizeError(error, AppLocalizations.of(context)!)` |
 | `clinicalHistoryStoreProvider` | `core/database/tables/clinical_history_providers.dart` | `Provider<IClinicalHistoryStore>` | Clinical history store |
+| `labResultsStoreProvider` | `core/database/tables/lab_results_providers.dart` | `Provider<ILabResultsStore>` | Lab results store |
 | `patientInfoStoreProvider` | `core/database/tables/patient_info_providers.dart` | `Provider<IPatientInfoStore>` | Patient info store |
 | `passwordHasherProvider` | `core/services/crypto/password_hasher_provider.dart` | `Provider<IPasswordHasher>` | Password hashing (bcrypt) |
 | `connectivityCheckerProvider` | `core/network/connectivity/connectivity_providers.dart` | `Provider<IConnectivityChecker>` | Connectivity check abstraction |
@@ -25,6 +26,7 @@ All global providers are **non-autoDispose** (alive for the lifetime of the `Pro
 | `credentialStoreProvider` | `core/services/auth/token_providers.dart` | `Provider<ICredentialStore>` | Credential storage (remember-me) — credentials only; token persistence is owned by `tokenStoreProvider` (ISP) |
 | `jwtWrapperProvider` | `core/services/auth/token_providers.dart` | `Provider<IJwtWrapper>` | JWT payload decode (`decodePayload`) |
 | `loggerProvider` | `core/services/logging/logging_providers.dart` | `Provider<ILogger>` | Observability seam (`DevLogger` → `dart:developer log`); re-exported by each feature `di/`; overridable in tests (e.g. `FakeLogger`) |
+| `trendChartProvider` | `core/services/charts/charts_providers.dart` | `Provider<ITrendChart>` | Trend chart seam (`FlChartTrendChart` wraps `package:fl_chart`); re-exported by `features/lab_results/di/`; feature code NEVER imports `package:fl_chart` |
 | `environmentProvider` | `core/config/environment_provider.dart` | `Provider<AppEnvironment>` | App environment config |
 | `appUriesProvider` | `core/network/api_endpoints.dart` | `Provider<IEndpointConfig>` | Remote endpoint URLs bound to `environmentProvider` (overridable in tests) |
 | `appNavigatorProvider` | `core/router/app_navigator_provider.dart` | `Provider<IAppNavigator>` | Navigation seam — fail-fast until bound by `routerOverrides()`; a feature that navigates imperatively uses it via a one-line re-export in its own `di/` (on-demand) |
@@ -55,6 +57,23 @@ The `clinical_history` feature defines its own provider chain in `lib/features/c
 | `clinicalHistoryRefreshErrorProvider` | `NotifierProvider<ClinicalHistoryRefreshError, AppError?>` | Transient error emitted when a pull-to-refresh fails while the list is kept visible (UI-state, codegen in `presentation/notifiers/`) |
 
 Remote endpoint: `appUriesProvider` → `IEndpointConfig.clinicalHistory` (`lib/core/network/api_endpoints.dart`) → `GET /user/clinical-history`.
+
+The `lab_results` feature defines its own provider chain in `lib/features/lab_results/di/lab_results_provider.dart`:
+
+| Provider | Type | Exposed state |
+|---|---|---|
+| `_labResultsRemoteDatasourceProvider` (private) | `Provider<ILabResultsRemoteDatasource>` | Remote datasource (`httpServiceProvider` + `appUriesProvider`) |
+| `_labResultsLocalDatasourceProvider` (private) | `Provider<ILabResultsLocalDatasource>` | Local datasource (`labResultsStoreProvider`) |
+| `labResultsRepositoryProvider` | `Provider<ILabResultsRepository>` | Online-first repository (write-through on remote success, cache fallback only on connectivity failure) |
+| `loadLabResultsUseCaseProvider` | `Provider<LoadLabResultsUseCase>` | Load use case (remote-first, cache fallback only on connectivity failure) |
+| `refreshLabResultsUseCaseProvider` | `Provider<RefreshLabResultsUseCase>` | Refresh use case |
+| `labResultsProvider` | `NotifierProvider<LabResultsNotifier, LabResultsState>` | Lab results UI state (codegen provider in `features/lab_results/presentation/notifiers/`) |
+| `labResultsPeriodProvider` | `NotifierProvider<LabResultsPeriod, Period>` | Selected period filter (UI-state, codegen in `presentation/notifiers/`) |
+| `labResultsRefreshErrorProvider` | `NotifierProvider<LabResultsRefreshError, AppError?>` | Transient error emitted when a pull-to-refresh fails while results stay visible (UI-state, codegen in `presentation/notifiers/`) |
+
+The feature `di/` also re-exports `trendChartProvider`/`ITrendChart`/`TrendChartData` (charts seam) and `loggerProvider` so presentation imports the wrapper seam — never `package:fl_chart`.
+
+Remote endpoint: `appUriesProvider` → `IEndpointConfig.labResults` → `GET /user/clinical-history/lab-results`.
 
 The `auth` feature defines its own provider chain in `lib/features/auth/di/auth_provider.dart` (datasources, ISP-split repositories, and use cases incl. `restoreSessionUseCaseProvider` and `handle401UseCaseProvider`; the composed `_refreshTokenUseCaseProvider` / `_credentialLoginUseCaseProvider` are private to the file).
 
@@ -136,7 +155,7 @@ routerConfig: router,
 
 #### GoRouter navigation — Riverpod pattern + IAppNavigator seam
 
-`goRouterProvider` in `app/di/router/router_provider.dart` creates the `GoRouter` instance with `AuthGuard` (deep-link `?from=` restore) and `authenticationObserverProvider` as `refreshListenable`. **Features never import `go_router` types nor `app/`** (Rules 6/11): a feature that navigates imperatively re-exports the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` — where `appNavigatorProvider` (`core/router/app_navigator_provider.dart`) is bound by `routerOverrides()` in the composition root and added as a one-line re-export in the feature's own `di/` file **on-demand** (today no feature does, so no `di/` re-exports the seam):
+`goRouterProvider` in `app/di/router/router_provider.dart` creates the `GoRouter` instance with `AuthGuard` (deep-link `?from=` restore) and `authenticationObserverProvider` as `refreshListenable`. **Features never import `go_router` types nor `app/`** (Rules 6/11): a feature that navigates imperatively re-exports the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` — where `appNavigatorProvider` (`core/router/app_navigator_provider.dart`) is bound by `routerOverrides()` in the composition root and added as a one-line re-export in the feature's own `di/` file **on-demand**. `features/clinical_history` is the first feature that navigates imperatively (AppBar "Lab Results" action → `AppRoute.labResults`):
 
 ```dart
 // features/<name>/di/<name>_provider.dart

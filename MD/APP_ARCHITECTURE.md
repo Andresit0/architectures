@@ -7,7 +7,7 @@ lib/
 │   ├── database/            ← AppDatabase (sembast, AES-256-CBC via codec)
 │   ├── network/             ← Dio wrapper, providers (authDioProvider/httpServiceProvider + authInterceptorProvider seam), interceptors (auth, retry), connectivity, certificate pinning, timeouts (per-endpoint SLA), retry (exponential backoff + policy), api_endpoints, contracts/ (shared transport DTOs)
 │   ├── router/              ← IAppNavigator seam (appNavigatorProvider, fail-fast if not bound by app/)
-│   ├── services/            ← Wrappers organized by domain (auth, crypto, device, events, storage)
+│   ├── services/            ← Wrappers organized by domain (auth, charts, crypto, device, logging, storage)
 │   └── utils/               ← General-purpose utilities
 │
 ├── app/                     ← Application composition root
@@ -47,6 +47,7 @@ lib/
 |---|---|
 | `PatientEntity` | `features/auth` (login envelope `LoginResponseEntity.patient`) + `core/database` (`PatientSerializer`) |
 | `ClinicalHistoryEntity` + 6 sub-entities | `features/clinical_history` (domain/infrastructure/presentation) + `core/database` (`ClinicalHistorySerializer`) |
+| `LabResultEntity` + sub-entities | `features/lab_results` (domain/infrastructure/presentation) + `core/database` (`LabResultsSerializer`) |
 
 **Why they live in `shared/` and not in their owning feature:** `core/database/` persists these models, and `core/` is feature-agnostic (architecture Rule 14: `core/` NO importa `features/`). Moving them back to a feature would force `core/` → `features/` imports and break the dependency direction.
 
@@ -81,12 +82,15 @@ Currently it holds: the clinical-history wire contract (`ClinicalHistoryDto` + 6
 
 `clearSession()` clears the session-scoped data explicitly (token + credentials + registered session stores: patient info, clinical history). Contract: a feature that caches session-scoped data must register its store's clear in `LocalAuthDatasourceImpl.clearSession()`. App-global/device data survives logout; a total database wipe is only done via `IAppDatabase.resetDatabase()` (core primitive, for account reset / GDPR) — a **full wipe** that deletes the DB file **and** the encryption key. The production consumer is `ResetAccountUseCase` (auth) → `LocalAuthDatasourceImpl.resetAccount()` = `clearSession()` (secure storage: token + credentials) **+** `resetDatabase()` (DB file + key) — no orphaned credentials survive the GDPR wipe.
 
+**Lab results cache is deliberately NOT cleared on logout** (`labResultsStore` is not registered in `clearSession()`): its data is session-scoped but write-through-invalidated on every load/refresh, so a stale read is impossible after re-login; the only full wipe is `resetAccount()`. Documented coupling for auth in `features/lab_results/spec/contracts.md`.
+
 ### Features
 
 - `features/auth` — authentication (login, session restore, token refresh). Repository split by role (ISP): `IAuthRepository` (login/refreshToken, remote) implemented by `AuthRemoteRepositoryImpl` + `ILocalAuthRepository` (saveSession/clearSession/restoreSession, local) implemented by `AuthLocalRepositoryImpl` — one class = one contract (Rules 19a/19b).
 
 > **Enforced by CI (`test/architecture/dependency_rules_test.dart`):** Rule 18 (usecases dependen de otros usecases via `IUseCase<Input, Output>`, nunca clases concretas), Rule 19a (1 contrato = 1 impl en `domain/repositories` + `domain/datasources`), Rule 19b (1 clase = 1 contrato en `infrastructure/`), Rule 20 (providers de `core/database/tables/` solo en archivos `*_providers.dart`).
 - `features/clinical_history` — clinical history list (remote `GET /user/clinical-history` via `IClinicalHistoryRemoteDatasource` + offline cache via `IClinicalHistoryLocalDatasource`/`clinicalHistoryStoreProvider`, online-first repository with write-through: cache fallback only on a genuine connectivity failure).
+- `features/lab_results` — lab results (remote `GET /user/clinical-history/lab-results` via `ILabResultsRemoteDatasource` + offline cache via `ILabResultsLocalDatasource`/`labResultsStoreProvider`, online-first repository; numeric tests render as trend charts through the `ITrendChart` seam (`trendChartProvider`, wraps `package:fl_chart` — never imported in features), non-numeric tests as a flat list; period filter + pull-to-refresh; navigated to imperatively from the clinical_history AppBar via `IAppNavigator`).
 
 ### Bounded contexts — auth ↔ clinical_history (documented coupling)
 

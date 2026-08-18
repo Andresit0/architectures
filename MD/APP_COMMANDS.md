@@ -66,7 +66,7 @@ Caveats:
 flutter test integration_test/[feature_name]_integration_test.dart -d <device-id> --dart-define-from-file=.env
 ```
 
-Integration tests use fake repositories (`_FakeAuthRepository`, `_FakeTokenStore` and failure-variant repositories like `_FakeNetworkErrorRepository`, `_FakeOfflineWithCachedDataRepository`) — no live HTTP calls needed.
+Integration tests use fake repositories (`_FakeAuthRepository`, `_FakeTokenStore`, `_FakeLabResultsRepository` and failure-variant repositories like `_FakeNetworkErrorRepository`, `_FakeOfflineWithCachedDataRepository`) — no live HTTP calls needed. lab_results integration tests (`integration_test/lab_results_integration_test.dart`) inject the fake repository via Riverpod overrides in `app.main(overrides: [...])`.
 
 ---
 

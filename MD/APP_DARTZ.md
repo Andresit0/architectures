@@ -298,11 +298,17 @@ final result = await ref.read(loginUseCaseProvider)(LoginInput(email: e, passwor
 
 ## 12. Decision — Shared Kernel entities: NO validated factories
 
-**Decisión registrada (2026-08):** las entidades del Shared Kernel (`PatientEntity`, `ClinicalHistoryEntity` + sub-entidades) son **modelos de wire/persistencia** y NO tienen factories validadas (`result()`/`create()`). Se mantienen anémicas a propósito.
+**Decisión registrada (2026-08):** las entidades del Shared Kernel (`PatientEntity`, `ClinicalHistoryEntity` + sub-entidades, `LabResultEntity` + sub-entidades) son **modelos de wire/persistencia** y NO tienen factories validadas (`result()`/`create()`). Se mantienen anémicas a propósito.
 
-**Razón:** la única frontera de input no confiable de la app es el formulario de login, ya cubierta por los VOs (`Email.result()`, `Password.result()`, `PasswordHash.result()`, §10). `PatientEntity`/`ClinicalHistoryEntity` llegan desde la propia API (DTO → mapper) y la propia DB (serializer) — contratos controlados por la app. La forma del wire ya se valida en el mapper (`ClinicalHistoryMapper`/`AuthMapper` lanzan excepciones tipadas que `guard()` mapea). Añadir "no vacío" a las entidades sería validación decorativa: los serializers/mappers usan el `const factory` (no existe `raw` en entidades), por lo que la invariante sería bypasseable en las dos rutas reales de entrada de datos.
+**Razón:** la única frontera de input no confiable de la app es el formulario de login, ya cubierta por los VOs (`Email.result()`, `Password.result()`, `PasswordHash.result()`, §10). `PatientEntity`/`ClinicalHistoryEntity`/`LabResultEntity` llegan desde la propia API (DTO → mapper) y la propia DB (serializer) — contratos controlados por la app. La forma del wire ya se valida en el mapper (`AuthMapper`/`ClinicalHistoryMapper`/`LabResultsMapper` — ver §13 — lanzan excepciones tipadas que `guard()` mapea). Añadir "no vacío" a las entidades sería validación decorativa: los serializers/mappers usan el `const factory` (no existe `raw` en entidades), por lo que la invariante sería bypasseable en las dos rutas reales de entrada de datos.
 
 **Cuándo re-evaluar (condiciones para agregarlas):**
 1. La API deja de ser propia / el contrato viene de un tercero sin SLA de schema.
-2. Aparecen ≥2 puntos de construcción desde input no confiable (hoy solo `AuthMapper` y `ClinicalHistoryMapper`).
+2. Aparecen ≥2 puntos de construcción desde input no confiable (hoy son 3: `AuthMapper`, `ClinicalHistoryMapper` y `LabResultsMapper`).
 3. Surge una regla de negocio real (p. ej. "una historia clínica debe tener ≥1 diagnóstico"), no un mero "no vacío". En ese caso la validación debe vivir **en la frontera** (mapper DTO→Entity), no en una factory decorativa.
+
+---
+
+## 13. Third construction point — `LabResultsMapper` (DTO → Entity)
+
+**Decisión registrada (2026-08):** se añadió un tercer punto de construcción de entidades del Shared Kernel: `LabResultsMapper` (`features/lab_results/infrastructure/mappers/`). Igual que `AuthMapper`/`ClinicalHistoryMapper`, convierte wire DTO → Entity usando **named constructors** (`raw`-equivalentes, sin validación decorativa) — las entidades `LabResultEntity`/`LabResultValueEntity`/`LabResultReferenceRangeEntity` siguen anémicas (ver §12) y el mapper es la frontera que valida la forma del wire (excepciones tipadas que `guard()` mapea). El guard de consistencia es `test/core/database/lab_results_serializer_test.dart` (round-trip con discriminador `LabResultKind`).

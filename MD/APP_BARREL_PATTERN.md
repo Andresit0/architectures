@@ -26,7 +26,9 @@ export 'app_timeout_exception.dart';
 - `shared/functions/` → imports individually (`online_first.dart` directly) — no barrel
 - `shared/router/` → single file (`app_route.dart`), imported directly — no barrel (same as `shared/functions/`)
 - `core/router/` → single file (`app_navigator_provider.dart`), imported directly — no barrel
-- `features/auth/di/` → feature providers via `@riverpod` code-gen; navigation access via one-line `export` of `appNavigatorProvider` **only when the feature navigates imperatively** (on-demand — today no feature does, so none re-exports the seam yet)
+- `features/auth/di/` → feature providers via `@riverpod` code-gen; navigation access via one-line `export` of `appNavigatorProvider` **only when the feature navigates imperatively** (on-demand — today only `features/clinical_history` (AppBar "Lab Results" action) re-exports the seam)
+- `features/clinical_history/di/` → re-exports `appNavigatorProvider` (first feature to navigate imperatively) + `loggerProvider`
+- `features/lab_results/di/` → re-exports `trendChartProvider`/`ITrendChart`/`TrendChartData` (charts seam) + `loggerProvider`
 - `app/di/` → app-level DI seams (`dio_overrides.dart`, `auth_observer_provider.dart`, `router_overrides.dart`) — NO provider barrel; providers live in `core/` source files (composition root: `httpServiceProvider`, `tokenStoreProvider`, `appDatabaseProvider`, `internetServiceProvider`, `clinicalHistoryStoreProvider`, `patientInfoStoreProvider`, `passwordHasherProvider`, `connectivityCheckerProvider`, `tokenVerifierProvider`, `credentialStoreProvider`, `jwtWrapperProvider`, `environmentProvider`, `appNavigatorProvider`)
 - `shared/` → mock data lives in per-feature FakeDatasource files (no CustomJsons barrel)
 - `core/database/` → accessed via Riverpod providers (`ref.watch(appDatabaseProvider)`); **no barrel** — production imports provider files directly and tests import the table impls directly (`tables/clinical_history.dart`, `tables/patient_info.dart`)
@@ -38,6 +40,8 @@ export 'app_timeout_exception.dart';
 - `*.g.dart` / `*.freezed.dart` files are owned by their source (they are `part of` their annotation file) — never add them to a barrel.
 - Files starting with `_` are internal and are not exported by the barrel.
 - An external package type can be re-exported through a barrel with `export` when needed.
+- Feature `di/` re-exports expose ONLY the seam: when the source file also holds the concrete impl (`fl_chart_wrapper.dart` mixes `ITrendChart` + `FlChartTrendChart`), restrict with `export '...' show <Seam>;` so impls never leak into feature/presentation scope.
+- `export` does NOT bring names into the current library's scope: a feature `di/` file that USES a re-exported provider (e.g. `loggerProvider`) needs BOTH `import` (local use) and `export` (consumers) — the import is NOT redundant.
 
 **Exception — folders with `@riverpod`-annotated files:**
 
