@@ -1,6 +1,7 @@
 enum AppRoute {
   login(path: '/', name: 'login'),
-  clinicalHistory(path: '/clinical-history', name: 'clinical-history');
+  clinicalHistory(path: '/clinical-history', name: 'clinical-history'),
+  labResults(path: '/clinical-history/lab-results', name: 'lab-results');
 
   const AppRoute({required this.path, required this.name})
     : assert(path != '', 'AppRoute path must not be empty'),

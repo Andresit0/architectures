@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:clean_architecture_sdd_harness/core/router/app_navigator_provider.dart';
 import 'package:clean_architecture_sdd_harness/design_system/_design.lib.dart';
 import 'package:clean_architecture_sdd_harness/design_system/theme/app_theme.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/presentation/notifiers/clinical_history_notifier.dart';
@@ -11,7 +12,23 @@ import 'package:clean_architecture_sdd_harness/features/clinical_history/present
 import 'package:clean_architecture_sdd_harness/features/clinical_history/presentation/widgets/clinical_history_card.dart';
 import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/_models.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/router/app_route.dart';
+
+class _FakeNavigator implements IAppNavigator {
+  AppRoute? lastGoRoute;
+
+  @override
+  void go(AppRoute route, {Object? extra}) {
+    lastGoRoute = route;
+  }
+
+  @override
+  Future<void> push(AppRoute route, {Object? extra}) async {
+    lastGoRoute = route;
+  }
+}
 
 class _FakeClinicalHistoryNotifier extends ClinicalHistoryNotifier {
   _FakeClinicalHistoryNotifier(this._initial) : super();
@@ -282,9 +299,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Clinical History'), findsOneWidget);
-    expect(find.text('Logout'), findsOneWidget);
+    expect(find.byTooltip('Logout'), findsOneWidget);
 
-    await tester.tap(find.text('Logout'));
+    await tester.tap(find.byIcon(Icons.logout));
     await tester.pump();
 
     expect(logoutCalled, isTrue);
@@ -296,6 +313,31 @@ void main() {
     await tester.pumpWidget(_buildScreen(state: ClinicalHistoryLoaded(_tList)));
     await tester.pump();
 
-    expect(find.text('Logout'), findsNothing);
+    expect(find.byTooltip('Logout'), findsNothing);
+  });
+
+  testWidgets('appbar Lab Results action navigates via IAppNavigator', (
+    tester,
+  ) async {
+    final navigator = _FakeNavigator();
+    final container = ProviderContainer(
+      overrides: [
+        clinicalHistoryProvider.overrideWith(
+          () => _FakeClinicalHistoryNotifier(ClinicalHistoryLoaded(_tList)),
+        ),
+        appNavigatorProvider.overrideWith((ref) => navigator),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildScreen(container: container));
+    await tester.pump();
+
+    expect(find.byTooltip('Lab Results'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.biotech_outlined));
+    await tester.pump();
+
+    expect(navigator.lastGoRoute, AppRoute.labResults);
   });
 }

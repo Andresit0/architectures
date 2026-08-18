@@ -5,7 +5,6 @@ import 'package:clean_architecture_sdd_harness/app/di/auth/auth_observer_provide
 import 'package:clean_architecture_sdd_harness/app/di/router/go_router_navigator.dart';
 import 'package:clean_architecture_sdd_harness/app/di/router/router_overrides.dart';
 import 'package:clean_architecture_sdd_harness/app/di/router/router_provider.dart';
-import 'package:clean_architecture_sdd_harness/core/router/app_navigator_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/services/auth/i_authentication_observer.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/di/clinical_history_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/domain/repositories/i_clinical_history_repository.dart';

@@ -13,6 +13,7 @@ import 'package:clean_architecture_sdd_harness/features/clinical_history/infrast
 import 'package:clean_architecture_sdd_harness/features/clinical_history/infrastructure/datasources/clinical_history_remote_datasource_impl.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/infrastructure/repositories/clinical_history_repository_impl.dart';
 
+export 'package:clean_architecture_sdd_harness/core/router/app_navigator_provider.dart';
 export 'package:clean_architecture_sdd_harness/core/services/logging/logging_providers.dart';
 
 part 'clinical_history_provider.g.dart';
