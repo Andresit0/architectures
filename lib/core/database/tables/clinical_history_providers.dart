@@ -5,5 +5,5 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final clinicalHistoryStoreProvider = Provider<IClinicalHistoryStore>((ref) {
   final appDb = ref.watch(appDatabaseProvider);
-  return ClinicalHistory(database: appDb.database.then((isDb) => isDb.db));
+  return ClinicalHistory(database: appDb.database);
 });

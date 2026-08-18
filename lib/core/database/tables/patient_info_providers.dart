@@ -5,5 +5,5 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final patientInfoStoreProvider = Provider<IPatientInfoStore>((ref) {
   final appDb = ref.watch(appDatabaseProvider);
-  return PatientInfo(database: appDb.database.then((isDb) => isDb.db));
+  return PatientInfo(database: appDb.database);
 });
