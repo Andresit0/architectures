@@ -111,21 +111,24 @@ void main() {
       expect(data.unit, '');
     });
 
-    test('tooltip includes date, value+unit, range and status with a range', () {
-      final data = mapper.toTrendChartData(
-        result: _result,
-        values: _values,
-        formatDate: _formatDate,
-        statusLabel: _statusLabel,
-        referenceRangeLabel: 'Range',
-      );
+    test(
+      'tooltip includes date, value+unit, range and status with a range',
+      () {
+        final data = mapper.toTrendChartData(
+          result: _result,
+          values: _values,
+          formatDate: _formatDate,
+          statusLabel: _statusLabel,
+          referenceRangeLabel: 'Range',
+        );
 
-      final first = data.tooltipLines.first;
-      expect(first, contains('D10/8'));
-      expect(first, contains('16.8 g/dL'));
-      expect(first, contains('Range: 13–17'));
-      expect(first, contains('status:normal'));
-    });
+        final first = data.tooltipLines.first;
+        expect(first, contains('D10/8'));
+        expect(first, contains('16.8 g/dL'));
+        expect(first, contains('Range: 13–17'));
+        expect(first, contains('status:normal'));
+      },
+    );
 
     test('tooltip omits the range when the result has none', () {
       final noRange = LabResultEntity(
