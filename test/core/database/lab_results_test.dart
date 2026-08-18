@@ -1,3 +1,4 @@
+import 'package:clean_architecture_sdd_harness/core/database/sembast_db_wrapper.dart';
 import 'package:clean_architecture_sdd_harness/core/database/tables/lab_results.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/lab_results/lab_result_entity.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/lab_results/lab_result_kind.dart';
@@ -45,7 +46,7 @@ void main() {
 
   setUp(() async {
     db = await databaseFactoryMemory.openDatabase('memory');
-    store = LabResults(database: Future.value(db));
+    store = LabResults(database: Future.value(SembastDbWrapper(db)));
     await store.deleteAll();
   });
 

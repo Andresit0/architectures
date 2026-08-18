@@ -1,3 +1,4 @@
+import 'package:clean_architecture_sdd_harness/core/database/sembast_db_wrapper.dart';
 import 'package:clean_architecture_sdd_harness/core/database/tables/clinical_history.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sembast/sembast_memory.dart';
@@ -79,7 +80,7 @@ void main() {
 
   setUp(() async {
     db = await databaseFactoryMemory.openDatabase('memory');
-    store = ClinicalHistory(database: Future.value(db));
+    store = ClinicalHistory(database: Future.value(SembastDbWrapper(db)));
     await store.deleteAll();
   });
 
