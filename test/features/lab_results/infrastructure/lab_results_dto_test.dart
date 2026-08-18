@@ -160,6 +160,30 @@ void main() {
       expect(restored.date, dto.date);
       expect(restored.value, dto.value);
     });
+
+    test('freezed copyWith mutates a single field', () {
+      final dto = LabResultValueDto.fromJson(const <String, dynamic>{
+        'date': '2026-08-10',
+        'value': 16.8,
+      });
+
+      expect(dto.copyWith(value: 15.4).value, 15.4);
+      expect(dto.copyWith(value: 15.4).date, DateTime(2026, 8, 10));
+    });
+
+    test('freezed value equality compares structurally', () {
+      final a = LabResultValueDto.fromJson(const <String, dynamic>{
+        'date': '2026-08-10',
+        'value': 16.8,
+      });
+      final b = LabResultValueDto.fromJson(const <String, dynamic>{
+        'date': '2026-08-10',
+        'value': 16.8,
+      });
+
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+    });
   });
 
   group('LabResultReferenceRangeDto', () {
