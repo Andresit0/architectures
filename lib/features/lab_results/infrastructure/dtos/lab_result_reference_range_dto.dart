@@ -1,14 +1,15 @@
-class LabResultReferenceRangeDto {
-  const LabResultReferenceRangeDto({required this.low, required this.high});
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'lab_result_reference_range_dto.freezed.dart';
+part 'lab_result_reference_range_dto.g.dart';
+
+@freezed
+abstract class LabResultReferenceRangeDto with _$LabResultReferenceRangeDto {
+  const factory LabResultReferenceRangeDto({
+    required double low,
+    required double high,
+  }) = _LabResultReferenceRangeDto;
 
   factory LabResultReferenceRangeDto.fromJson(Map<String, dynamic> json) =>
-      LabResultReferenceRangeDto(
-        low: (json['low'] as num).toDouble(),
-        high: (json['high'] as num).toDouble(),
-      );
-
-  final double low;
-  final double high;
-
-  Map<String, dynamic> toJson() => <String, dynamic>{'low': low, 'high': high};
+      _$LabResultReferenceRangeDtoFromJson(json);
 }

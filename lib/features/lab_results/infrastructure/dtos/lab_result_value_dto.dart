@@ -1,17 +1,15 @@
-class LabResultValueDto {
-  const LabResultValueDto({required this.date, this.value});
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'lab_result_value_dto.freezed.dart';
+part 'lab_result_value_dto.g.dart';
+
+@freezed
+abstract class LabResultValueDto with _$LabResultValueDto {
+  const factory LabResultValueDto({
+    required DateTime date,
+    required dynamic value,
+  }) = _LabResultValueDto;
 
   factory LabResultValueDto.fromJson(Map<String, dynamic> json) =>
-      LabResultValueDto(
-        date: DateTime.parse(json['date'] as String),
-        value: json['value'],
-      );
-
-  final DateTime date;
-  final dynamic value;
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'date': date.toIso8601String(),
-    'value': value,
-  };
+      _$LabResultValueDtoFromJson(json);
 }
