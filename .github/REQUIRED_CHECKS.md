@@ -32,18 +32,23 @@ signing that GitHub-hosted macOS runners cannot provide.
 
 - Until a signing-capable/controlled runner is provisioned, the job is skipped
   and is **NOT** a required check — this is the documented D6 exception for a
-  personal account (GIT_FLOW.md §4.4, §10.2).
+  personal account (see README.md → Git Flow).
 - Once the variable is set and the job is green on a controlled runner, add
   `Integration` to branch protection as a required check and update this file.
 
 ## Coverage
 
 `codecov.yml` enforces project and patch coverage against the agreed
-threshold (`target: auto`, `threshold: 1%`). `codecov/patch` is a required
-status on every PR; a coverage regression blocks the merge. The Codecov upload
-itself is tolerant to a service outage (`fail_ci_if_error: false`) so an
-external failure never fails the job — the internal coverage status remains
-the authoritative gate.
+threshold (`target: auto`, `threshold: 1%`). `codecov/patch` is currently an
+INFORMATIVE status, not a required check: it is NOT present in the branch
+protection `required_status_checks.contexts` for `develop` or `main`, and the
+Codecov upload is tolerant to failure (`fail_ci_if_error: false`), so a
+coverage regression or a service outage never blocks the merge. This is an
+intentional bootstrap state to keep stacked-PR pipelines unblocked.
+
+To make coverage an authoritative gate (recommended once the matrix is
+stable), add `codecov/patch` to branch protection as a required check AND
+update this file in the SAME change (D7: required checks must match real CI).
 
 ## Change management
 

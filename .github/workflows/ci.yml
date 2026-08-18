@@ -67,7 +67,7 @@ jobs:
     name: Integration
     runs-on: macos-latest
     needs: [analyze]
-    # D6 (GIT_FLOW.md): device integration requires a controlled runner with
+    # D6 (REQUIRED_CHECKS.md → Device Integration): device integration requires a controlled runner with
     # Apple signing (the app uses flutter_secure_storage keychain groups, which
     # cannot be signed on GitHub-hosted macOS runners). Set the repository
     # variable RUN_DEVICE_INTEGRATION=true once such a runner is provisioned.
