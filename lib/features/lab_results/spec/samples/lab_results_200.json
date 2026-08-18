@@ -1,0 +1,85 @@
+{
+  "lab_results": [
+    {
+      "id": "lr_0001",
+      "test_code": "HB",
+      "test_name": "Hemoglobina",
+      "category": "Hematología",
+      "unit": "g/dL",
+      "kind": "numeric",
+      "reference_range": { "low": 13.0, "high": 17.0 },
+      "values": [
+        { "date": "2026-08-10", "value": 16.8 },
+        { "date": "2026-06-14", "value": 15.4 },
+        { "date": "2026-03-22", "value": 14.9 },
+        { "date": "2025-12-01", "value": 13.2 }
+      ]
+    },
+    {
+      "id": "lr_0002",
+      "test_code": "GLU",
+      "test_name": "Glucosa en ayunas",
+      "category": "Química sanguínea",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "reference_range": { "low": 70.0, "high": 110.0 },
+      "values": [
+        { "date": "2026-08-10", "value": 128.0 },
+        { "date": "2026-06-14", "value": 118.5 },
+        { "date": "2026-03-22", "value": 96.0 }
+      ]
+    },
+    {
+      "id": "lr_0003",
+      "test_code": "K",
+      "test_name": "Potasio sérico",
+      "category": "Electrolitos",
+      "unit": "mmol/L",
+      "kind": "numeric",
+      "reference_range": { "low": 3.5, "high": 5.1 },
+      "values": [
+        { "date": "2026-08-10", "value": 3.2 },
+        { "date": "2026-03-22", "value": 3.8 }
+      ]
+    },
+    {
+      "id": "lr_0004",
+      "test_code": "PCR",
+      "test_name": "Proteína C reactiva",
+      "category": "Inmunología",
+      "unit": "mg/L",
+      "kind": "numeric",
+      "reference_range": null,
+      "values": [
+        { "date": "2026-08-10", "value": 2.4 },
+        { "date": "2026-06-14", "value": 1.9 }
+      ]
+    },
+    {
+      "id": "lr_0005",
+      "test_code": "GRUPO",
+      "test_name": "Grupo sanguíneo",
+      "category": "Inmunohematología",
+      "unit": null,
+      "kind": "text",
+      "reference_range": null,
+      "values": [
+        { "date": "2026-08-10", "value": "A Positivo (A+)" },
+        { "date": "2026-03-22", "value": "A Positivo (A+)" }
+      ]
+    },
+    {
+      "id": "lr_0006",
+      "test_code": "SED",
+      "test_name": "Sedimento de orina",
+      "category": "Análisis de orina",
+      "unit": null,
+      "kind": "text",
+      "reference_range": null,
+      "values": [
+        { "date": "2026-08-10", "value": "No se observan cristales" },
+        { "date": "2026-06-14", "value": "Presencia leve de cristales de oxalato" }
+      ]
+    }
+  ]
+}
