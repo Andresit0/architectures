@@ -1,4 +1,5 @@
 import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
+import 'package:clean_architecture_sdd_harness/core/database/sembast_db_wrapper.dart';
 import 'package:clean_architecture_sdd_harness/core/database/tables/patient_info.dart';
 import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,7 @@ void main() {
 
   setUp(() async {
     db = await databaseFactoryMemory.openDatabase('memory');
-    store = PatientInfo(database: Future.value(db));
+    store = PatientInfo(database: Future.value(SembastDbWrapper(db)));
     await store.delete();
   });
 
