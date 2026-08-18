@@ -59,6 +59,15 @@ void main() {
       expect(result, AppRoute.clinicalHistory.path);
     });
 
+    test('restores nested lab-results deep-link target after login', () {
+      final result = guard.redirect(
+        location: AppRoute.login.path,
+        from: AppRoute.labResults.path,
+        isAuthenticated: true,
+      );
+      expect(result, AppRoute.labResults.path);
+    });
+
     test(
       'does NOT restore login as deep-link target (redirect loop guard)',
       () {

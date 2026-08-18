@@ -5,14 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:clean_architecture_sdd_harness/app/di/auth/auth_observer_provider.dart';
 import 'package:clean_architecture_sdd_harness/app/di/router/router_provider.dart';
 import 'package:clean_architecture_sdd_harness/app/widgets/app_error_screen.dart';
-import 'package:clean_architecture_sdd_harness/core/router/app_navigator_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/services/auth/i_authentication_observer.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/di/clinical_history_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/domain/repositories/i_clinical_history_repository.dart';
+import 'package:clean_architecture_sdd_harness/features/lab_results/di/lab_results_provider.dart';
+import 'package:clean_architecture_sdd_harness/features/lab_results/domain/repositories/i_lab_results_repository.dart';
 import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/models/clinical_history/clinical_history_entity.dart';
+import 'package:clean_architecture_sdd_harness/shared/models/_models.lib.dart';
 import 'package:clean_architecture_sdd_harness/shared/router/app_route.dart';
 
 class _FakeAuthObserver extends ChangeNotifier
@@ -41,6 +42,16 @@ class _FakeClinicalHistoryRepository implements IClinicalHistoryRepository {
   refreshClinicalHistories() async => const Success(<ClinicalHistoryEntity>[]);
 }
 
+class _FakeLabResultsRepository implements ILabResultsRepository {
+  @override
+  Future<Result<List<LabResultEntity>>> loadLabResults() async =>
+      const Success(<LabResultEntity>[]);
+
+  @override
+  Future<Result<List<LabResultEntity>>> refreshLabResults() async =>
+      const Success(<LabResultEntity>[]);
+}
+
 class _FakeNavigator implements IAppNavigator {
   @override
   void go(AppRoute route, {Object? extra}) {}
@@ -56,6 +67,9 @@ void main() {
         authenticationObserverProvider.overrideWith((ref) => observer),
         clinicalHistoryRepositoryProvider.overrideWith(
           (ref) => _FakeClinicalHistoryRepository(),
+        ),
+        labResultsRepositoryProvider.overrideWith(
+          (ref) => _FakeLabResultsRepository(),
         ),
         appNavigatorProvider.overrideWith((ref) => _FakeNavigator()),
       ],
@@ -97,6 +111,26 @@ void main() {
       expect(router.state.matchedLocation, AppRoute.clinicalHistory.path);
     },
   );
+
+  testWidgets('lab-results deep link is preserved across the login bounce and '
+      'restored after auth', (tester) async {
+    final observer = _FakeAuthObserver();
+    final container = createContainer(observer);
+    final router = container.read(goRouterProvider);
+
+    await tester.pumpWidget(buildApp(container));
+    await tester.pumpAndSettle();
+
+    router.go(AppRoute.labResults.path);
+    await tester.pumpAndSettle();
+
+    expect(router.state.matchedLocation, AppRoute.login.path);
+    expect(router.state.uri.queryParameters['from'], AppRoute.labResults.path);
+
+    observer.update(true);
+    await tester.pumpAndSettle();
+    expect(router.state.matchedLocation, AppRoute.labResults.path);
+  });
 
   testWidgets('unknown path renders AppErrorScreen (errorBuilder)', (
     tester,
