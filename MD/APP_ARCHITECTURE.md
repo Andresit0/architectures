@@ -4,8 +4,9 @@
 lib/
 ├── core/                    ← Pure infrastructure (no domain imports)
 │   ├── config/              ← AppEnvironment sealed class + environmentProvider
-│   ├── database/            ← AppDatabase (sembast, AES-256-CBC via codec)
+│   ├── database/            ← AppDatabase (sembast, AES-256-CBC via codec) + IDatabaseHandle facade sembast-free (findAll/replaceAll/deleteAll)
 │   ├── network/             ← Dio wrapper, providers (authDioProvider/httpServiceProvider + authInterceptorProvider seam), interceptors (auth, retry), connectivity, certificate pinning, timeouts (per-endpoint SLA), retry (exponential backoff + policy), api_endpoints, contracts/ (shared transport DTOs)
+│   ├── repositories/        ← OnlineFirstRepository<T> (template-method: política online-first + cache best-effort centralizadas; los repos de feature extienden esta base — Rule 25)
 │   ├── router/              ← IAppNavigator seam (appNavigatorProvider, fail-fast if not bound by app/)
 │   ├── services/            ← Wrappers organized by domain (auth, charts, crypto, device, logging, storage)
 │   └── utils/               ← General-purpose utilities
