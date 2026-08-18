@@ -313,6 +313,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your device has been modified. For security reasons, this app cannot be used on jailbroken or rooted devices.'**
   String get deviceSecurityMessage;
+
+  /// No description provided for @labResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Lab Results'**
+  String get labResults;
+
+  /// No description provided for @labResultsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No lab results.'**
+  String get labResultsEmpty;
+
+  /// No description provided for @labResultsPeriodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get labResultsPeriodLabel;
+
+  /// No description provided for @labResultsPeriodAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get labResultsPeriodAll;
+
+  /// No description provided for @labResultsPeriod3Months.
+  ///
+  /// In en, this message translates to:
+  /// **'3 months'**
+  String get labResultsPeriod3Months;
+
+  /// No description provided for @labResultsPeriod6Months.
+  ///
+  /// In en, this message translates to:
+  /// **'6 months'**
+  String get labResultsPeriod6Months;
+
+  /// No description provided for @labResultsPeriod1Year.
+  ///
+  /// In en, this message translates to:
+  /// **'1 year'**
+  String get labResultsPeriod1Year;
+
+  /// No description provided for @labResultsStatusNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get labResultsStatusNormal;
+
+  /// No description provided for @labResultsStatusHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get labResultsStatusHigh;
+
+  /// No description provided for @labResultsStatusLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get labResultsStatusLow;
+
+  /// No description provided for @labResultsStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get labResultsStatusUnknown;
+
+  /// No description provided for @labResultsChartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trend'**
+  String get labResultsChartTitle;
+
+  /// No description provided for @labResultsOtherTests.
+  ///
+  /// In en, this message translates to:
+  /// **'Other results'**
+  String get labResultsOtherTests;
+
+  /// No description provided for @labResultsSelectTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a test'**
+  String get labResultsSelectTest;
+
+  /// No description provided for @labResultsLatestValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get labResultsLatestValue;
+
+  /// No description provided for @labResultsReferenceRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference range'**
+  String get labResultsReferenceRange;
+
+  /// No description provided for @labResultsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh results'**
+  String get labResultsRefresh;
+
+  /// No description provided for @clinicalHistoryLabResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Lab Results'**
+  String get clinicalHistoryLabResults;
 }
 
 class _AppLocalizationsDelegate

@@ -126,4 +126,58 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deviceSecurityMessage =>
       'Your device has been modified. For security reasons, this app cannot be used on jailbroken or rooted devices.';
+
+  @override
+  String get labResults => 'Lab Results';
+
+  @override
+  String get labResultsEmpty => 'No lab results.';
+
+  @override
+  String get labResultsPeriodLabel => 'Period';
+
+  @override
+  String get labResultsPeriodAll => 'All';
+
+  @override
+  String get labResultsPeriod3Months => '3 months';
+
+  @override
+  String get labResultsPeriod6Months => '6 months';
+
+  @override
+  String get labResultsPeriod1Year => '1 year';
+
+  @override
+  String get labResultsStatusNormal => 'Normal';
+
+  @override
+  String get labResultsStatusHigh => 'High';
+
+  @override
+  String get labResultsStatusLow => 'Low';
+
+  @override
+  String get labResultsStatusUnknown => 'Unknown';
+
+  @override
+  String get labResultsChartTitle => 'Trend';
+
+  @override
+  String get labResultsOtherTests => 'Other results';
+
+  @override
+  String get labResultsSelectTest => 'Select a test';
+
+  @override
+  String get labResultsLatestValue => 'Latest';
+
+  @override
+  String get labResultsReferenceRange => 'Reference range';
+
+  @override
+  String get labResultsRefresh => 'Refresh results';
+
+  @override
+  String get clinicalHistoryLabResults => 'Lab Results';
 }

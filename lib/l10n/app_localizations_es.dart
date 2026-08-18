@@ -130,4 +130,58 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get deviceSecurityMessage =>
       'Tu dispositivo ha sido modificado. Por motivos de seguridad, esta aplicación no puede usarse en dispositivos con jailbreak o root.';
+
+  @override
+  String get labResults => 'Resultados de laboratorio';
+
+  @override
+  String get labResultsEmpty => 'No hay resultados de laboratorio';
+
+  @override
+  String get labResultsPeriodLabel => 'Periodo';
+
+  @override
+  String get labResultsPeriodAll => 'Todo';
+
+  @override
+  String get labResultsPeriod3Months => '3 meses';
+
+  @override
+  String get labResultsPeriod6Months => '6 meses';
+
+  @override
+  String get labResultsPeriod1Year => '1 año';
+
+  @override
+  String get labResultsStatusNormal => 'Normal';
+
+  @override
+  String get labResultsStatusHigh => 'Alto';
+
+  @override
+  String get labResultsStatusLow => 'Bajo';
+
+  @override
+  String get labResultsStatusUnknown => 'Desconocido';
+
+  @override
+  String get labResultsChartTitle => 'Tendencia';
+
+  @override
+  String get labResultsOtherTests => 'Otros resultados';
+
+  @override
+  String get labResultsSelectTest => 'Selecciona un análisis';
+
+  @override
+  String get labResultsLatestValue => 'Último';
+
+  @override
+  String get labResultsReferenceRange => 'Rango de referencia';
+
+  @override
+  String get labResultsRefresh => 'Actualizar resultados';
+
+  @override
+  String get clinicalHistoryLabResults => 'Resultados de laboratorio';
 }
