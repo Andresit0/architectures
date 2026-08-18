@@ -15,9 +15,7 @@ sealed class AppEnvironment {
     return [if (hash1.isNotEmpty) hash1, if (hash2.isNotEmpty) hash2];
   }
 
-  static final AppEnvironment current = _select();
-
-  static AppEnvironment _select() {
+  static AppEnvironment selectEnvironment() {
     return switch (const String.fromEnvironment(
       'ENVIRONMENT',
       defaultValue: 'dev',

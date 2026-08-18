@@ -19,8 +19,8 @@ void main() {
 
     group('StagingEnvironment', () {});
 
-    test('AppEnvironment.current is DevEnvironment by default', () {
-      expect(AppEnvironment.current, isA<DevEnvironment>());
+    test('selectEnvironment() is DevEnvironment by default', () {
+      expect(AppEnvironment.selectEnvironment(), isA<DevEnvironment>());
     });
   });
 
