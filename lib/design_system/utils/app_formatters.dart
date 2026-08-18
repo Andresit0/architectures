@@ -6,6 +6,9 @@ String formatClinicalDate(String value, {String? locale}) {
   return DateFormat.yMMMd(locale).format(date);
 }
 
+String formatChartDate(DateTime date, {String? locale}) =>
+    DateFormat.yMMMd(locale).format(date);
+
 String formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes B';
   const units = ['KB', 'MB', 'GB', 'TB'];
