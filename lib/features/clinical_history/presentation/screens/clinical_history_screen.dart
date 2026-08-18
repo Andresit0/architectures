@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:clean_architecture_sdd_harness/design_system/_design.lib.dart';
 import 'package:clean_architecture_sdd_harness/design_system/theme/app_colors.dart';
+import 'package:clean_architecture_sdd_harness/features/clinical_history/di/clinical_history_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/presentation/notifiers/clinical_history_notifier.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/presentation/notifiers/clinical_history_refresh_error_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/clinical_history/presentation/notifiers/clinical_history_state.dart';
 import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 import 'package:clean_architecture_sdd_harness/l10n/error_localizer.dart';
 import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/router/app_route.dart';
 
 import '../widgets/clinical_history_card.dart';
 
@@ -37,13 +39,13 @@ class ClinicalHistoryScreen extends ConsumerWidget {
         ref.read(clinicalHistoryProvider.notifier).load();
       });
       return Scaffold(
-        appBar: _buildAppBar(context),
+        appBar: _buildAppBar(context, ref),
         body: const SkeletonList(),
       );
     }
 
     return Scaffold(
-      appBar: _buildAppBar(context),
+      appBar: _buildAppBar(context, ref),
       body: switch (state) {
         ClinicalHistoryLoading() => const SkeletonList(),
         ClinicalHistoryInitial() => const SkeletonList(),
@@ -91,13 +93,23 @@ class ClinicalHistoryScreen extends ConsumerWidget {
       );
   }
 
-  AppBar _buildAppBar(BuildContext context) {
+  AppBar _buildAppBar(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return AppBar(
       title: Text(l10n.clinicalHistory),
       actions: [
+        IconButton(
+          tooltip: l10n.clinicalHistoryLabResults,
+          icon: const Icon(Icons.biotech_outlined),
+          onPressed: () =>
+              ref.read(appNavigatorProvider).go(AppRoute.labResults),
+        ),
         if (onLogout != null)
-          TextButton(onPressed: onLogout, child: Text(l10n.logout)),
+          IconButton(
+            tooltip: l10n.logout,
+            icon: const Icon(Icons.logout),
+            onPressed: onLogout,
+          ),
       ],
     );
   }
