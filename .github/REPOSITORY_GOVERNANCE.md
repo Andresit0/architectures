@@ -1,7 +1,7 @@
 # Repository Governance Bootstrap
 
 This PR bootstraps the repository governance required before the enterprise
-migration (GIT_FLOW.md) can proceed. It covers:
+migration (README.md → Git Flow) can proceed. It covers:
 
 1. **CODEOWNERS** — `.github/CODEOWNERS` maps ownership areas to real handles.
 2. **Branch protection** — enforced on `develop` and `main` (push blocked,
@@ -15,7 +15,7 @@ migration (GIT_FLOW.md) can proceed. It covers:
    green. When an org/second reviewer is added, enable the target approval
    counts and update this file.
 4. **Merge queue** — NOT available on a personal GitHub account. Documented
-   exception per GIT_FLOW.md §4.4: auto-merge only after all checks are green
+   exception per README.md → Git Flow: auto-merge only after all checks are green
    and a human control equivalent (reviewer approval) is required. When the
    repository moves to an enterprise plan, enable the merge queue and update
    this file.
