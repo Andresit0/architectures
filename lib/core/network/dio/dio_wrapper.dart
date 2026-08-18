@@ -1,11 +1,11 @@
-import 'dart:async' show TimeoutException;
-
-import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
 import 'package:clean_architecture_sdd_harness/core/network/connectivity/internet_service.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/dio_multipart_builder.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/dio_response_parser.dart';
+import 'package:clean_architecture_sdd_harness/core/network/dio/error_mapper.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/http_response.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/i_multipart_file.dart';
+import 'package:clean_architecture_sdd_harness/core/network/dio/request_executor.dart';
+import 'package:clean_architecture_sdd_harness/core/network/dio/retry_executor.dart';
 import 'package:clean_architecture_sdd_harness/core/network/interceptors/_interceptors.lib.dart';
 import 'package:clean_architecture_sdd_harness/core/network/security/certificate_pinner.dart';
 import 'package:clean_architecture_sdd_harness/core/network/timeouts/_timeouts.lib.dart';
@@ -13,8 +13,6 @@ import 'package:clean_architecture_sdd_harness/core/network/utils/uri_utils.dart
 import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show VoidCallback;
-
-enum _HttpMethod { get, post, patch, delete, put, multipart }
 
 abstract class IDioWrapper {
   Future<HttpResponse<Map<String, dynamic>>> post(
@@ -90,6 +88,8 @@ class DioWrapper implements IDioWrapper {
     IDioMultipartBuilder? multipartBuilder,
     IDioResponseParser? responseParser,
     ConnectionProfile? profile,
+    IErrorMapper? errorMapper,
+    IRetryExecutor? retryExecutor,
   ]) : _dio = dio ?? Dio(),
        _certificatePinner =
            certificatePinner ?? CertificatePinner(pinnedCertificates: const []),
@@ -100,13 +100,23 @@ class DioWrapper implements IDioWrapper {
     _dio.options.connectTimeout = _profile.connectTimeout;
     _dio.options.receiveTimeout = _profile.receiveTimeout;
     _dio.options.sendTimeout = _profile.sendTimeout;
+    _requestExecutor = RequestExecutor(
+      dio: _dio,
+      internetService: _internetService,
+      multipartBuilder: _multipartBuilder,
+      responseParser: _responseParser,
+      errorMapper: errorMapper ?? const ErrorMapper(),
+      retryExecutor: retryExecutor ?? const RetryExecutor(),
+    );
   }
+
   final Dio _dio;
   final IInternetService _internetService;
   final ICertificatePinner _certificatePinner;
   final IDioMultipartBuilder _multipartBuilder;
   final IDioResponseParser _responseParser;
   final ConnectionProfile _profile;
+  late final IRequestExecutor _requestExecutor;
 
   @override
   void addAuthInterceptor(
@@ -125,170 +135,6 @@ class DioWrapper implements IDioWrapper {
     );
   }
 
-  Future<void> _checkConnectivity() async {
-    if (!await _internetService.isConnected()) {
-      throw NoConnectionException();
-    }
-    if (!await _internetService.isServerReachable()) {
-      throw ServerUnreachableException();
-    }
-  }
-
-  static bool isBrowserNetworkFailure(DioException e) {
-    if (e.type != DioExceptionType.unknown) {
-      return false;
-    }
-    final error = e.error;
-    final message = error?.toString() ?? '';
-    return error is TypeError ||
-        message.contains('Failed to fetch') ||
-        message.contains('Network Error');
-  }
-
-  Future<HttpResponse<Map<String, dynamic>>> _request({
-    required _HttpMethod method,
-    required Uri uri,
-    String? type,
-    Map<String, String>? headers,
-    List<Map<String, String>>? fields,
-    List<IMultipartFile>? fileList,
-    Object? body,
-    bool returnDioResponse = false,
-    required EndpointSla sla,
-    int attempt = 1,
-  }) async {
-    try {
-      await _checkConnectivity();
-      final effectiveTimeout = sla.timeout;
-      Response<dynamic> response;
-      final requestOptions =
-          (type == 'bytes' ||
-              (headers != null && headers['Content-Type'] == 'application/pdf'))
-          ? Options(headers: headers, responseType: ResponseType.bytes)
-          : Options(headers: headers);
-
-      switch (method) {
-        case _HttpMethod.get:
-          response = await _dio
-              .getUri<dynamic>(uri, options: requestOptions)
-              .timeout(effectiveTimeout);
-        case _HttpMethod.post:
-          response = await _dio
-              .postUri<dynamic>(uri, data: body, options: requestOptions)
-              .timeout(effectiveTimeout);
-        case _HttpMethod.patch:
-          response = await _dio
-              .patchUri<dynamic>(uri, data: body, options: requestOptions)
-              .timeout(effectiveTimeout);
-        case _HttpMethod.delete:
-          response = await _dio
-              .deleteUri<dynamic>(uri, data: body, options: requestOptions)
-              .timeout(effectiveTimeout);
-        case _HttpMethod.put:
-          response = await _dio
-              .putUri<dynamic>(uri, data: body, options: requestOptions)
-              .timeout(effectiveTimeout);
-        case _HttpMethod.multipart:
-          final formData = await _multipartBuilder.build(
-            fields: fields,
-            fileList: fileList?.cast<Object?>(),
-          );
-          response = await _dio
-              .postUri<dynamic>(uri, data: formData, options: requestOptions)
-              .timeout(effectiveTimeout);
-      }
-
-      final httpResponse = _responseParser.parse(
-        response: response,
-        type: type,
-        returnDioResponse: returnDioResponse,
-      );
-      return httpResponse;
-    } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.sendTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        return _retryOrTimeout(
-          method: method,
-          uri: uri,
-          type: type,
-          headers: headers,
-          fields: fields,
-          fileList: fileList,
-          body: body,
-          returnDioResponse: returnDioResponse,
-          sla: sla,
-          attempt: attempt,
-        );
-      }
-      if (e.response != null) {
-        throw ApiException(e.response!.statusCode ?? 0);
-      }
-      if (e.type == DioExceptionType.connectionError) {
-        throw NoConnectionException();
-      }
-      if (isBrowserNetworkFailure(e)) {
-        throw NoConnectionException();
-      }
-      throw UnexpectedResponseException(
-        'Unhandled DioException type: ${e.type}',
-      );
-    } on TimeoutException catch (_) {
-      return _retryOrTimeout(
-        method: method,
-        uri: uri,
-        type: type,
-        headers: headers,
-        fields: fields,
-        fileList: fileList,
-        body: body,
-        returnDioResponse: returnDioResponse,
-        sla: sla,
-        attempt: attempt,
-      );
-    } on Exception catch (error) {
-      throw switch (error) {
-        UnexpectedResponseException() ||
-        NoConnectionException() ||
-        ServerUnreachableException() => error,
-        _ => const UnexpectedResponseException('Unexpected internal error'),
-      };
-    }
-  }
-
-  Future<HttpResponse<Map<String, dynamic>>> _retryOrTimeout({
-    required _HttpMethod method,
-    required Uri uri,
-    required String? type,
-    required Map<String, String>? headers,
-    required List<Map<String, String>>? fields,
-    required List<IMultipartFile>? fileList,
-    required Object? body,
-    required bool returnDioResponse,
-    required EndpointSla sla,
-    required int attempt,
-  }) async {
-    if (sla.retry.retryOnTimeout && attempt < sla.retry.maxRetries) {
-      await Future<void>.delayed(sla.retry.baseDelay);
-      return _request(
-        method: method,
-        uri: uri,
-        type: type,
-        headers: headers,
-        fields: fields,
-        fileList: fileList,
-        body: body,
-        returnDioResponse: returnDioResponse,
-        sla: sla,
-        attempt: attempt + 1,
-      );
-    }
-    throw AppTimeoutException(
-      message:
-          'The request timed out for $uri (timeout ${sla.timeout}, attempt $attempt)',
-    );
-  }
-
   @override
   Future<HttpResponse<Map<String, dynamic>>> post(
     Uri url, {
@@ -300,8 +146,8 @@ class DioWrapper implements IDioWrapper {
     EndpointSla sla = EndpointSla.unknown,
   }) async {
     url = UriUtils.replacePathParams(url, pathParams);
-    return _request(
-      method: _HttpMethod.post,
+    return _requestExecutor.execute(
+      method: HttpMethod.post,
       uri: url,
       headers: headers,
       body: body,
@@ -320,8 +166,8 @@ class DioWrapper implements IDioWrapper {
     EndpointSla sla = EndpointSla.unknown,
   }) async {
     url = UriUtils.replacePathParams(url, pathParams);
-    return _request(
-      method: _HttpMethod.get,
+    return _requestExecutor.execute(
+      method: HttpMethod.get,
       uri: url,
       type: type,
       headers: headers,
@@ -340,8 +186,8 @@ class DioWrapper implements IDioWrapper {
     EndpointSla sla = EndpointSla.unknown,
   }) async {
     uri = UriUtils.replacePathParams(uri, pathParams);
-    return _request(
-      method: _HttpMethod.patch,
+    return _requestExecutor.execute(
+      method: HttpMethod.patch,
       uri: uri,
       headers: headers,
       body: body,
@@ -360,8 +206,8 @@ class DioWrapper implements IDioWrapper {
     EndpointSla sla = EndpointSla.unknown,
   }) async {
     uri = UriUtils.replacePathParams(uri, pathParams);
-    return _request(
-      method: _HttpMethod.delete,
+    return _requestExecutor.execute(
+      method: HttpMethod.delete,
       uri: uri,
       headers: headers,
       body: body,
@@ -380,8 +226,8 @@ class DioWrapper implements IDioWrapper {
     EndpointSla sla = EndpointSla.unknown,
   }) async {
     uri = UriUtils.replacePathParams(uri, pathParams);
-    return _request(
-      method: _HttpMethod.put,
+    return _requestExecutor.execute(
+      method: HttpMethod.put,
       uri: uri,
       headers: headers,
       body: body,
@@ -403,8 +249,8 @@ class DioWrapper implements IDioWrapper {
     EndpointSla sla = EndpointSla.unknown,
   }) async {
     uri = UriUtils.replacePathParams(uri, pathParams);
-    return _request(
-      method: _HttpMethod.multipart,
+    return _requestExecutor.execute(
+      method: HttpMethod.multipart,
       type: type,
       uri: uri,
       fileList: fileList,
