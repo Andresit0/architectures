@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:clean_architecture_sdd_harness/core/database/app_database_provider.dart';
@@ -15,6 +14,7 @@ import '../domain/datasources/i_local_auth_datasource.dart';
 import '../domain/repositories/i_auth_repository.dart';
 import '../domain/repositories/i_local_auth_repository.dart';
 import '../domain/usecases/login_usecase.dart';
+import '../domain/usecases/save_session_usecase.dart';
 import '../domain/usecases/clear_session_usecase.dart';
 import '../domain/usecases/reset_account_usecase.dart';
 import '../domain/usecases/restore_session_usecase.dart';
@@ -46,24 +46,27 @@ ILocalAuthDatasource localAuthDatasource(Ref ref) => LocalAuthDatasourceImpl(
   appDatabase: ref.watch(appDatabaseProvider),
 );
 
-final authRepositoryProvider = Provider<IAuthRepository>(
-  (ref) => AuthRemoteRepositoryImpl(
-    remoteDatasource: ref.watch(authRemoteDatasourceProvider),
-  ),
+@riverpod
+IAuthRepository authRepository(Ref ref) => AuthRemoteRepositoryImpl(
+  remoteDatasource: ref.watch(authRemoteDatasourceProvider),
 );
 
-final localAuthRepositoryProvider = Provider<ILocalAuthRepository>(
-  (ref) => AuthLocalRepositoryImpl(
-    localDatasource: ref.watch(localAuthDatasourceProvider),
-  ),
+@riverpod
+ILocalAuthRepository localAuthRepository(Ref ref) => AuthLocalRepositoryImpl(
+  localDatasource: ref.watch(localAuthDatasourceProvider),
+);
+
+@riverpod
+SaveSessionUseCase _saveSessionUseCase(Ref ref) => SaveSessionUseCase(
+  sessionRepository: ref.watch(localAuthRepositoryProvider),
+  tokenStore: ref.watch(tokenStoreProvider),
 );
 
 @riverpod
 LoginUseCase loginUseCase(Ref ref) => LoginUseCase(
   repository: ref.watch(authRepositoryProvider),
-  sessionRepository: ref.watch(localAuthRepositoryProvider),
   passwordHasher: ref.watch(passwordHasherProvider),
-  tokenStore: ref.watch(tokenStoreProvider),
+  saveSessionUseCase: ref.watch(_saveSessionUseCaseProvider),
 );
 
 @riverpod
