@@ -22,6 +22,22 @@ List<String> _imports(File f) => f
     .where((line) => line.startsWith('import'))
     .toList();
 
+const _externalPackages = [
+  'package:dio',
+  'package:sembast',
+  'package:flutter_secure_storage',
+  'package:dart_jsonwebtoken',
+  'package:bcrypt',
+  'package:encrypt',
+  'package:crypto',
+  'package:fl_chart',
+  'package:go_router',
+  'package:internet_connection_checker_plus',
+  'package:path_provider',
+  'package:flutter_jailbreak_detection',
+  'package:logger',
+];
+
 void main() {
   group('Architecture Dependency Rules', () {
     test(
@@ -133,29 +149,12 @@ void main() {
     test(
       'Rule 6: features/ NO importa paquetes externos directamente (solo via wrappers)',
       () {
-        final externalPackages = [
-          'package:dio',
-          'package:sembast',
-          'package:flutter_secure_storage',
-          'package:dart_jsonwebtoken',
-          'package:bcrypt',
-          'package:encrypt',
-          'package:crypto',
-          'package:go_router',
-          'package:internet_connection_checker_plus',
-          'package:path_provider',
-          'package:flutter_jailbreak_detection',
-          'package:logger',
-        ];
-
         for (final feature in _featureDirs()) {
-          final featureFiles = _dartFilesIn(
-            feature,
-          ).where((f) => !f.path.contains('/di/'));
+          final featureFiles = _dartFilesIn(feature);
 
           for (final file in featureFiles) {
             for (final import in _imports(file)) {
-              for (final pkg in externalPackages) {
+              for (final pkg in _externalPackages) {
                 expect(
                   import.contains(pkg),
                   isFalse,
@@ -168,6 +167,30 @@ void main() {
         }
       },
     );
+
+    test('Rule 6b: feature tests (test/features, test/bdd, integration_test) '
+        'NO importan paquetes externos directamente (solo via wrappers)', () {
+      final testDirs = [
+        Directory('test/features'),
+        Directory('test/bdd'),
+        Directory('integration_test'),
+      ];
+
+      for (final dir in testDirs) {
+        for (final file in _dartFilesIn(dir)) {
+          for (final import in _imports(file)) {
+            for (final pkg in _externalPackages) {
+              expect(
+                import.contains(pkg),
+                isFalse,
+                reason:
+                    '${file.path} importa $pkg directamente. Debe usar wrapper.',
+              );
+            }
+          }
+        }
+      }
+    });
 
     test('Rule 7: domain/ NO importa presentation/', () {
       for (final feature in _featureDirs()) {
