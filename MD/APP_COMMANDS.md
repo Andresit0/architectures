@@ -12,18 +12,21 @@ flutter gen-l10n
 # 3. Regenerate Riverpod code (run whenever @riverpod files change)
 dart run build_runner build --delete-conflicting-outputs
 
-# 4. Analyze
+# 4. Check formatting (CI "Enforce Dart formatting" runs the same scope — analyze does NOT catch it)
+dart format --output=none --set-exit-if-changed lib test integration_test
+
+# 5. Analyze
 flutter analyze
 
-# 5. Unit / widget tests (goldens excluded for a fast local loop; CI Test job uses the same flag)
+# 6. Unit / widget tests (goldens excluded for a fast local loop; CI Test job uses the same flag)
 flutter test --exclude-tags golden
 
-# 5b. Golden tests (tagged @Tags(['golden']) — declared in dart_test.yaml, no "A tag was used" warning)
+# 6b. Golden tests (tagged @Tags(['golden']) — declared in dart_test.yaml, no "A tag was used" warning)
 # CI runs them on Linux with `flutter test --tags golden`. Regenerate fixtures with --update-goldens.
 flutter test --tags golden
 flutter test --tags golden --update-goldens
 
-# 6. Run on macOS
+# 7. Run on macOS
 flutter run -d mac --dart-define-from-file=.env
 ```
 

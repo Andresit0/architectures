@@ -3081,11 +3081,11 @@ updates require review.
 
 ### Branch protection (`develop`)
 
-`develop` is protected and requires all 5 checks to pass before merging (`strict: true`, so PRs must be up to date with `develop`):
+`develop` is protected and requires all 6 checks to pass before merging (`strict: true`, so PRs must be up to date with `develop`):
 
-`Analyze`, `Test`, `Test Goldens`, `Build iOS`, `Build Android`
+`Analyze`, `Test`, `Test Goldens`, `Build iOS`, `Build Android`, `Gitleaks`
 
-No required reviewers are configured (single-account repo — PRs are self-approved after passing the 6 quality gates of the `super-pull-request-reviewer` command).
+No required reviewers are configured (single-account repo — GitHub blocks self-approval, so PRs are gated on the required-check matrix plus an explicit human merge after CI is green; see `.github/REPOSITORY_GOVERNANCE.md`).
 
 ### Merge strategy
 
@@ -3094,6 +3094,11 @@ GitHub **merge queue is not available on personal accounts** (organization featu
 - **Squash** on merge (`squash_merge_commit_title: PR_TITLE`, `squash_merge_commit_message: PR_BODY`) — one clean commit per PR.
 - **Delete branch on merge** (`delete_branch_on_merge: true`).
 - **Allow update branch** (`allow_update_branch: true`).
+- **Post-merge CI** — `ci.yml` also runs on `push` to `develop`/`main`, so every
+  squash merge triggers a fresh verification run on develop. With
+  `concurrency: cancel-in-progress: true`, a rapid stacked merge can cancel the
+  previous post-merge run (benign: the authoritative merge gate is the PR-head
+  required checks).
 - Dependabot patch/minor auto-merge via `auto-merge.yml`.
 
 This yields the same outcome a merge queue would (clean history, no `Merge branch` noise, branches auto-removed) without the queue.

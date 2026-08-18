@@ -125,7 +125,7 @@ Mocks use `mocktail`; dependencies are replaced via Riverpod overrides — no re
 
 ## CI/CD Gates
 
-Every PR runs `.github/workflows/ci.yml` on `develop` and `main`:
+Every PR runs `.github/workflows/ci.yml` on `develop` and `main`; the same workflow also triggers on every push to `develop`/`main`, so each merge is followed by a post-merge verification run:
 
 | Job | Purpose |
 |---|---|
