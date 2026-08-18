@@ -50,7 +50,7 @@ Before executing any git command, write the exact command and ask the user to co
 
 ### Git Flow (enforced)
 
-Default branch: `main` (production). Integration branch: `develop`. See README §3 for the full model.
+Default branch: `main` (production). Integration branch: `develop`. See README.md → Git Flow section for the full model.
 
 * `feature/*` → PR → `develop` (checks) → merge
 * Dependabot (patch/minor) → PR → `develop` → checks → auto-merge
@@ -272,8 +272,8 @@ The flow is complete when:
 | `.ai/commands/super-commit.md` | Script with steps to group changes into semantic commits and push the branch |
 | `.ai/commands/super-md-update.md` | Script to sync MD/* and AGENTS.md from git changes |
 | `.ai/commands/spec-local.md` | Entry point for the Spec-Local TDD-First workflow — invoke as `/spec-local <feature name>` |
-| `.ai/commands/super-pull-request.md` | Smart PR Split pipeline: classify changes, plan stacked PRs (English Conventional Commit titles + type-prefixed git-flow branches), execute and validate each PR |
-| `.ai/commands/super-pull-request-reviewer.md` | Review open GitHub PRs against 6 quality gates and optionally approve/merge them sequentially |
+| `.ai/commands/super-pull-request.md` | Smart PR Split pipeline: classify changes, plan stacked PRs (English Conventional Commit titles + type-prefixed git-flow branches), execute and validate each PR (analyzer, tests, dart format matching CI), publish stacked PRs |
+| `.ai/commands/super-pull-request-reviewer.md` | Review open GitHub PRs against 6 quality gates (introspects branch protection; local analyzer/tests/dart format; CI-gated sequential squash merge; no self-approval) |
 
 ---
 
