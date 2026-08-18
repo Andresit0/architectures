@@ -7,3 +7,8 @@ export 'clinical_history/clinical_history_diagnosis_entity.dart';
 export 'clinical_history/clinical_history_attachment_entity.dart';
 export 'clinical_history/clinical_history_state_entity.dart';
 export 'clinical_history/clinical_history_status.dart';
+export 'lab_results/lab_result_entity.dart';
+export 'lab_results/lab_result_kind.dart';
+export 'lab_results/lab_result_reference_range_entity.dart';
+export 'lab_results/lab_result_status.dart';
+export 'lab_results/lab_result_value_entity.dart';
