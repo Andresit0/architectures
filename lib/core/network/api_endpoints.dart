@@ -7,6 +7,7 @@ abstract interface class IEndpointConfig {
   Uri get login;
   Uri get refreshToken;
   Uri get clinicalHistory;
+  Uri get labResults;
 }
 
 class AppUris implements IEndpointConfig {
@@ -30,6 +31,10 @@ class AppUris implements IEndpointConfig {
 
   @override
   Uri get clinicalHistory => _base.replace(path: '$_userPath/clinical-history');
+
+  @override
+  Uri get labResults =>
+      _base.replace(path: '$_userPath/clinical-history/lab-results');
 }
 
 final appUriesProvider = Provider<IEndpointConfig>(
