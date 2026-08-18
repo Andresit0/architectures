@@ -16,6 +16,7 @@ void main() {
       expect(config, isA<IEndpointConfig>());
       expect(config.login.host, 'localhost');
       expect(config.login.scheme, 'http');
+      expect(config.labResults.path, '/user/clinical-history/lab-results');
     });
 
     test('honors environmentProvider overrides', () {
@@ -32,6 +33,7 @@ void main() {
       expect(config.login.scheme, 'https');
       expect(config.refreshToken.host, 'staging.example.com');
       expect(config.clinicalHistory.host, 'staging.example.com');
+      expect(config.labResults.path, '/user/clinical-history/lab-results');
     });
 
     test('uses https scheme when port is 443', () {
