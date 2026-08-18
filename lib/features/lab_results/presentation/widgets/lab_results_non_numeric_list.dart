@@ -4,10 +4,7 @@ import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 import 'package:clean_architecture_sdd_harness/shared/models/_models.lib.dart';
 
 class LabResultsNonNumericList extends StatelessWidget {
-  const LabResultsNonNumericList({
-    super.key,
-    required this.results,
-  });
+  const LabResultsNonNumericList({super.key, required this.results});
 
   final List<LabResultEntity> results;
 

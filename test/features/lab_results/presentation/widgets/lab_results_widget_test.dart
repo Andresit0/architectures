@@ -116,7 +116,8 @@ void main() {
 
       final semantics = tester.getSemantics(
         find.byWidgetPredicate(
-          (w) => w is Semantics && w.properties.label?.contains('Latest') == true,
+          (w) =>
+              w is Semantics && w.properties.label?.contains('Latest') == true,
         ),
       );
       expect(semantics.label, contains('Latest: 16.8 g/dL'));
