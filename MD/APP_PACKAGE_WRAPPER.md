@@ -21,6 +21,7 @@ imported from the provider's `core/` source file — never imports the package d
 | **auth** | `auth/secure_credential_store.dart` | `ICredentialStore` | `SecureCredentialStore` | `ref.watch(credentialStoreProvider)` |
 | **auth** | `auth/jwt_wrapper.dart` | `IJwtWrapper` | `JwtWrapper` | `ref.watch(jwtWrapperProvider)` — `decodePayload()` (decode sin verificación de firma) |
 | **auth** | `auth/jwt_token_expiry_checker.dart` | `ITokenVerifier` | `JwtTokenExpiryChecker` | `ref.watch(tokenVerifierProvider)` — `isExpired()` |
+| **charts** | `charts/fl_chart_wrapper.dart` | `ITrendChart` | `FlChartTrendChart` | `ref.watch(trendChartProvider)` (from `charts/charts_providers.dart`) — line chart with reference-range band + legible axes. Pure-utility-with-provider (precedent: `jwtWrapperProvider`). `ITrendChart` lives in `core/services/charts/` (NOT `shared/` — it exposes Flutter `Widget` types). ⚠️ **Anti-pattern:** `import 'package:fl_chart'` in feature code is forbidden (Rule 6) — features consume the seam via the `di/` re-export |
 | **crypto** | `crypto/bcrypt_wrapper.dart` | `IPasswordHasher` | `BcryptWrapper` | `ref.watch(passwordHasherProvider)` |
 | **device** | `device/path_provider_wrapper.dart` | `IPathProviderWrapper` | `PathProviderWrapper` | `ref.watch(pathProviderProvider)` — pure utility |
 | **device** | `device/jailbreak_detection_wrapper.dart` | — | `JailbreakDetectionWrapper` | — (internal, called during app init) |
@@ -43,6 +44,7 @@ Mixing categories is an architectural error.
 | Category | Wrappers | Correct access from features | Riverpod Bridge |
 |---|---|---|---|
 | **Pure utility** | `path_provider_wrapper` | `ref.watch(provider)` directly | Provider-level (not via composition root barrel) |
+| **Pure utility with provider** | `fl_chart_wrapper` (`ITrendChart`/`FlChartTrendChart`/`trendChartProvider`, `core/services/charts/`), `jwt_wrapper` (`jwtWrapperProvider`) | `ref.watch(provider)` directly, imported from its `core/` source file; the feature `di/` re-exports the provider + interface + capacity-contract model (`show`-restricted when the source file also holds the impl) so presentation/ never touches the raw package | Provider-level in `core/` source file |
  | **Injectable service** | `dio_wrapper`, `secure_token_store`, `secure_credential_store` | `ref.watch/read(ProviderName)` from its `core/` source file | YES — Riverpod provider in `core/` source file |
 | **Internal dependency** | `internet_service`, `secure_storage_wrapper`, `jailbreak_detection_wrapper` | Only inside their consuming wrappers. Never from features | NO |
 | **GoRouter (Riverpod)** | `goRouterProvider` | `ref.watch(goRouterProvider)` from `app/di/router/router_provider.dart` (composition root only) | NO — features navigate via the `IAppNavigator` seam (`appNavigatorProvider` re-exported by their `di/` on-demand), never `go_router` |

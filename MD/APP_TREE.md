@@ -16,7 +16,7 @@
 │   │       ├── router_overrides.dart ← routerOverrides(): binds appNavigatorProvider seam (merged in main.dart)
 │   │       └── router_provider.dart ← goRouterProvider
 │   └── router
-│       ├── app_router.dart
+│       ├── app_router.dart         ← appRoutes(): login, clinical-history (+ child lab-results GoRoute)
 │       └── guards
 │           └── auth_guard.dart ← redirect con deep-link restore (?from=)
 ├── core
@@ -33,10 +33,13 @@
 │   │   ├── sembast_db_wrapper.dart
 │   │   ├── serializers
 │   │   │   ├── clinical_history_serializer.dart
+│   │   │   ├── lab_results_serializer.dart ← LabResultsSerializer (Entity ↔ Map, discriminador LabResultKind)
 │   │   │   └── patient_serializer.dart
 │   │   └── tables
 │   │       ├── clinical_history.dart        ← ClinicalHistory impl (no providers — Rule 20)
 │   │       ├── clinical_history_providers.dart ← clinicalHistoryStoreProvider
+│   │       ├── lab_results.dart             ← LabResults impl (StoreRef 'lab_results', no providers — Rule 20)
+│   │       ├── lab_results_providers.dart   ← labResultsStoreProvider
 │   │       ├── patient_info.dart            ← PatientInfo impl (no providers — Rule 20)
 │   │       └── patient_info_providers.dart  ← patientInfoStoreProvider
 │   ├── network
@@ -89,6 +92,11 @@
 │       │   ├── secure_credential_store.dart
 │       │   ├── secure_token_store.dart
 │       │   └── token_providers.dart   ← tokenStoreProvider, credentialStoreProvider, tokenVerifierProvider, jwtWrapperProvider, secureStorageProvider
+│       ├── charts
+│       │   ├── charts_providers.dart      ← trendChartProvider (Provider<ITrendChart>)
+│       │   ├── fl_chart_wrapper.dart      ← ITrendChart seam + FlChartTrendChart (wraps package:fl_chart)
+│       │   └── models
+│       │       └── trend_chart_data.dart  ← TrendPoint + TrendChartData (capacity contract)
 │       ├── crypto
 │       │   ├── bcrypt_wrapper.dart
 │       │   └── password_hasher_provider.dart
@@ -171,7 +179,7 @@
 │   │       ├── bdd.feature / contracts.md / domain.md / spec.md / tasks.md / tests.md
 │   └── clinical_history
 │       ├── di
-│       │   ├── clinical_history_provider.dart    ← feature DI (imports core providers directly)
+│       │   ├── clinical_history_provider.dart    ← feature DI (imports core providers directly); re-exports appNavigatorProvider + loggerProvider
 │       │   └── clinical_history_provider.g.dart
 │       ├── domain
 │       │   ├── datasources
@@ -200,6 +208,57 @@
 │       └── spec
 │           ├── bdd.feature / contracts.md / domain.md / spec.md / tasks.md / tests.md
 │           └── generated_api_contract.md
+│   └── lab_results
+│       ├── di
+│       │   ├── lab_results_provider.dart   ← feature DI; re-exports trendChartProvider/ITrendChart/TrendChartData/loggerProvider
+│       │   └── lab_results_provider.g.dart
+│       ├── domain
+│       │   ├── datasources
+│       │   │   ├── i_lab_results_local_datasource.dart
+│       │   │   └── i_lab_results_remote_datasource.dart
+│       │   ├── repositories
+│       │   │   └── i_lab_results_repository.dart
+│       │   ├── usecases
+│       │   │   ├── load_lab_results_usecase.dart
+│       │   │   └── refresh_lab_results_usecase.dart
+│       │   └── value_objects
+│       │       └── period.dart            ← Period enum (3m/6m/1y/all) + duration + filterByPeriod (co-located)
+│       ├── infrastructure
+│       │   ├── datasources
+│       │   │   ├── lab_results_local_datasource_impl.dart
+│       │   │   └── lab_results_remote_datasource_impl.dart
+│       │   ├── dtos
+│       │   │   ├── _dtos.lib.dart
+│       │   │   ├── lab_result_dto.dart
+│       │   │   ├── lab_result_reference_range_dto.dart
+│       │   │   ├── lab_result_value_dto.dart
+│       │   │   └── lab_results_list_response_dto.dart
+│       │   ├── mappers
+│       │   │   └── lab_results_mapper.dart   ← wire DTO ↔ Entity (adaptador de frontera, no unificar con serializer)
+│       │   └── repositories
+│       │       └── lab_results_repository_impl.dart ← online-first (write-through, cache fallback solo sin conexión)
+│       ├── presentation
+│       │   ├── mappers
+│       │   │   └── lab_result_chart_mapper.dart  ← Entity → TrendChartData
+│       │   ├── notifiers
+│       │   │   ├── lab_results_notifier.dart (+ .g)          ← provider: labResultsProvider (codegen)
+│       │   │   ├── lab_results_period_provider.dart (+ .g)   ← periodo seleccionado (UI-state)
+│       │   │   ├── lab_results_refresh_error_provider.dart (+ .g) ← refresh-error snackbar (UI-state)
+│       │   │   └── lab_results_state.dart (+ .freezed)
+│       │   ├── screens
+│       │   │   └── lab_results_screen.dart
+│       │   ├── utils
+│       │   │   └── lab_value_formatter.dart
+│       │   └── widgets                     ← standalone files, explicit imports (no barrel)
+│       │       ├── lab_results_card.dart
+│       │       ├── lab_results_chart_pane.dart   ← ITrendChart via trendChartProvider (nunca package:fl_chart)
+│       │       ├── lab_results_non_numeric_list.dart
+│       │       ├── lab_results_period_filter.dart
+│       │       └── lab_results_test_selector.dart
+│       └── spec
+│           ├── bdd.feature / contracts.md / domain.md / spec.md / tasks.md / tests.md
+│           ├── generated_api_contract.md
+│           └── samples/lab_results_200.json
 ├── l10n
 │   ├── app_en.arb / app_es.arb
 │   ├── app_localizations*.dart (generated)
@@ -223,6 +282,7 @@
     │   ├── i_clinical_history_store.dart
     │   ├── i_connectivity_checker.dart
     │   ├── i_credential_store.dart
+    │   ├── i_lab_results_store.dart    ← ILabResultsStore + ISP split ILabResultsReader/ILabResultsWriter
     │   ├── i_logger.dart                 ← ILogger (seam de observabilidad — port de dominio)
     │   ├── i_password_hasher.dart
     │   ├── i_patient_info_store.dart
@@ -232,6 +292,7 @@
     ├── models                    ← Shared Kernel (DDD): domain models shared by ≥2 bounded contexts (features + core/database); no single feature owns them
     │   ├── _models.lib.dart
     │   ├── clinical_history/ (ClinicalHistoryEntity + 6 sub-entities + ClinicalHistoryStatus enum, freezed)
+    │   ├── lab_results/ (LabResultEntity + LabResultValueEntity + LabResultReferenceRangeEntity + enums LabResultKind/LabResultStatus, freezed)
     │   └── patient/patient_entity.dart
     └── router
-        └── app_route.dart               ← AppRoute (registro tipado de rutas, Shared Kernel, pure Dart)
+        └── app_route.dart               ← AppRoute (registro tipado de rutas, Shared Kernel, pure Dart): login, clinicalHistory, labResults (/clinical-history/lab-results)

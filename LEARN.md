@@ -1608,7 +1608,7 @@ Model classes in Dart require: `==` operator, `hashCode`, `copyWith`, `toString`
 | :--- | :--- | :--- |
 | **DTO (Data Transfer Object)** | `features/*/infrastructure/dtos/` | API JSON contract — `@freezed` with `fromJson`/`toJson` (`json_serializable`). |
 | **Domain Entity** | `features/*/domain/entities/` + `shared/models/` | Pure business object — `@freezed` ONLY, NO `fromJson`/`toJson`. |
-| **Value Object** | `features/*/domain/value_objects/` | Validated value objects (`Email`, `Password`, `PasswordHash`) — `@freezed`. |
+| **Value Object** | `features/*/domain/value_objects/` | Validated value objects (`Email`, `Password`, `PasswordHash`) — `@freezed`; también enums de dominio puros con función derivada co-locada (`Period` + `filterByPeriod`, patrón `deriveLabResultStatus`). |
 | **State Classes** | `features/*/presentation/notifiers/*_state.dart` | UI state as `@freezed sealed class`. |
 | **Mapper** | `features/*/infrastructure/mappers/` | Converts DTO → Entity via constructors. |
 
@@ -2102,7 +2102,7 @@ Wrapped in `jailbreak_detection_wrapper.dart` (`IJailbreakDetectionWrapper` / `J
 
 ### fl_chart — Charts & Graphs
 
-`fl_chart` was evaluated for lab-result line charts but is **currently not a dependency** of the project (not present in `pubspec.yaml`). If added later, use it directly in presentation layer widgets only — never in domain/notifier layers.
+`fl_chart` is used for lab-result line charts and is wrapped behind the `ITrendChart` seam (`lib/core/services/charts/fl_chart_wrapper.dart`, impl `FlChartTrendChart`) exposed via `trendChartProvider` (`core/services/charts/charts_providers.dart`). **Never import `package:fl_chart` in features or feature tests** — the wrapper rule applies (Rule 6); presentation consumes the seam via the `di/` re-export (`features/lab_results/di/`) and mocks `ITrendChart` in tests. Capacity contract types (`TrendPoint`, `TrendChartData`) live in `core/services/charts/models/trend_chart_data.dart`.
 
 ---
 

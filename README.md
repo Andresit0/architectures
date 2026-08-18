@@ -35,11 +35,21 @@ A production-oriented Flutter starter that enforces clean architecture conventio
 
 ## Screenshots
 
-> Screenshots are generated from the committed golden fixtures (`test/features/auth/presentation/screens/goldens/`, `test/features/clinical_history/presentation/screens/goldens/`).
+> Screenshots are captured from the real app running on an iOS simulator against the dev backend (`localhost:5111`). Regenerate them after UI changes with:
 
-| Login | Clinical History |
-|---|---|
-| ![Login](screenshots/login_screen.png) | ![Clinical History](screenshots/clinical_history.png) |
+```bash
+flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/screenshots_capture_test.dart \
+  -d <ios-simulator-id>
+```
+
+> The capture test (`integration_test/screenshots_capture_test.dart`) logs in with the dev credentials and captures `login_screen`, `clinical_history` and `lab_results` via the integration_test driver, writing the PNGs to `screenshots/`.
+
+| Login | Clinical History | Lab Results |
+|---|---|---|
+| ![Login](screenshots/login_screen.png) | ![Clinical History](screenshots/clinical_history.png) | ![Lab Results](screenshots/lab_results.png) |
+
+Demo flow: **Login → Clinical History → Lab Results** (the clinical history AppBar "Lab Results" action navigates to the lab results screen via the `IAppNavigator` seam).
 
 ## Architecture
 

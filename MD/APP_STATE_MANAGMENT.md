@@ -21,6 +21,7 @@ Global **non-autoDispose** providers are defined in `lib/core/` source files (e.
 | `credentialStoreProvider` | `Provider<ICredentialStore>` | `core/services/auth/token_providers.dart` |
 | `jwtWrapperProvider` | `Provider<IJwtWrapper>` | `core/services/auth/token_providers.dart` |
 | `loggerProvider` | `Provider<ILogger>` | `core/services/logging/logging_providers.dart` |
+| `trendChartProvider` | `Provider<ITrendChart>` | `core/services/charts/charts_providers.dart` |
 | `environmentProvider` | `Provider<AppEnvironment>` | `core/config/environment_provider.dart` |
 
 - Feature code accesses providers by their direct name (e.g. `ref.watch(httpServiceProvider)`), imported from the provider's `core/` source file (never from `app/`).

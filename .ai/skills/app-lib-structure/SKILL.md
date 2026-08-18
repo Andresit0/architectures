@@ -75,9 +75,11 @@ lib/
 │       │   ├── repositories/
 │       │   └── services/
 │       ├── presentation/
+│       │   ├── mappers/              ← on-demand: UI view-model builders (e.g. lab_result_chart_mapper: Entity → TrendChartData)
 │       │   ├── notifiers/             ← Riverpod notifiers + states (providers moved to features/<f>/di/)
 │       │   ├── screens/
-│       │   └── widgets/               ← ✅ BARREL
+│       │   ├── utils/                 ← on-demand: presentation formatters (e.g. lab_value_formatter)
+│       │   └── widgets/               ← standalone files, explicit imports (no barrel)
 │       └── spec/                      ← SDD artifacts
 ├── l10n/
 └── shared/                            ← Pure domain abstractions
@@ -119,7 +121,7 @@ lib/
 | **Domain** | `features/<f>/domain/` | No Flutter imports. Pure Dart: interfaces (`i_*.dart`), entities, usecases, value_objects. Can import from `shared/` only. |
 | **DI (feature)** | `features/<f>/di/` | Feature-specific Riverpod providers (auth_provider) — migrated from `presentation/providers/`. UI-state providers (p. ej. `remember_me_provider`) viven en `presentation/notifiers/`. |
 | **Infrastructure** | `features/<f>/infrastructure/` | Implements domain interfaces. HTTP calls use `IDioWrapper` via constructor injection. DTOs de un solo feature → `infrastructure/dtos/`; **shared wire contracts → `core/network/contracts/`** (barrel `_contracts.lib.dart`). |
-| **Presentation** | `features/<f>/presentation/` | Riverpod notifiers, screens, widgets. Providers are in `features/<f>/di/`. |
+| **Presentation** | `features/<f>/presentation/` | Riverpod notifiers, screens, widgets. Providers are in `features/<f>/di/`. Subfolders on-demand: `mappers/` (UI view-model builders) y `utils/` (formatters). |
 | **core/** | `core/` | Infrastructure wrappers, database, error types, network, api_endpoints. Domain must NEVER import from `core/`. |
 | **shared/** | `shared/` | Domain abstractions (interfaces, exceptions, models) + utilities (router, functions). Domain-safe; can be imported by any layer. |
 | **app/** | `app/` | Composition root: GoRouter setup (`goRouterProvider`), `routerOverrides()` (IAppNavigator seam), `dioOverrides()`. Orchestrates `core/` services. |
