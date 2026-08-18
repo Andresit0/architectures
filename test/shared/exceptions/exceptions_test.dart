@@ -44,5 +44,20 @@ void main() {
       const exception = AppTimeoutException(message: 'timeout in /login');
       expect(exception.toString(), contains('timeout in /login'));
     });
+
+    test('SeamNotBoundException is an Error (NOT an Exception) so guard() '
+        'keeps fail-fast and never swallows it as Failure', () {
+      final exception = SeamNotBoundException('provider must be overridden');
+      expect(exception, isA<Error>());
+      expect(exception, isNot(isA<Exception>()));
+    });
+
+    test('SeamNotBoundException exposes the message and toString', () {
+      final exception = SeamNotBoundException(
+        'appNavigatorProvider must be overridden',
+      );
+      expect(exception.message, 'appNavigatorProvider must be overridden');
+      expect(exception.toString(), 'appNavigatorProvider must be overridden');
+    });
   });
 }
