@@ -28,9 +28,7 @@ final _numericNoRangeDto = LabResultDto(
   unit: 'mg/L',
   kind: 'numeric',
   referenceRange: null,
-  values: [
-    LabResultValueDto(date: DateTime(2026, 8, 10), value: 2.4),
-  ],
+  values: [LabResultValueDto(date: DateTime(2026, 8, 10), value: 2.4)],
 );
 
 final _textDto = LabResultDto(
@@ -129,9 +127,7 @@ void main() {
 
     group('fromDtoList', () {
       test('maps every item preserving order', () {
-        final entities = LabResultsMapper.fromDtoList(
-          [_numericDto, _textDto],
-        );
+        final entities = LabResultsMapper.fromDtoList([_numericDto, _textDto]);
 
         expect(entities, hasLength(2));
         expect(entities.first.id, 'lr_0001');

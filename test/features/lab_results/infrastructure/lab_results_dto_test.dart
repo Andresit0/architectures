@@ -132,26 +132,29 @@ void main() {
 
   group('LabResultValueDto', () {
     test('fromJson parses date and value', () {
-      final dto = LabResultValueDto.fromJson(
-        const <String, dynamic>{'date': '2026-08-10', 'value': 16.8},
-      );
+      final dto = LabResultValueDto.fromJson(const <String, dynamic>{
+        'date': '2026-08-10',
+        'value': 16.8,
+      });
 
       expect(dto.date, DateTime(2026, 8, 10));
       expect(dto.value, 16.8);
     });
 
     test('fromJson preserves a text value', () {
-      final dto = LabResultValueDto.fromJson(
-        const <String, dynamic>{'date': '2026-08-10', 'value': 'A Positivo (A+)'},
-      );
+      final dto = LabResultValueDto.fromJson(const <String, dynamic>{
+        'date': '2026-08-10',
+        'value': 'A Positivo (A+)',
+      });
 
       expect(dto.value, 'A Positivo (A+)');
     });
 
     test('toJson roundtrip preserves date and value', () {
-      final dto = LabResultValueDto.fromJson(
-        const <String, dynamic>{'date': '2026-08-10', 'value': 16.8},
-      );
+      final dto = LabResultValueDto.fromJson(const <String, dynamic>{
+        'date': '2026-08-10',
+        'value': 16.8,
+      });
       final restored = LabResultValueDto.fromJson(dto.toJson());
 
       expect(restored.date, dto.date);
@@ -161,18 +164,20 @@ void main() {
 
   group('LabResultReferenceRangeDto', () {
     test('fromJson parses low and high', () {
-      final dto = LabResultReferenceRangeDto.fromJson(
-        const <String, dynamic>{'low': 13.0, 'high': 17.0},
-      );
+      final dto = LabResultReferenceRangeDto.fromJson(const <String, dynamic>{
+        'low': 13.0,
+        'high': 17.0,
+      });
 
       expect(dto.low, 13.0);
       expect(dto.high, 17.0);
     });
 
     test('toJson roundtrip preserves low and high', () {
-      final dto = LabResultReferenceRangeDto.fromJson(
-        const <String, dynamic>{'low': 13.0, 'high': 17.0},
-      );
+      final dto = LabResultReferenceRangeDto.fromJson(const <String, dynamic>{
+        'low': 13.0,
+        'high': 17.0,
+      });
       final restored = LabResultReferenceRangeDto.fromJson(dto.toJson());
 
       expect(restored.low, dto.low);
