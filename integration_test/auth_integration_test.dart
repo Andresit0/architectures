@@ -464,7 +464,7 @@ void main() {
       await _tapLogin(tester);
 
       expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
-      expect(find.text('Cerrar sesión'), findsOneWidget);
+      expect(find.byIcon(Icons.logout), findsOneWidget);
     },
   );
 
@@ -550,7 +550,7 @@ void main() {
       await _tapLogin(tester);
 
       expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
-      expect(find.text('Cerrar sesión'), findsOneWidget);
+      expect(find.byIcon(Icons.logout), findsOneWidget);
     },
   );
 
@@ -569,7 +569,7 @@ void main() {
       await _tapLogin(tester);
 
       expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
-      expect(find.text('Cerrar sesión'), findsOneWidget);
+      expect(find.byIcon(Icons.logout), findsOneWidget);
     },
   );
 
@@ -700,7 +700,7 @@ void main() {
 
       expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
 
-      await tester.tap(find.text('Cerrar sesión'));
+      await tester.tap(find.byIcon(Icons.logout));
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsNWidgets(2));
@@ -726,7 +726,7 @@ void main() {
       await _tapLogin(tester);
 
       expect(find.text('INICIAR SESIÓN'), findsOneWidget);
-      expect(find.text('Cerrar sesión'), findsNothing);
+      expect(find.byIcon(Icons.logout), findsNothing);
       expect(find.text('Ocurrió un error inesperado'), findsOneWidget);
     },
   );
@@ -744,7 +744,7 @@ void main() {
 
       expect(find.byType(TextField), findsNWidgets(2));
       expect(find.text('INICIAR SESIÓN'), findsOneWidget);
-      expect(find.text('Cerrar sesión'), findsNothing);
+      expect(find.byIcon(Icons.logout), findsNothing);
     },
   );
 
@@ -761,7 +761,7 @@ void main() {
 
       expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
 
-      await tester.tap(find.text('Cerrar sesión'));
+      await tester.tap(find.byIcon(Icons.logout));
       await tester.pumpAndSettle();
 
       expect(find.text('Historial Clínico'), findsAtLeastNWidgets(1));
