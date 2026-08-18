@@ -6,6 +6,7 @@ import 'package:clean_architecture_sdd_harness/core/network/dio/dio_wrapper.dart
 import 'package:clean_architecture_sdd_harness/core/network/interceptors/i_auth_interceptor_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/network/security/certificate_pinner.dart';
 import 'package:clean_architecture_sdd_harness/core/network/timeouts/connection_profile.dart';
+import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
 
 IDioWrapper _createDioWrapper(Ref ref) {
   final internetService = ref.watch(internetServiceProvider);
@@ -21,7 +22,7 @@ IDioWrapper _createDioWrapper(Ref ref) {
 }
 
 final authInterceptorProvider = Provider<IAuthInterceptorProvider>(
-  (ref) => throw UnimplementedError(
+  (ref) => throw SeamNotBoundException(
     'authInterceptorProvider must be overridden in the composition root '
     '(app/di/network/dio_overrides.dart)',
   ),
