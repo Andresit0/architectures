@@ -47,10 +47,10 @@ void main() {
     ).thenAnswer((_) async => true);
   });
 
-  group('DioWrapper.isBrowserNetworkFailure', () {
+  group('ErrorMapper.isBrowserNetworkFailure', () {
     test('returns true for TypeError: Failed to fetch', () {
       expect(
-        DioWrapper.isBrowserNetworkFailure(
+        const ErrorMapper().isBrowserNetworkFailure(
           DioException(
             type: DioExceptionType.unknown,
             requestOptions: RequestOptions(path: 'https://example.com'),
@@ -63,7 +63,7 @@ void main() {
 
     test('returns true for Network Error message', () {
       expect(
-        DioWrapper.isBrowserNetworkFailure(
+        const ErrorMapper().isBrowserNetworkFailure(
           DioException(
             type: DioExceptionType.unknown,
             requestOptions: RequestOptions(path: 'https://example.com'),
@@ -76,7 +76,7 @@ void main() {
 
     test('returns true for a raw TypeError', () {
       expect(
-        DioWrapper.isBrowserNetworkFailure(
+        const ErrorMapper().isBrowserNetworkFailure(
           DioException(
             type: DioExceptionType.unknown,
             requestOptions: RequestOptions(path: 'https://example.com'),
@@ -89,7 +89,7 @@ void main() {
 
     test('returns false when error is null', () {
       expect(
-        DioWrapper.isBrowserNetworkFailure(
+        const ErrorMapper().isBrowserNetworkFailure(
           DioException(
             type: DioExceptionType.unknown,
             requestOptions: RequestOptions(path: 'https://example.com'),
@@ -101,7 +101,7 @@ void main() {
 
     test('returns false for generic unknown errors', () {
       expect(
-        DioWrapper.isBrowserNetworkFailure(
+        const ErrorMapper().isBrowserNetworkFailure(
           DioException(
             type: DioExceptionType.unknown,
             requestOptions: RequestOptions(path: 'https://example.com'),
@@ -114,7 +114,7 @@ void main() {
 
     test('returns false for non-unknown DioException types', () {
       expect(
-        DioWrapper.isBrowserNetworkFailure(
+        const ErrorMapper().isBrowserNetworkFailure(
           DioException(
             type: DioExceptionType.connectionError,
             requestOptions: RequestOptions(path: 'https://example.com'),

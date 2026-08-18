@@ -68,20 +68,25 @@ void main() {
   });
 
   group('authInterceptorProvider seam', () {
-    test('throws UnimplementedError when not overridden (fail-fast seam)', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test(
+      'throws SeamNotBoundException when not overridden (fail-fast seam)',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
 
-      expect(
-        () => container.read(authInterceptorProvider),
-        throwsA(
-          predicate(
-            (e) => e.toString().contains(
-              'authInterceptorProvider must be overridden',
+        expect(
+          () => container.read(authInterceptorProvider),
+          throwsA(
+            predicate(
+              (e) =>
+                  e.toString().contains(
+                    'authInterceptorProvider must be overridden',
+                  ) &&
+                  !e.toString().contains('UnimplementedError'),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   });
 }
