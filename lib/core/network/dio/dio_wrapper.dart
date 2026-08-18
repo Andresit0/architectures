@@ -134,6 +134,17 @@ class DioWrapper implements IDioWrapper {
     }
   }
 
+  static bool isBrowserNetworkFailure(DioException e) {
+    if (e.type != DioExceptionType.unknown) {
+      return false;
+    }
+    final error = e.error;
+    final message = error?.toString() ?? '';
+    return error is TypeError ||
+        message.contains('Failed to fetch') ||
+        message.contains('Network Error');
+  }
+
   Future<HttpResponse<Map<String, dynamic>>> _request({
     required _HttpMethod method,
     required Uri uri,
@@ -214,6 +225,9 @@ class DioWrapper implements IDioWrapper {
         throw ApiException(e.response!.statusCode ?? 0);
       }
       if (e.type == DioExceptionType.connectionError) {
+        throw NoConnectionException();
+      }
+      if (isBrowserNetworkFailure(e)) {
         throw NoConnectionException();
       }
       throw UnexpectedResponseException(
