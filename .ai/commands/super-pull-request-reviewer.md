@@ -129,7 +129,8 @@ seen in this repo: `codecov/patch` is described in the doc's coverage section bu
 is NOT in branch protection — it never blocks a merge.
 
 Record for later steps: `$MY_LOGIN`, `$REQUIRED_CONTEXTS`, `$STRICT`,
-`$APPROVALS_REQUIRED`, `$ALLOW_UPDATE_BRANCH`, `$DELETE_BRANCH_ON_MERGE`.
+`$APPROVALS_REQUIRED`, `$ALLOW_UPDATE_BRANCH`, `$ALLOW_AUTO_MERGE`,
+`$DELETE_BRANCH_ON_MERGE`.
 
 ---
 
@@ -224,6 +225,11 @@ Check against the INTROSPECTED configuration (Step 3.5):
 (`Branch Source Gate` on develop, `Integration` gated by `RUN_DEVICE_INTEGRATION`)
 are OK. Non-required checks that fail (e.g. `codecov/patch` — not in branch
 protection, upload is tolerant) are INFORMATIVE, never a FAIL.
+
+> A stacked PR pointed at an intermediate branch shows no checks until retargeted;
+> **`gh pr checks --required` printing "no checks reported" (exit 0) is NOT green** —
+> it means CI hasn't registered yet. Do not treat it as success. The merge gate is
+> delegated to GitHub auto-merge (Step 10.1).
 
 Result: `PASS` / `WARN` / `FAIL`
 
@@ -495,6 +501,11 @@ In a stacked chain, each PR's branch is based on the previous PR's branch. Mergi
 - `develop` is protected with `strict: true` → every PR must be **up-to-date** with its base before merge. `gh pr update-branch` is available because `$ALLOW_UPDATE_BRANCH == true`. If it is NOT available, merge locally instead (fetch the PR head, merge the base, push) — but first check the repo settings, they may have changed.
 - The repo auto-deletes merged branches (`$DELETE_BRANCH_ON_MERGE == true`) → do NOT pass `--delete-branch=false`; never depend on a merged branch still existing.
 - A draft PR blocks the merge → always `gh pr ready <N>` first, WITHOUT `2>/dev/null` (show errors).
+- The merge gate is delegated to GitHub **auto-merge** (`gh pr merge --auto --squash`), which merges
+  atomically once the required-check matrix is green — this requires `$ALLOW_AUTO_MERGE == true`
+  (introspected). If `--auto` is unavailable/rejected, fall back to the explicit path (Step 10.1):
+  wait for `gh pr checks --required` to be **reported** and green (never treat "no checks reported" as
+  green), then `gh pr merge --squash`.
 
 ### 10.1 — Single merge procedure (independent AND stacked)
 
@@ -509,6 +520,7 @@ for N in <PR_NUMBER_1> <PR_NUMBER_2> ...; do
   fi
 
   echo "🔀 Processing PR #$N..."
+  # A draft PR blocks (auto-)merge → mark ready first; show errors (no 2>/dev/null).
   gh pr ready $N || { echo "❌ PR #$N: failed to make ready" >&2; exit 1; }
 
   # Retarget stacked PRs to develop once the previous PR is merged.
@@ -517,39 +529,47 @@ for N in <PR_NUMBER_1> <PR_NUMBER_2> ...; do
     gh pr edit $N --base develop || { echo "❌ PR #$N: retarget failed" >&2; exit 1; }
   fi
 
-  # strict: true → bring the branch up to date BEFORE merging.
+  # strict: true → bring the branch up to date BEFORE enabling auto-merge.
   gh pr update-branch $N || { echo "❌ PR #$N: update-branch failed" >&2; exit 1; }
 
-  # Wait until every REQUIRED context is green. `gh pr checks --required` exits 0
-  # only when all branch-protection-required checks have passed; it ignores
-  # non-required checks (e.g. codecov/patch) and "skipping" jobs.
-  attempts=0
-  while ! gh pr checks $N --required >/dev/null 2>&1; do
-    attempts=$((attempts + 1))
-    if [ $attempts -gt 60 ]; then
-      echo "❌ PR #$N: required checks not green after ~15 min" >&2
-      exit 1
-    fi
-    gh pr checks $N --required | grep -q "fail" && {
-      echo "❌ PR #$N: a required check failed" >&2
-      exit 1
-    }
-    sleep 15
-  done
+  # Sanity: after retarget the diff must still contain this PR's own changes.
+  if [ -z "$(gh pr diff $N 2>/dev/null)" ]; then
+    echo "❌ PR #$N: empty diff after retarget — changes already on develop" >&2
+    exit 1
+  fi
 
-  # Wait for mergeStateStatus == CLEAN (not BEHIND / BLOCKED / DIRTY).
-  while [ "$(gh pr view $N --json mergeStateStatus -q .mergeStateStatus)" != "CLEAN" ]; do
+  # Enable GitHub auto-merge: it merges ATOMICALLY once the required-check
+  # matrix is green (LEARN.md → Merge strategy). No manual check parsing, no
+  # "no checks reported" race. Ignores non-required failures (codecov/patch →
+  # UNSTABLE, never blocks). Requires $ALLOW_AUTO_MERGE == true (Step 10.0
+  # fallback applies otherwise).
+  gh pr merge $N --auto --squash || { echo "❌ PR #$N: auto-merge enable failed" >&2; exit 1; }
+
+  # Wait for the merge to complete by polling the authoritative state.
+  attempts=0
+  while [ "$(gh pr view $N --json state -q .state)" != "MERGED" ]; do
     MS=$(gh pr view $N --json mergeStateStatus -q .mergeStateStatus)
     case "$MS" in
-      BLOCKED) echo "❌ PR #$N: merge blocked ($MS)" >&2; exit 1 ;;
-      BEHIND)  gh pr update-branch $N ;;
+      BLOCKED|DIRTY|CONFLICTING)
+        echo "❌ PR #$N: auto-merge blocked ($MS):" >&2
+        gh pr checks $N --required >&2 || true
+        exit 1 ;;
+      BEHIND) gh pr update-branch $N ;;
     esac
+    attempts=$((attempts + 1))
+    if [ $attempts -gt 120 ]; then
+      echo "❌ PR #$N: auto-merge did not complete in ~30 min" >&2
+      exit 1
+    fi
     sleep 15
   done
-
-  gh pr merge $N --squash || { echo "❌ PR #$N: merge failed" >&2; exit 1; }
   echo "✅ PR #$N merged"
 done
+
+# Optional post-merge verification (enterprise safety net): the last develop
+# CI run must be green.
+gh run list --branch develop --limit 1 --json status,conclusion \
+  --jq '.[0] | "post-merge CI: \(.status) / \(.conclusion)"'
 ```
 
 **Why retarget + update-branch works:** After the previous PR is merged into develop, its commits are already part of develop. Retargeting (`--base develop`) makes GitHub recalculate the merge-base, so the diff shrinks to only the PR's own commits. With `strict: true` the merge ALSO requires the branch to be up-to-date — `gh pr update-branch` satisfies that, so no `git rebase` or manual merge is needed in the normal case.
@@ -560,8 +580,10 @@ run on the new develop commit — in addition to the PR-head gate above. Because
 `concurrency: cancel-in-progress: true` groups runs by ref (`ci-${{ github.ref }}`),
 the next merge in a rapid stack CANCELS the previous post-merge run (e.g. a
 `Build Android: cancelled` on an earlier squash commit is expected and benign).
-The AUTHORITATIVE merge gate is the PR-head required checks, which this loop
-already waits for; the post-merge run is a safety net, not a gate.
+The AUTHORITATIVE merge gate is the PR-head required checks, which GitHub
+auto-merge enforces before merging (Step 10.1 waits for state == MERGED, which
+only happens once the required matrix is green); the post-merge run is a safety
+net, not a gate.
 
 **Recovering from an `add/add` conflict in update-branch** (e.g. a formatting fix
 was pushed to an upstream PR but not propagated downstream): GitHub cannot
@@ -621,8 +643,9 @@ done
 | User says "approve only" without merge | Only run `gh pr review <N> --approve` (if applicable per Step 9). Do NOT merge any PR. |
 | Self-approval would be required (`$MY_LOGIN` == author and `$APPROVALS_REQUIRED > 0`) | GitHub rejects self-approval (HTTP 422). Never call `--approve`; gate on the required-check matrix + human merge. Notify the user a second reviewer account is needed. |
 | `codecov/patch` fails but is not required | Informative only (not in branch protection; upload tolerant). NOT a Gate 6 failure. |
-| PR is a draft at merge time | Run `gh pr ready <N>` before merge (Step 10.1). |
+| PR is a draft at merge time | Run `gh pr ready <N>` before enabling auto-merge (Step 10.1). |
+| `gh pr checks --required` prints "no checks reported" right after retarget/update-branch | NOT green — CI hasn't registered yet. Do NOT treat as success; Step 10.1 delegates the gate to GitHub auto-merge. |
 | `gh pr update-branch` conflicts (`add/add`) | Resolve locally taking develop's version (Step 10.1 recovery). STOP only on real semantic conflicts. |
-| `mergeStateStatus` stays `BEHIND` | Re-run `gh pr update-branch <N>` and re-wait for CLEAN. |
+| `mergeStateStatus` stays `BEHIND` after auto-merge enabled | Re-run `gh pr update-branch <N>`; auto-merge completes once up-to-date and checks pass (wait for state == MERGED). |
 | PR already MERGED when re-running the merge loop | Skip it (idempotent/resumable loop). |
 | REQUIRED_CHECKS.md drifts from branch-protection contexts | Report the drift in the final report; evaluate Gate 6 with the introspected contexts (the real gate). |
