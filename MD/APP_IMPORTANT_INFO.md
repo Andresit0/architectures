@@ -78,7 +78,7 @@ flutter gen-l10n
 6. **`.g.dart` and `.freezed.dart` files are never edited manually.** Always regenerate with `dart run build_runner build --delete-conflicting-outputs`.
 7. **`GoRouter` is accessed via `goRouterProvider` from `app/di/router/router_provider.dart`.** In `main.dart`, use `ref.watch(goRouterProvider)` to get the instance. In features, navigate via the `IAppNavigator` seam — `ref.read(appNavigatorProvider).go/push(AppRoute.x)` — never `go_router` nor `app/` (Rules 6/11).
 8. **New routes** are added in `app_router.dart` (`appRoutes()`) with the route name added to `AppRoute` enum in `shared/router/app_route.dart`.
-9. **Use `@freezed` for all entities and states.** Do not create mutable data classes in the domain.
+9. **Use `@freezed` for all entities and states.** Do not create mutable data classes in the domain. **All DTOs are also `@freezed`** (wire transport + list envelopes, incluidos los 4 de `lab_results`): `@JsonKey(name: ...)` mapea el nombre de cable exacto (p. ej. `test_code`, `reference_range`, `lab_results`) y `value` se declara `dynamic` para soportar `num | String`.
 10. **Apply the `class_to_solid`** skill (in features) or **`class_to_solid_min`** (in `core/services/`) when creating any new class. The skills document the mandatory correct pattern.
 
 ### 2.2 Configuration and environment rules

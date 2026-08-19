@@ -41,5 +41,12 @@ void main() {
         throwsA(isA<UnexpectedResponseException>()),
       );
     });
+
+    test('SeamNotBoundException from new location', () {
+      expect(
+        () => throw SeamNotBoundException('seam must be overridden'),
+        throwsA(isA<SeamNotBoundException>()),
+      );
+    });
   });
 }

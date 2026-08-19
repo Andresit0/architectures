@@ -13,7 +13,7 @@ All global providers are **non-autoDispose** (alive for the lifetime of the `Pro
 | `httpServiceProvider` | `core/network/dio/dio_providers.dart` | `Provider<IDioWrapper>` | HTTP singleton (Dio) WITH auth interceptor (401 retry + force logout); applies `authInterceptorProvider` (bound via `app/di/network/dio_overrides.dart`) |
 | `authDioProvider` | `core/network/dio/dio_providers.dart` | `Provider<IDioWrapper>` | Dio WITHOUT auth interceptor. Used by AuthRemoteDatasource for login/refresh where no token exists yet |
 | `tokenStoreProvider` | `core/services/auth/token_providers.dart` | `Provider<ITokenStore>` | Token storage singleton |
-| `appDatabaseProvider` | `core/database/app_database_provider.dart` | `Provider<IAppDatabase>` | Sembast database instance (AES-256-CBC encrypted); `resetDatabase()` wipes file + key (account reset/GDPR), consumed via `ResetAccountUseCase` (auth) = `clearSession()` + `resetDatabase()` |
+| `appDatabaseProvider` | `core/database/app_database_provider.dart` | `Provider<IAppDatabase>` | `IAppDatabase.database` → `Future<IDatabaseHandle>` (facade sembast-free: `findAll`/`replaceAll`/`deleteAll`); `resetDatabase()` wipes file + key (account reset/GDPR), consumed via `ResetAccountUseCase` (auth) = `clearSession()` + `resetDatabase()` |
 | `internetServiceProvider` | `core/network/connectivity/connectivity_providers.dart` | `Provider<IInternetService>` | Internet connectivity checker |
 | `internetStatusProvider` | `core/network/connectivity/connectivity_providers.dart` | `StreamProvider<bool>` | Reactive internet status for the offline banner (emits current status immediately; `null` until first emission = treat as online) |
 | *(removed)* `errorPropagation` | *(removed)* | Error propagation replaced by `localizeError()` in `l10n/error_localizer.dart` — UI layer calls `localizeError(error, AppLocalizations.of(context)!)` |
@@ -75,7 +75,7 @@ The feature `di/` also re-exports `trendChartProvider`/`ITrendChart`/`TrendChart
 
 Remote endpoint: `appUriesProvider` → `IEndpointConfig.labResults` → `GET /user/clinical-history/lab-results`.
 
-The `auth` feature defines its own provider chain in `lib/features/auth/di/auth_provider.dart` (datasources, ISP-split repositories, and use cases incl. `restoreSessionUseCaseProvider` and `handle401UseCaseProvider`; the composed `_refreshTokenUseCaseProvider` / `_credentialLoginUseCaseProvider` are private to the file).
+The `auth` feature defines its own provider chain in `lib/features/auth/di/auth_provider.dart` (datasources, ISP-split repositories, and use cases incl. `restoreSessionUseCaseProvider` and `handle401UseCaseProvider`). `loginUseCase` orchestrates the login flow (validate + hash + login) and delegates session/token persistence to `SaveSessionUseCase` via `IUseCase<SaveSessionInput, void>` (Rule 18 DIP — `_saveSessionUseCaseProvider` is private to the file, same as `_refreshTokenUseCaseProvider` / `_credentialLoginUseCaseProvider`).
 
 ---
 
@@ -113,9 +113,8 @@ IAuthRemoteDatasource userDatasource(Ref ref) =>
 LoginUseCase loginUseCase(Ref ref) =>
     LoginUseCase(
       repository: ref.watch(authRepositoryProvider),
-      sessionRepository: ref.watch(localAuthRepositoryProvider),
       passwordHasher: ref.watch(passwordHasherProvider),
-      tokenStore: ref.watch(tokenStoreProvider),
+      saveSessionUseCase: ref.watch(_saveSessionUseCaseProvider),
     );
 ```
 

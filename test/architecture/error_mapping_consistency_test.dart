@@ -11,6 +11,10 @@ const _canonicalMapping = <String, String>{
   'DeviceSecurityException': 'DeviceSecurityError',
 };
 
+const _programmingErrors = <String, String>{
+  'seam_not_bound_exception.dart': 'SeamNotBoundException',
+};
+
 void main() {
   group('Error mapping consistency', () {
     final guardSource = File(
@@ -62,6 +66,7 @@ void main() {
           'server_unreachable_exception.dart': 'ServerUnreachableException',
           'app_timeout_exception.dart': 'AppTimeoutException',
           'unexpected_response_exception.dart': 'UnexpectedResponseException',
+          'seam_not_bound_exception.dart': 'SeamNotBoundException',
         };
         final exceptionFiles = Directory('lib/shared/exceptions')
             .listSync()
@@ -72,14 +77,41 @@ void main() {
 
         for (final fileName in exceptionFiles) {
           final className = fileToClass[fileName];
-          expect(
-            className != null && _canonicalMapping.containsKey(className),
-            isTrue,
-            reason:
-                '$fileName existe en shared/exceptions pero su clase no está '
-                'en _canonicalMapping — cubrir el mapping guard() + '
-                'localizeError()',
-          );
+          if (_programmingErrors.containsKey(fileName)) {
+            expect(
+              className != null,
+              isTrue,
+              reason:
+                  '$fileName declarado en _programmingErrors pero su clase '
+                  'no está en fileToClass',
+            );
+            expect(
+              _canonicalMapping.containsKey(className),
+              isFalse,
+              reason:
+                  '$className es un Error de programación (fail-fast) — NO '
+                  'debe mapearse en guard() ni localizeError()',
+            );
+            final source = File(
+              'lib/shared/exceptions/$fileName',
+            ).readAsStringSync();
+            expect(
+              source.contains('extends Error'),
+              isTrue,
+              reason:
+                  '$className debe extender Error (no Exception) para que '
+                  'guard() no lo convierta en Failure — ver MD/APP_EXCEPTION.md',
+            );
+          } else {
+            expect(
+              className != null && _canonicalMapping.containsKey(className),
+              isTrue,
+              reason:
+                  '$fileName existe en shared/exceptions pero su clase no está '
+                  'en _canonicalMapping — cubrir el mapping guard() + '
+                  'localizeError()',
+            );
+          }
         }
       },
     );

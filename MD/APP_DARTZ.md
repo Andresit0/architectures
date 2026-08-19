@@ -9,7 +9,7 @@
 
 | Layer | Rule |
 |---|---|---|
-| `core/network/dio/dio_wrapper.dart` | Throws typed exceptions (`ApiException`, `NoConnectionException`, …) |
+| `core/network/dio/dio_wrapper.dart` | Orquesta 3 colaboradores inyectados (interface+impl): `RequestExecutor` (llamada dio + parse + error mapping + retry-timeout), `ErrorMapper` (`isBrowserNetworkFailure` + mapeo `DioException` → typed exceptions), `RetryExecutor` (política `retryOnTimeout/maxRetries/baseDelay` → `AppTimeoutException`). **Throws typed exceptions** (`ApiException`, `NoConnectionException`, …) — el wrapper público solo rellena `pathParams` y delega. |
 | **Datasource impl** | Raw call only — **no try/catch**, lets exceptions propagate up |
 | **Repository impl** | Wraps datasource with `guard(...)` → `Result<T>`. |
 | **Repository interface** | Declares `Future<Result<T>>` return types |
@@ -161,6 +161,14 @@ Import `shared/exceptions/_exceptions.lib.dart` separately for exception classes
    ```
 2. Add `export '<name>_exception.dart';` to `_exceptions.lib.dart` (the exceptions barrel uses `export` for its standalone files, see `MD/APP_BARREL_PATTERN.md`).
 3. Add the matching `on MyException catch` branch to `guard()` in `result_guard.dart`.
+
+> **Exceptions to the checklist — programming errors (`Error`):** types that extend
+> `Error` (e.g. `SeamNotBoundException`, thrown by unbound DI seams) are
+> **deliberately NOT added** to `guard()` — `guard()` only catches `Exception`, so an
+> `Error` propagates and fails fast (a missing DI binding must never surface as a
+> `Failure`). The consistency guard (`test/architecture/error_mapping_consistency_test.dart`)
+> enforces this via its `_programmingErrors` set (asserts `extends Error` and no
+> `_canonicalMapping` entry). See `MD/APP_EXCEPTION.md`.
 
 ---
 

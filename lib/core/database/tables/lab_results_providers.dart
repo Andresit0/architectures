@@ -5,5 +5,5 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final labResultsStoreProvider = Provider<ILabResultsStore>((ref) {
   final appDb = ref.watch(appDatabaseProvider);
-  return LabResults(database: appDb.database.then((isDb) => isDb.db));
+  return LabResults(database: appDb.database);
 });

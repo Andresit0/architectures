@@ -40,14 +40,15 @@ void main() {
 
       await appDb.resetDatabase();
 
-      final ISembastDb db2 = await appDb.database;
+      final IDatabaseHandle db2 = await appDb.database;
       final secondKey = await keyService.readKey();
       expect(secondKey, isNotNull);
       expect(secondKey, isNot(firstKey));
 
-      final store = intMapStoreFactory.store('test');
-      await store.add(db2.db, {'k': 'v'});
-      expect(await store.find(db2.db), hasLength(1));
+      await db2.replaceAll('test', {
+        'k': {'v': 'value'},
+      });
+      expect(await db2.findAll('test'), hasLength(1));
     },
   );
 }

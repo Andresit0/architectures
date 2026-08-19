@@ -11,6 +11,9 @@ imported from the provider's `core/` source file — never imports the package d
 | Wrapper | Interface | Impl class | Access | Riverpod Bridge |
 |---|---|---|---|---|
 | `dio/dio_wrapper.dart` | `IDioWrapper` | `DioWrapper` | `ref.watch(httpServiceProvider)` | `httpServiceProvider` |
+| `dio/error_mapper.dart` | `IErrorMapper` | `ErrorMapper` | injectado en `RequestExecutor` (default `const ErrorMapper()`) | — |
+| `dio/request_executor.dart` | `IRequestExecutor` | `RequestExecutor` | creado por `DioWrapper` (private, late final) | — |
+| `dio/retry_executor.dart` | `IRetryExecutor` | `RetryExecutor` | injectado en `RequestExecutor` (default `const RetryExecutor()`) | — |
 | `interceptors/auth_interceptor.dart` | `IAuthInterceptorProvider` | `AuthInterceptor` | Used internally by `DioWrapper`; do not use from features | — |
 
 #### Services (`core/services/`)

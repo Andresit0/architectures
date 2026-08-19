@@ -38,7 +38,7 @@ void main() {
     test('validator returns false when no pinned certificates', () {
       final der = Uint8List.fromList([0x30, 0x31, 0x32]);
       expect(
-        validateCert(der, AppEnvironment.current.pinnedCertificates),
+        validateCert(der, const DevEnvironment().pinnedCertificates),
         isFalse,
       );
     });

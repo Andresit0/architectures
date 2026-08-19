@@ -409,28 +409,32 @@ void main() {
       },
     );
 
-    test('Rule 16: Sin AppEnvironment.current fuera de core/config/', () {
-      final dartFiles = Directory('lib')
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where(
-            (f) =>
-                f.path.endsWith('.dart') &&
-                !f.path.contains('.freezed.dart') &&
-                !f.path.contains('.g.dart'),
-          );
+    test(
+      'Rule 16: Sin acceso estático a AppEnvironment fuera de core/config/',
+      () {
+        final dartFiles = Directory('lib')
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where(
+              (f) =>
+                  f.path.endsWith('.dart') &&
+                  !f.path.contains('.freezed.dart') &&
+                  !f.path.contains('.g.dart'),
+            );
 
-      for (final file in dartFiles) {
-        if (file.path.contains('lib/core/config/')) continue;
-        expect(
-          file.readAsStringSync().contains('AppEnvironment.current'),
-          isFalse,
-          reason:
-              '${file.path} usa AppEnvironment.current — la '
-              'configuración se lee via environmentProvider',
-        );
-      }
-    });
+        for (final file in dartFiles) {
+          if (file.path.contains('lib/core/config/')) continue;
+          expect(
+            file.readAsStringSync().contains(RegExp(r'AppEnvironment\.\w')),
+            isFalse,
+            reason:
+                '${file.path} usa un miembro estático de AppEnvironment — la '
+                'configuración se lee via environmentProvider o se inyecta la '
+                'instancia concreta (const DevEnvironment()...)',
+          );
+        }
+      },
+    );
 
     test(
       'Rule 17a: todo método público de domain/repositories/* devuelve Future<Result<...>>',
@@ -531,7 +535,8 @@ void main() {
             )) {
               final iface = match.group(1)!;
               final implRegex = RegExp(
-                r'class\s+(\w+)\s+implements\s+[^{]*\b' + iface + r'\b',
+                'class\\s+(\\w+)(?:\\s+extends\\s+[A-Za-z0-9_<>, ]+)?'
+                '\\s+implements\\s+[^{]*\\b$iface\\b',
               );
               final impls = <String>{};
               for (final infraFile in infraFiles) {
