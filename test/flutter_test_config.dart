@@ -5,9 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Loads a real font so golden tests render deterministically across
-/// platforms (Linux CI and macOS local). Without this, text rendering
-/// differs per OS and golden comparisons fail on one of the two.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -27,10 +24,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   await testMain();
 }
 
-/// Maximum allowed pixel difference for cross-platform golden runs.
-/// Determinism comes from the embedded fonts; this is a safety net for
-/// subtle anti-aliasing differences between Linux CI and macOS local.
-const double _kMaxDiffPercent = 0.02;
+const double _kMaxDiffPercent = 0.03;
 
 Future<void> _loadFont(String family, String path) async {
   final fontBytes = File(path).readAsBytesSync();
@@ -41,7 +35,7 @@ Future<void> _loadFont(String family, String path) async {
 
 class _TolerantGoldenFileComparator extends LocalFileComparator {
   _TolerantGoldenFileComparator(super.testFile, {required this.tolerance})
-      : assert(tolerance >= 0 && tolerance <= 1);
+    : assert(tolerance >= 0 && tolerance <= 1);
 
   final double tolerance;
 

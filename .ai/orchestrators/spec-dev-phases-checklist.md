@@ -39,7 +39,7 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 
 [ ] 0.3  Read shared configuration files:
         lib/core/network/api_endpoints.dart
-        lib/app/router/app_route.dart
+        lib/shared/router/app_route.dart
         lib/app/router/app_router.dart
 
 [ ] 0.4  Read the reference feature:
@@ -50,7 +50,7 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
         lib/features/[feature_name]/presentation/notifiers/[feature_name]_notifier.dart
         lib/features/[feature_name]/di/[feature_name]_provider.dart
         lib/features/[feature_name]/presentation/screens/[feature_name]_screen.dart
-        lib/features/[feature_name]/presentation/widgets/_widgets.lib.dart
+        lib/features/[feature_name]/presentation/widgets/<widget_name>.dart  (standalone — no _widgets.lib.dart barrel, no Custom facade)
         integration_test/[feature_name]_integration_test.dart
 
 [ ] 0.5  Create todowrite with ALL items from <spec>/tasks.md
@@ -68,6 +68,8 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
         
 
 [ ] 1.3  Create DTOs (infrastructure/dtos/)
+
+[ ] 1.3b Shared wire contracts → core/network/contracts/ (no infra/dtos); borrar generados de origen al mover (Rule 29)
 
 [ ] 1.4  Verify .freezed.dart and .g.dart exist for each entity
 
@@ -140,7 +142,7 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 [ ] 5.2  Implement mapper (named constructors from DTO, VGV-standard)
 
 [ ] 5.3  Implement repository with guard() from shared/error/result_guard.dart
-        NEVER use raw try/catch
+        NEVER use raw try/catch. Usecases also wrap shared ports (raw values) with guard()
 
 [ ] 5.4  Run: flutter test test/features/<feature>/infrastructure/
         EXPECTED: all GREEN
@@ -227,13 +229,13 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 
 ---
 
-## Phase 10 — Barrels + Navigation + build_runner
+## Phase 10 — Widgets + Navigation + build_runner
 
 ```
-[ ] 10.1  Run barrel skill for presentation/widgets/
-        → Create _widgets.lib.dart + _widgets.dart
+[ ] 10.1  Create standalone widget files in presentation/widgets/
+        → <widget_name>.dart with explicit imports (NO _widgets.lib.dart barrel, NO Custom facade)
 
-[ ] 10.2  Add AppRoute entry in lib/app/router/app_route.dart
+[ ] 10.2  Add AppRoute entry in lib/shared/router/app_route.dart
 
 [ ] 10.3  Add GoRoute + screen import in lib/app/router/app_router.dart
 
@@ -242,7 +244,7 @@ Each phase has a checklist. Before moving to the next phase, ALL items must be c
 [ ] 10.5  [Removed — screen import goes directly in app_router.dart]
 
 [ ] 10.6  If the spec says there is a navigation trigger in parent screen:
-        → Add IconButton with ref.read(goRouterProvider).push() in that screen
+        → Add IconButton with ref.read(appNavigatorProvider).push(AppRoute.x) in that screen (re-export the seam in the feature's di/)
 
 [ ] 10.7  Run: dart run build_runner build --delete-conflicting-outputs
         

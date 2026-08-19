@@ -4,14 +4,6 @@ import 'package:clean_architecture_sdd_harness/core/config/app_environment.dart'
 void main() {
   group('AppEnvironment', () {
     group('DevEnvironment', () {
-      test('appName contains Dev', () {
-        expect(const DevEnvironment().appName, contains('Dev'));
-      });
-
-      test('appName Clinical History (Dev)', () {
-        expect(const DevEnvironment().appName, 'Clinical History (Dev)');
-      });
-
       test('host localhost', () {
         expect(const DevEnvironment().host, 'localhost');
       });
@@ -25,18 +17,10 @@ void main() {
       });
     });
 
-    group('ProductionEnvironment', () {
-      test('isProduction == true', () {
-        expect(const ProductionEnvironment().isProduction, isTrue);
-      });
+    group('StagingEnvironment', () {});
 
-    });
-
-    group('StagingEnvironment', () {
-    });
-
-    test('AppEnvironment.current is DevEnvironment by default', () {
-      expect(AppEnvironment.current, isA<DevEnvironment>());
+    test('selectEnvironment() is DevEnvironment by default', () {
+      expect(AppEnvironment.selectEnvironment(), isA<DevEnvironment>());
     });
   });
 

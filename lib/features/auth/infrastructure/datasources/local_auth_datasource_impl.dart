@@ -1,29 +1,26 @@
-import '../../../../core/database/_database.lib.dart';
-import '../../../../core/network/connectivity/internet_service.dart';
-import '../../../../shared/interfaces/_interfaces.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/database/i_app_database.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 
-import '../../domain/datasources/i_local_auth_datasource.dart';
-import '../../domain/entities/login_response_entity.dart';
-import '../../domain/entities/token_entity.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/datasources/i_local_auth_datasource.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/login_response_entity.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/token_entity.dart';
 
 class LocalAuthDatasourceImpl implements ILocalAuthDatasource {
   LocalAuthDatasourceImpl({
     required this._patientInfo,
-    required this._clinicalHistory,
+    required this._clinicalHistoryReader,
+    required this._clinicalHistoryWriter,
     required this._tokenStore,
     required this._credentialStore,
-    required this._tokenVerifier,
     required this._appDatabase,
-    required this._internetService,
   });
 
   final IPatientInfoStore _patientInfo;
-  final IClinicalHistoryStore _clinicalHistory;
+  final IClinicalHistoryReader _clinicalHistoryReader;
+  final IClinicalHistoryWriter _clinicalHistoryWriter;
   final ITokenStore _tokenStore;
   final ICredentialStore _credentialStore;
-  final ITokenVerifier _tokenVerifier;
   final IAppDatabase _appDatabase;
-  final IInternetService _internetService;
 
   @override
   Future<void> saveSession({
@@ -32,7 +29,7 @@ class LocalAuthDatasourceImpl implements ILocalAuthDatasource {
     required String passwordHash,
   }) async {
     await _patientInfo.save(data.patient);
-    await _clinicalHistory.storeAll(data.clinicalHistory);
+    await _clinicalHistoryWriter.storeAll(data.clinicalHistory);
     await _tokenStore.save(data.token.key);
     await _credentialStore.saveCredentials(
       email: email,
@@ -44,8 +41,15 @@ class LocalAuthDatasourceImpl implements ILocalAuthDatasource {
   Future<void> clearSession() async {
     await Future.wait([
       _tokenStore.delete(),
-      _credentialStore.deleteAll(),
+      _credentialStore.deleteCredentials(),
+      _patientInfo.delete(),
+      _clinicalHistoryWriter.deleteAll(),
     ]);
+  }
+
+  @override
+  Future<void> resetAccount() async {
+    await clearSession();
     await _appDatabase.resetDatabase();
   }
 
@@ -54,22 +58,10 @@ class LocalAuthDatasourceImpl implements ILocalAuthDatasource {
     final patient = await _patientInfo.load();
     final tokenStr = await _tokenStore.read();
     if (patient == null || tokenStr == null) return null;
-    if (await _tokenVerifier.isExpired(tokenStr)) {
-      if (await _internetService.isConnected()) {
-        await Future.wait([
-          _tokenStore.delete(),
-          _credentialStore.deleteAll(),
-        ]);
-        return null;
-      }
-    }
-    final clinicalHistory = await _clinicalHistory.loadAll();
+    final clinicalHistory = await _clinicalHistoryReader.loadAll();
     return LoginResponseEntity(
       patient: patient,
-      token: TokenEntity(
-        type: 'Bearer',
-        key: tokenStr,
-      ),
+      token: TokenEntity(key: tokenStr),
       clinicalHistory: clinicalHistory,
     );
   }

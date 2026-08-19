@@ -2,7 +2,8 @@
 description: |
   Smart PR Split pipeline: analyze all changes vs base branch → classify files by
   category (feature-agnostic) → plan atomic PRs → execute stacked branches sequentially
-  with per-PR validation+repair → re-validate ALL → publish stacked PRs on GitHub.
+  with per-PR validation+repair (analyzer, tests, dart format matching CI) → re-validate
+  ALL → publish stacked PRs on GitHub (CI-gated against develop, strict branch protection).
 ---
 
 # Super Pull-Request — Smart PR Split Pipeline
@@ -34,7 +35,7 @@ If `develop` exists (local or remote `origin/develop`):
   Set `$BASE = develop`
 
 If `develop` does NOT exist:
-  **STOP.** Ask the user: "No se encontró la rama develop. ¿Qué rama quieres usar como base?"
+  **STOP.** Ask the user: "Branch develop was not found. Which branch should be used as base?"
   Wait for their answer and set `$BASE = <user_answer>`
 
 Once confirmed, fetch the latest:
@@ -78,8 +79,8 @@ For each file in the diff, detect the **group name** using these rules:
 | `lib/features/{f}/domain/**`                          | `{f}-domain`            | `test/features/{f}/domain/**` → merge |
 | `lib/features/{f}/infrastructure/**`                  | `{f}-infra`             | `test/features/{f}/infrastructure/**` → merge |
 | `lib/features/{f}/presentation/**`                    | `{f}-presentation`      | `test/features/{f}/presentation/**` → merge |
-| `**/generated_plugin_registrant.*` / `**/generated_plugins.cmake` | `deps` (forced)     | Forzado a `deps` — NUNCA asignado a otro PR |
-| `**/*.g.dart` / `**/*.freezed.dart`                              | `generated`         | Fusionar con el grupo del archivo .dart fuente |
+| `**/generated_plugin_registrant.*` / `**/generated_plugins.cmake` | `deps` (forced)     | Forced to `deps` — NEVER assigned to another PR |
+| `**/*.g.dart` / `**/*.freezed.dart`                              | `generated`         | Merge with the group of the source .dart file |
 
 **Feature detection**: Extract `{f}` from whatever directory name exists under
 `lib/features/`. There may be multiple features; each gets its own `{f}-*` groups.
@@ -121,19 +122,19 @@ Apply these merge rules in order:
 
 | # | Rule | Merge condition | Capability title template |
 |---|------|----------------|---------------------------|
-| R1 | Dependency setup | If `deps` + `platform` both exist | `chore: setup dependencies and platform config` |
-| R2 | Shared models | If `models` exists | `feat: add shared domain models` |
-| R3 | Database migration | If `database` exists | `feat: migrate database` |
+| R1 | Dependency setup | If `deps` + `platform` both exist | `build(deps): add dependencies and platform configuration` |
+| R2 | Shared models | If `models` exists | `feat(models): add shared domain entities` |
+| R3 | Database migration | If `database` exists | `feat(database): migrate to sembast schema` |
 | R4 | Infrastructure cleanup | If `exceptions` + `configs` + `jsons` all exist and sum < 200 lines | `refactor: consolidate exceptions and configuration` |
-| R5 | Network infrastructure | If `services:internet_service` + `services:reachability` both exist | `feat: add server reachability strategies` |
-| R6 | Auth interceptor | If `interceptors` exists + `services:dio` | `feat: implement auth interceptor` |
+| R5 | Network infrastructure | If `services:internet_service` + `services:reachability` both exist | `feat(network): add server reachability strategies` |
+| R6 | Auth interceptor | If `interceptors` exists + `services:dio` | `feat(network): add auth interceptor with retry` |
 | R7 | Routing + providers | If `providers` exists + `app:router` | `refactor: update routing and provider wiring` |
 | R8 | AI tooling | If `ai` exists | `chore: update AI tooling configuration` |
-| R9a | Feature spec | If `{f}-spec` exists | `docs({f}): add feature specification files` |
+| R9a | Feature spec | If `{f}-spec` exists | `docs({f}): add specification artifacts` |
 | R9b | Feature domain | If `{f}-domain` exists | `feat({f}): add domain layer` |
 | R10 | Feature infra | If `{f}-infra` exists | `feat({f}): implement infrastructure layer` |
 | R11 | Feature presentation | If `{f}-presentation` + `shared-widgets` both exist | `feat({f}): implement presentation layer` |
-| R12 | Finalization | If `bdd-tests` + `integration-tests` + `docs` all exist | `test: add BDD and integration tests + docs` |
+| R12 | Finalization | If `bdd-tests` + `integration-tests` + `docs` all exist | `test: add BDD, integration tests and documentation` |
 | R13 | Generated code | If `generated` exists | Merge with the PR that contains the source .dart file |
 
 **Rules for capabilities without a merge rule**:
@@ -169,6 +170,35 @@ Sort capabilities by dependency order (not by rule number):
 ```
 
 If a capability has no files (no matching file groups), skip it.
+
+### 3.4 — Compilation audit BEFORE accepting the automatic split (mandatory)
+
+The generic split (R9b/R10/R11) separates domain/infra/presentation. That
+mechanical split is WRONG when a capability's contracts are entangled across
+layers. Before accepting the auto-split for any large change:
+
+1. Apply each proposed capability onto a clean copy of the base branch.
+2. Run `flutter analyze` + `dart format --output=none --set-exit-if-changed lib test integration_test` + the affected test set.
+3. Record errors per capability and per missing dependency.
+4. If a capability fails because its contracts live in another capability,
+   merge both into one ATOMIC capability and document the reason.
+5. Repeat until every public PR is compilable and green.
+
+**Documented exception (clean-architecture migration PR 7):** the atomic core
+(refactor/clean-architecture-core) contains errors, database, network
+contracts, auth, app seams, clinical history and their tests as a SINGLE
+atomic PR. Its commits are internal review units ordered by dependency and
+validated GREEN; it is NEVER subdivided by folder. The recommended 400-line
+limit may be overridden for this PR only with the compilation audit report and
+Architecture Board approval.
+
+**Stack depth limit:** no active stack may exceed two levels. Public PRs must
+receive CI against `develop` before review/merge; a PR pointing at an
+intermediate branch is not protected by required checks until retargeted.
+
+**No RED commits:** never publish a commit that leaves the project
+non-compiling or with known-failing tests. RED is a local TDD artifact only;
+it never reaches the shared branch.
 
 ### 3.5 — File Overlap Audit + Auto-correction
 
@@ -213,7 +243,7 @@ If no overlaps:
 
 ```
 ### PR {N} — `<type>(<scope>): <title>`
-**Razón**: <why this PR exists as a separate unit — one architectural decision>
+**Rationale**: <why this PR exists as a separate unit — one architectural decision>
 
 ```
 <commit-message-1>
@@ -221,47 +251,62 @@ If no overlaps:
 <commit-message-3>
 ```
 
-~{N} lines, review target: {N} min
+~{N} lines, estimated review: {N} min
 ```
 
 Commit messages follow **Conventional Commits** (full table):
 
-| Type      | Cuándo usar                                  | Ejemplo                                          |
+| Type      | When to use                                  | Example                                          |
 |-----------|----------------------------------------------|--------------------------------------------------|
-| `feat`    | Nueva funcionalidad visible                  | `feat(auth): add biometric login`               |
-| `fix`     | Corrección de bug                            | `fix(auth): prevent token refresh loop`          |
-| `refactor`| Cambia estructura sin cambiar comportamiento | `refactor(storage): extract persistence service` |
-| `perf`    | Optimización de rendimiento                  | `perf(list): reduce rebuild count`               |
-| `test`    | Agregar o modificar tests                    | `test(auth): add login notifier tests`           |
-| `docs`    | Documentación                                | `docs(api): update auth flow`                    |
-| `build`   | Dependencias o compilación                   | `build(deps): update freezed`                    |
-| `ci`      | Pipelines CI/CD                              | `ci(github): add release workflow`               |
-| `chore`   | Mantenimiento sin impacto funcional          | `chore(repo): cleanup scripts`                   |
-| `style`   | Formato solamente                            | `style(ui): apply formatter`                     |
-| `revert`  | Revertir commit                              | `revert: feat(auth): add remember me`            |
-| `release` | Publicación de versión                       | `release: v1.4.0`                                |
+| `feat`    | New visible functionality                    | `feat(auth): add biometric login`               |
+| `fix`     | Bug fix                                      | `fix(auth): prevent token refresh loop`          |
+| `refactor`| Structure change without behavior change     | `refactor(storage): extract persistence service` |
+| `perf`    | Performance optimization                     | `perf(list): reduce rebuild count`               |
+| `test`    | Adding or modifying tests                    | `test(auth): add login notifier tests`           |
+| `docs`    | Documentation                                | `docs(api): update auth flow`                    |
+| `build`   | Dependencies or build system                 | `build(deps): update freezed`                    |
+| `ci`      | CI/CD pipelines                              | `ci(github): add release workflow`               |
+| `chore`   | Maintenance with no functional impact        | `chore(repo): cleanup scripts`                   |
+| `style`   | Formatting only                              | `style(ui): apply formatter`                     |
+| `revert`  | Revert a commit                              | `revert: feat(auth): add remember me`            |
+| `release` | Version release                              | `release: v1.4.0`                                |
+
+### 3.6.5 — PR Title Rules (mandatory)
+
+This repository squash-merges with `squash_merge_commit_title: PR_TITLE` and
+`squash_merge_commit_message: PR_BODY` (see `LEARN.md` → Merge strategy). **The
+PR title becomes the commit on `develop`/`main`.** Therefore every PR title:
+
+- MUST follow Conventional Commits: `<type>(<scope>): <subject>`
+- MUST be in English and imperative mood
+- MUST be ≤ 72 characters (truncate the subject; move detail to the body)
+- MUST NOT have a `PR {N}:` prefix or any stack numbering
+- The scope derives from the capability group (`deps`, `models`, `database`,
+  `network`, `{f}-domain`, `{f}-infra`, `{f}-presentation`, etc.)
+
+Example: `feat(database): migrate to sembast schema` (not `PR 1: feat: migrate database`).
 
 ### 3.7 — Output the full plan
 
 ```
-## Estrategia de PRs ({N} PRs, ordenados por dependencias)
+## PR Strategy ({N} PRs, ordered by dependencies)
 
-### PR 1 — `chore: setup dependencies and platform config`
-**Razón**: Un solo cambio atómico de configuración del proyecto.
+### PR 1 — `build(deps): add dependencies and platform configuration`
+**Rationale**: A single atomic project configuration change.
 ```
 chore(deps): replace drift with sembast (+ encrypt, crypto)
 chore(platform): remove sqlite3_flutter_libs from linux/macos/windows
 ```
-~{N} lines, review target: {N} min
+~{N} lines, estimated review: {N} min
 
-### PR 2 — `feat: add shared domain models`
-**Razón**: Modelos compartidos necesarios para database y features.
+### PR 2 — `feat(models): add shared domain entities`
+**Rationale**: Shared models required by the database and feature layers.
 ```
 feat(models): add PatientEntity (@freezed, @JsonSerializable)
 feat(models): add ClinicalHistoryEntity + 6 sub-entities
 test(models): add serialization tests
 ```
-~{N} lines, review target: {N} min
+~{N} lines, estimated review: {N} min
 ...
 ```
 
@@ -286,15 +331,33 @@ For each PR **in dependency order** (level ascending):
 
 ```bash
 git checkout $BASE_BRANCH
-git checkout -b pr/{NN}-<short-kebab-name>
+git checkout -b <type>/<short-kebab-name>
 ```
 
-Branch naming: `pr/01-database-migration`, `pr/02-shared-models`, etc.
+Branch naming is **type-prefixed** (git-flow compatible), derived from the PR
+type, **without stack numbers**:
 
-### 4.3 — Clean build artifacts
+| PR type | Branch prefix | Example |
+|---------|---------------|---------|
+| `feat`    | `feature`  | `feature/shared-models` |
+| `fix`     | `fix`      | `fix/auth-token-refresh` |
+| `chore`   | `chore`    | `chore/ai-tooling` |
+| `docs`    | `docs`     | `docs/feature-spec` |
+| `ci`      | `ci`       | `ci/workflow-gates` |
+| `test`    | `test`     | `test/goldens-cross-platform` |
+| `build`   | `build`    | `build/deps-platform` |
+| `refactor`| `refactor` | `refactor/database-layer` |
 
-Before applying any commits, remove generated/build artifacts that should not
-be part of the PR diff:
+The kebab name derives from the PR subject (e.g. `feat(database): migrate to
+sembast schema` → `feature/sembast-schema`). If two PRs would produce the same
+branch name, append a short discriminator suffix (e.g. `feature/sembast-schema-2`).
+Track every created branch in `$PR_BRANCHES` (in dependency order) — the stack
+order is preserved by this array, not by the branch names.
+
+### 4.3 — Clean build artifacts (ONCE, before the first PR)
+
+Run `flutter clean` a single time before applying the first PR's commits to
+remove generated/build artifacts that should not be part of the PR diff:
 
 ```bash
 flutter clean
@@ -302,8 +365,11 @@ flutter clean
 
 This removes `build/`, `.dart_tool/`, and other artifacts that may have been
 generated by previous work or by `flutter pub get` during development.
-The next step will re-run `flutter pub get` during validation — no need to
-worry about missing dependencies.
+Do NOT repeat it per PR: it wipes the build cache and forces a full rebuild
+for every branch. Artifacts never leak into the diff anyway, because Step 4.4
+stages only explicit file paths (never `git add .`). The next step re-runs
+`flutter pub get` during validation — no need to worry about missing
+dependencies.
 
 ### 4.4 — Apply commits atomically (one per planned commit)
 
@@ -346,12 +412,24 @@ git commit -m "refactor(scope): <description>"
 
 ```bash
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs 2>/dev/null || true
+dart run build_runner build --delete-conflicting-outputs
+flutter gen-l10n   # ONLY if a .arb file changed (generated localizations are committed)
+dart format --output=none --set-exit-if-changed lib test integration_test
 flutter analyze
 flutter test
 ```
 
-**Expected**: 0 analyzer issues, 0 test failures.
+> `build_runner` errors MUST NOT be hidden. Do NOT append `|| true` — a failed
+> generation produces stale `.g.dart`/`.freezed.dart` and a false-green PR.
+>
+> **Dart format is mandatory**: the CI job "Enforce Dart formatting" (inside the
+> Analyze job) runs exactly `dart format --output=none --set-exit-if-changed lib
+> test integration_test`. `flutter analyze` does NOT detect formatting issues, and
+> a PR that fails this step is BLOCKED by CI. Run the format check AFTER
+> `build_runner`/`gen-l10n` because generated files (`.g.dart`, `.freezed.dart`,
+> `app_localizations*.dart`) live under `lib/` and are included in the check.
+
+**Expected**: 0 analyzer issues, 0 test failures, 0 files need formatting.
 
 ### 4.6 — If validation fails → repair loop
 
@@ -360,6 +438,7 @@ flutter test
 | Flutter analyze issues | `app-agent-fix-analyzer-issues` | Load skill, fix every issue file-by-file |
 | Test failures | `app-agent-fix-tests` | Load skill, fix each failing test |
 | Build runner errors | Manual fix | Fix generated files mismatches |
+| Dart formatting (CI "Enforce Dart formatting") | Manual fix | Run `dart format <files>` → commit `style(scope): apply dart format`. `flutter analyze` does not detect this — validate with the exact CI command. |
 
 Steps:
 1. Load the corresponding skill
@@ -380,9 +459,10 @@ Record that PR {N} passed. Continue to PR {N+1}.
 ### 4.8 — After ALL PRs executed → Re-validate every branch
 
 ```bash
-for BRANCH in pr/01-* pr/02-* pr/03-* ...; do
+for BRANCH in "${PR_BRANCHES[@]}"; do
   git checkout $BRANCH
   flutter analyze
+  dart format --output=none --set-exit-if-changed lib test integration_test
   flutter test
   echo "=== $BRANCH: $([ $? -eq 0 ] && echo 'PASS' || echo 'FAIL')"
 done
@@ -407,12 +487,12 @@ done
 ╔══════════════════════════════════════════════════════════════════╗
 ║  PR Pipeline — Validation Summary                               ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  PR 1  feat: database migration                      ✅  PASS   ║
+║  PR 1  feat(database): migrate to sembast schema      ✅  PASS   ║
 ║        ├─ chore(deps): replace drift with sembast               ║
 ║        ├─ feat(database): implement sembast...                  ║
 ║        └─ test(database): add sembast store tests               ║
 ║                                                                ║
-║  PR 2  feat: shared domain models                    ✅  PASS   ║
+║  PR 2  feat(models): add shared domain entities        ✅  PASS   ║
 ║        ├─ feat(models): add PatientEntity                       ║
 ║        └─ test(models): add serialization tests                 ║
 ║                                                                ║
@@ -424,9 +504,21 @@ done
 
 The user must see this table clearly before proceeding.
 
-> **Nota**: No se detectó GitHub Actions configurado en este repositorio.
-> Si el equipo quiere agregar CI básico, el workflow mínimo sugerido está
-> en `.github/workflows/ci.yml`. Esto no es parte del plan de PRs.
+> **Note**: The source of truth for required checks is `.github/REQUIRED_CHECKS.md`
+> — it MUST match the branch-protection `required_status_checks.contexts`
+> (verified by the `super-pull-request-reviewer` preflight). The workflow lives in
+> `.github/workflows/ci.yml`; `develop` is protected with `strict: true`, so each
+> stacked PR needs a retarget + `gh pr update-branch` before merge (handled by the
+> reviewer command). The `Integration` job is gated by the repository variable
+> `RUN_DEVICE_INTEGRATION` and is NOT part of the required checks for `develop`.
+> `ci.yml` also triggers on `push` to `develop`/`main`, so each squash merge
+> produces a post-merge verification run on develop. With
+> `concurrency: cancel-in-progress: true`, a rapid stacked merge may cancel the
+> previous post-merge run — benign, because the authoritative merge gate is the
+> PR-head required checks.
+> PRs to `main` are gated to `release/*` and `hotfix/*` heads only
+> (`branch-source-gate`); the branches created by this pipeline target
+> `develop`, so their type-prefixed names satisfy the gate.
 
 ---
 
@@ -436,7 +528,7 @@ The user must see this table clearly before proceeding.
 
 **STOP.** Present the summary table from 4.9 to the user and ask:
 
-> "Todas las branches pasaron validación. ¿Deseas pushear los {N} branches y crear los Pull Requests en GitHub?"
+> "All branches passed validation. Do you want to push the {N} branches and create the Pull Requests on GitHub?"
 
 Valid affirmative answers: `yes`, `approve`, `publish`, `execute`, `si`, `sí`
 
@@ -445,39 +537,87 @@ If the user says anything else → STOP. The branches exist locally for manual r
 ### 5.2 — Push all branches
 
 ```bash
-for BRANCH in pr/01-* pr/02-* ...; do
+for BRANCH in "${PR_BRANCHES[@]}"; do
   git push origin $BRANCH
 done
 ```
 
 ### 5.3 — Create GitHub PRs (stacked)
 
-For each branch, create a PR targeting the previous branch's branch:
+For each branch in `$PR_BRANCHES` (dependency order), create a PR targeting the
+previous branch's branch. The PR title MUST follow the PR Title Rules from
+Step 3.6.5 (`type(scope): subject`, English, no `PR {N}:` prefix) — it becomes
+the squash commit on merge. Add a label mapped from the PR type (labels already
+exist in the repo):
+
+| PR type | Label |
+|---------|-------|
+| `feat`    | `enhancement` |
+| `fix`     | `bug` |
+| `docs`    | `documentation` |
+| `build`   | `dependencies` |
+| `ci`      | `github_actions` |
+| other     | no label |
 
 **PR 1** (base = `$BASE`):
 ```bash
 gh pr create \
   --base $BASE \
-  --head pr/01-<name> \
-  --title "PR 1: feat: <title>" \
-  --body "## PR 1 — <title>
+  --head "${PR_BRANCHES[0]}" \
+  --title "<type>(<scope>): <subject>" \
+  --label "<label>" \
+  --body "## Summary
+<what this PR does>
 
-**Razón**: <reason>
+## Why
+<context / motivation / ticket reference>
 
-### Commits
-- <commit-list>
+## Changes
+- <file/area>: <description>
 
-**Review target**: ~{N} min"
+## Testing
+- [ ] flutter analyze
+- [ ] dart format --output=none --set-exit-if-changed lib test integration_test
+- [ ] flutter test
+- [ ] <integration/BDD specifics>
+
+## Stack
+| PR | Branch | Title |
+|----|--------|-------|
+| 1 | ${PR_BRANCHES[0]} | <type>(<scope>): <subject> |
+| 2 | ${PR_BRANCHES[1]} | <type>(<scope>): <subject> |
+| ... | ... | ... |"
 ```
 
-**PR {N}** (base = `pr/{N-1}-<name>`):
+**PR {N}** (base = branch of PR {N-1} = `"${PR_BRANCHES[N-1]}"`):
 ```bash
 gh pr create \
-  --base pr/{N-1}-<name> \
-  --head pr/{N}-<name> \
-  --title "PR {N}: <type>(<scope>): <title>" \
+  --base "${PR_BRANCHES[N-1]}" \
+  --head "${PR_BRANCHES[N]}" \
+  --title "<type>(<scope>): <subject>" \
+  --label "<label>" \
   --draft \
-  --body "..."
+  --body "## Summary
+<what this PR does>
+
+## Why
+<context / motivation / ticket reference>
+
+## Changes
+- <file/area>: <description>
+
+## Testing
+- [ ] flutter analyze
+- [ ] dart format --output=none --set-exit-if-changed lib test integration_test
+- [ ] flutter test
+- [ ] <integration/BDD specifics>
+
+## Stack
+| PR | Branch | Title |
+|----|--------|-------|
+| 1 | ${PR_BRANCHES[0]} | <type>(<scope>): <subject> |
+| 2 | ${PR_BRANCHES[1]} | <type>(<scope>): <subject> |
+| ... | ... | ... |"
 ```
 
 Use `--draft` for all PRs except PR 1 (since they depend on the previous PR being merged).
@@ -487,9 +627,9 @@ Use `--draft` for all PRs except PR 1 (since they depend on the previous PR bein
 ```
 | PR | Branch | URL | Status |
 |----|--------|-----|--------|
-| 1  | pr/01-database-migration     | https://... | Open |
-| 2  | pr/02-shared-models          | https://... | Draft |
-| 3  | pr/03-exceptions-configs     | https://... | Draft |
+| 1  | feature/sembast-schema     | https://... | Open |
+| 2  | feature/shared-models      | https://... | Draft |
+| 3  | build/deps-platform        | https://... | Draft |
 | ... | ... | ... | ... |
 ```
 
@@ -506,3 +646,9 @@ Use `--draft` for all PRs except PR 1 (since they depend on the previous PR bein
 | pubspec.lock changed without pubspec.yaml | Include with closest `deps` group. |
 | Binary/generated files (.g.dart, .freezed.dart) | Include in same PR as their source files. Never separate. |
 | Merge conflicts during branch creation | STOP. Inform user. Ask them to resolve manually. |
+| PR title longer than 72 chars | Truncate the subject to ≤72 chars; move the detail into the body (PR Title Rules, Step 3.6.5). |
+| PR targets `main` instead of `develop` | Remember `branch-source-gate`: only `release/*` and `hotfix/*` heads may merge to `main`. Re-target the PR to `develop`. |
+| CI fails with "Enforce Dart formatting" | Run `dart format <file>` on the offending files and commit `style(scope): apply dart format`. `flutter analyze` does not detect it — validate with the exact CI command. |
+| Repair touches a file already present in an upstream PR's branch (e.g. formatting) | Propagate the SAME fix to ALL downstream branches of the stack before publishing; otherwise the reviewer's `gh pr update-branch` produces an `add/add` conflict. |
+| A PR is merged by the reviewer before this pipeline finishes | The branch is auto-deleted by the repo (`delete_branch_on_merge: true`) — do not depend on it; skip/continue via the tracked `$PR_BRANCHES` list. |
+| Two capabilities produce the same branch name | Append a discriminator suffix to the later branch (e.g. `feature/sembast-schema-2`). |

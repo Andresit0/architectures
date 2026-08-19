@@ -3,16 +3,10 @@ import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_ent
 
 void main() {
   group('PatientEntity', () {
-    const entity = PatientEntity(
-      id: '1',
-      name: 'John Doe',
-    );
+    const entity = PatientEntity(id: '1', name: 'John Doe');
 
     test('equality works correctly', () {
-      expect(
-        entity,
-        equals(const PatientEntity(id: '1', name: 'John Doe')),
-      );
+      expect(entity, equals(const PatientEntity(id: '1', name: 'John Doe')));
     });
 
     test('inequality detects different values', () {

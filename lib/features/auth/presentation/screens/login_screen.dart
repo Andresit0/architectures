@@ -1,36 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../notifiers/auth_notifier.dart';
-import '../../di/auth_provider.dart';
-import '../../di/remember_me_provider.dart';
 import 'package:clean_architecture_sdd_harness/design_system/theme/app_colors.dart';
-import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
-import '../../../../l10n/app_localizations.dart';
 import 'package:clean_architecture_sdd_harness/design_system/_design.lib.dart';
+import '../../../../l10n/app_localizations.dart';
 
+import '../notifiers/auth_notifier.dart';
+import '../notifiers/remember_me_provider.dart';
 import '../notifiers/auth_state.dart';
-import '../widgets/_widgets.lib.dart';
+import '../widgets/email_form_field.dart';
+import '../widgets/login_button.dart';
+import '../widgets/password_form_field.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen<AuthState>(authProvider, (_, next) {
-      if (next is AuthFailure) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(localizeError(next.error, AppLocalizations.of(context)!)),
-              backgroundColor: AppColors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-      }
-    });
-
     final state = ref.watch(authProvider);
 
     if (state is AuthLoading) {
@@ -69,11 +55,13 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    ref.read(authProvider.notifier).login(
-      _emailController.text.trim(),
-      _passwordController.text,
-      rememberMe: ref.read(rememberMeProvider),
-    );
+    ref
+        .read(authProvider.notifier)
+        .login(
+          _emailController.text.trim(),
+          _passwordController.text,
+          rememberMe: ref.read(rememberMeProvider),
+        );
   }
 
   @override
@@ -90,14 +78,10 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(
-                  Icons.account_circle,
-                  size: 72,
-                  color: AppColors.primary,
-                ),
+                Icon(Icons.account_circle, size: 72, color: AppColors.primary),
                 const SizedBox(height: 8),
                 Text(
-                  ref.watch(appNameProvider),
+                  AppLocalizations.of(context)!.appTitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
@@ -108,19 +92,19 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                 Text(
                   AppLocalizations.of(context)!.loginTitle,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.gray,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.gray),
                 ),
                 const SizedBox(height: 40),
-                CustomAuthWidgets.createEmailFormField(
+                EmailFormField(
                   controller: _emailController,
                   hintText: AppLocalizations.of(context)!.emailHint,
                   focusNode: _emailFocus,
                   onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
                 ),
                 const SizedBox(height: 16),
-                CustomAuthWidgets.createPasswordFormField(
+                PasswordFormField(
                   controller: _passwordController,
                   hintText: AppLocalizations.of(context)!.passwordHint,
                   focusNode: _passwordFocus,
@@ -133,13 +117,15 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                       value: ref.watch(rememberMeProvider),
                       onChanged: isLoading
                           ? null
-                          : (v) => ref.read(rememberMeProvider.notifier).set(v ?? false),
+                          : (v) => ref
+                                .read(rememberMeProvider.notifier)
+                                .set(v ?? false),
                     ),
                     Text(AppLocalizations.of(context)!.rememberMe),
                   ],
                 ),
                 const SizedBox(height: 24),
-                CustomAuthWidgets.createLoginButton(
+                LoginButton(
                   text: AppLocalizations.of(context)!.loginButton,
                   onPressed: isLoading ? null : _submit,
                 ),

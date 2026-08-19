@@ -20,16 +20,19 @@ void main() {
     });
 
     group('read', () {
-      test('delegates to FlutterSecureStorage.read and returns value', () async {
-        when(
-          () => mockStorage.read(key: 'my_key'),
-        ).thenAnswer((_) async => 'my_value');
+      test(
+        'delegates to FlutterSecureStorage.read and returns value',
+        () async {
+          when(
+            () => mockStorage.read(key: 'my_key'),
+          ).thenAnswer((_) async => 'my_value');
 
-        final result = await cpSecureStorage.read(key: 'my_key');
+          final result = await cpSecureStorage.read(key: 'my_key');
 
-        expect(result, 'my_value');
-        verify(() => mockStorage.read(key: 'my_key')).called(1);
-      });
+          expect(result, 'my_value');
+          verify(() => mockStorage.read(key: 'my_key')).called(1);
+        },
+      );
 
       test('returns null when key not found', () async {
         when(
@@ -58,9 +61,7 @@ void main() {
 
     group('delete', () {
       test('delegates to FlutterSecureStorage.delete', () async {
-        when(
-          () => mockStorage.delete(key: 'my_key'),
-        ).thenAnswer((_) async {});
+        when(() => mockStorage.delete(key: 'my_key')).thenAnswer((_) async {});
 
         await cpSecureStorage.delete(key: 'my_key');
 

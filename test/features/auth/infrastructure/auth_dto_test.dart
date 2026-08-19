@@ -1,34 +1,23 @@
+import 'package:clean_architecture_sdd_harness/core/network/contracts/_contracts.lib.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/infrastructure/dtos/_dtos.lib.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TokenDto', () {
-    final validJson = {
-      'type': 'Bearer',
-      'key': 'some-jwt-token',
-    };
+    final validJson = {'key': 'some-jwt-token'};
 
     test('fromJson creates TokenDto from valid JSON', () {
       final dto = TokenDto.fromJson(validJson);
-      expect(dto.type, 'Bearer');
       expect(dto.key, 'some-jwt-token');
     });
 
-    test('fromJson throws when field is missing', () {
-      expect(
-        () => TokenDto.fromJson({'type': 'Bearer'}),
-        throwsA(isA<Object>()),
-      );
-      expect(
-        () => TokenDto.fromJson({'key': 'some-jwt-token'}),
-        throwsA(isA<Object>()),
-      );
+    test('fromJson throws when required field is missing', () {
+      expect(() => TokenDto.fromJson({}), throwsA(isA<Object>()));
     });
 
     test('toJson roundtrip produces same values', () {
       final dto = TokenDto.fromJson(validJson);
       final json = dto.toJson();
-      expect(json['type'], 'Bearer');
       expect(json['key'], 'some-jwt-token');
       final restored = TokenDto.fromJson(json);
       expect(restored, dto);
@@ -36,10 +25,7 @@ void main() {
   });
 
   group('PatientDto', () {
-    final validJson = {
-      'id': 'patient-1',
-      'name': 'John Doe',
-    };
+    final validJson = {'id': 'patient-1', 'name': 'John Doe'};
 
     test('fromJson creates PatientDto from valid JSON', () {
       final dto = PatientDto.fromJson(validJson);
@@ -122,16 +108,8 @@ void main() {
           {
             'id': 'ch-1',
             'encounter_number': 'ENC-001',
-            'service': {
-              'code': 'SVC01',
-              'name': 'General',
-              'category': 'A',
-            },
-            'facility': {
-              'id': 'fac-1',
-              'name': 'Hospital',
-              'city': 'City',
-            },
+            'service': {'code': 'SVC01', 'name': 'General', 'category': 'A'},
+            'facility': {'id': 'fac-1', 'name': 'Hospital', 'city': 'City'},
             'professional': null,
             'encounter_date': '2024-01-15',
             'created_at': null,
@@ -149,7 +127,6 @@ void main() {
 
       final dto = LoginResponseDto.fromJson(json);
       expect(dto.patient.id, 'p-1');
-      expect(dto.token.type, 'Bearer');
       expect(dto.clinicalHistory.length, 1);
       expect(dto.clinicalHistory.first.id, 'ch-1');
     });
@@ -157,10 +134,7 @@ void main() {
     test('toJson roundtrip produces same values', () {
       final json = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'ch1',
@@ -193,14 +167,15 @@ void main() {
       final dto = LoginResponseDto.fromJson(json);
       final jsonOut = dto.toJson();
 
-      // Verify toJson preserves values
       expect(jsonOut['patient']['id'], '1');
       expect(jsonOut['token']['key'], 'jwt_token');
       final historyList = jsonOut['clinical_history'] as List;
       expect(historyList.length, 1);
-      expect((historyList[0] as Map<String, dynamic>)['encounter_number'], 'ENC-001');
+      expect(
+        (historyList[0] as Map<String, dynamic>)['encounter_number'],
+        'ENC-001',
+      );
 
-      // Verify full roundtrip
       final restored = LoginResponseDto.fromJson(jsonOut);
       expect(restored, dto);
     });

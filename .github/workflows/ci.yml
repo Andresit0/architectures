@@ -17,27 +17,33 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version: '3.44.0'
           cache: true
       - run: flutter pub get
+      - name: Enforce Dart formatting
+        run: dart format --output=none --set-exit-if-changed lib test integration_test
       - run: flutter analyze
 
   test:
     name: Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version: '3.44.0'
           cache: true
       - run: flutter pub get
       - run: flutter test --coverage --exclude-tags golden
-      - uses: codecov/codecov-action@v7
+      - uses: codecov/codecov-action@a99c28d3f0da835de33ff2feb2e15691c7b9641f
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
@@ -46,27 +52,63 @@ jobs:
     name: Test Goldens
     runs-on: ubuntu-latest
     needs: [analyze]
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version: '3.44.0'
           cache: true
       - run: flutter pub get
       - run: flutter test --tags golden
 
+  integration:
+    name: Integration
+    runs-on: macos-latest
+    needs: [analyze]
+    # D6 (REQUIRED_CHECKS.md → Device Integration): device integration requires a controlled runner with
+    # Apple signing (the app uses flutter_secure_storage keychain groups, which
+    # cannot be signed on GitHub-hosted macOS runners). Set the repository
+    # variable RUN_DEVICE_INTEGRATION=true once such a runner is provisioned.
+    if: vars.RUN_DEVICE_INTEGRATION == 'true'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.44.0'
+          cache: true
+      - run: flutter pub get
+      - name: Run integration tests on macOS device
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=("$PWD"/integration_test/*_test.dart)
+          if [ ${#tests[@]} -eq 0 ] || [ ! -e "${tests[0]}" ]; then
+            echo "::error::No integration tests found under integration_test/"
+            exit 1
+          fi
+          for test in "${tests[@]}"; do
+            echo "=== Running $(basename "$test") ==="
+            flutter test "$test" -d macos
+          done
+
   build-ios:
     name: Build iOS
     runs-on: macos-latest
     needs: [analyze]
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version: '3.44.0'
           cache: true
       - name: Cache CocoaPods
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ios/Pods
           key: pods-${{ hashFiles('ios/Podfile.lock') }}
@@ -79,9 +121,11 @@ jobs:
     name: Build Android
     runs-on: ubuntu-latest
     needs: [analyze]
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version: '3.44.0'
           cache: true
@@ -91,11 +135,13 @@ jobs:
   gitleaks:
     name: Gitleaks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"
@@ -105,6 +151,8 @@ jobs:
     name: Branch Source Gate
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'
+    permissions:
+      contents: read
     steps:
       - run: |
           head="${{ github.event.pull_request.head.ref }}"

@@ -2,9 +2,7 @@
 library;
 
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_notifier.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/di/remember_me_provider.dart';
-import 'package:clean_architecture_sdd_harness/core/config/environment_provider.dart';
-import 'package:clean_architecture_sdd_harness/core/config/app_environment.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/remember_me_provider.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/notifiers/auth_state.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/presentation/screens/login_screen.dart';
 import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
@@ -22,10 +20,14 @@ class _FakeAuthNotifier extends AuthNotifier {
   AuthState build() => _initial;
 
   @override
-  Future<void> login(String email, String password, {bool rememberMe = false}) async {}
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {}
 }
 
-class _FakeRememberMeNotifier extends RememberMeNotifier {
+class _FakeRememberMeNotifier extends RememberMe {
   @override
   bool build() => false;
 
@@ -38,7 +40,6 @@ Widget _buildScreen(AuthState state) {
     overrides: [
       authProvider.overrideWith(() => _FakeAuthNotifier(state)),
       rememberMeProvider.overrideWith(_FakeRememberMeNotifier.new),
-      environmentProvider.overrideWith((ref) => const ProductionEnvironment()),
     ],
     child: MaterialApp(
       theme: ThemeData(fontFamily: 'Roboto'),
@@ -50,7 +51,6 @@ Widget _buildScreen(AuthState state) {
 }
 
 void main() {
-
   testGoldens('LoginScreen golden test — initial state', (tester) async {
     await tester.pumpWidget(_buildScreen(const AuthInitial()));
     await tester.pump();

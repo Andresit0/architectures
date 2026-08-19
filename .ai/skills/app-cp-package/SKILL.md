@@ -59,7 +59,7 @@ Expected behavior
 
 4. Consumers access the wrapper via Riverpod provider:
    - The wrapper file (`<package>_wrapper.dart`) is a standalone file in `lib/core/services/<domain>/`.
-   - Consumer files access it via Riverpod provider: `ref.watch(<pkg>Provider)` from `_providers.lib.dart` barrel.
+   - Consumer files access it via Riverpod provider: `ref.watch(<pkg>Provider)` imported from its `core/` source file (no app-level barrel).
 
 5. Notify the user of the changes made:
    - Show the lines added to `pubspec.yaml` and run `dart pub get` from the project root.
@@ -82,7 +82,7 @@ Usage example (user request)
 Mandatory next step
 After executing this skill, always apply the `class_to_solid_min` skill (SKILL.md at `.ai/skills/app-class-to-solid-min/SKILL.md`) to:
 - Add the abstract interface `I<Package>` to the wrapper.
-- Create the Riverpod provider in `app/di/services/<name>_provider.dart` if the service needs injection (category "Injectable service").
+- Create the Riverpod provider in `lib/core/services/<domain>/<name>_provider.dart` (Rule 20 — DI en archivos `*_providers.dart` separados de la implementación, sin barrel de app) if the service needs injection (category "Injectable service").
 
 ---
 

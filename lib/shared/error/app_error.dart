@@ -1,49 +1,57 @@
 sealed class AppError {
-  const AppError(this.userMessage, {this.technicalMessage, this.stackTrace});
+  const AppError({this.technicalMessage, this.stackTrace});
 
-  const AppError.technical({this.technicalMessage, this.stackTrace}) : userMessage = '';
-
-  final String userMessage;
   final String? technicalMessage;
   final StackTrace? stackTrace;
 
   bool get isNetworkRelated => false;
+
+  bool get isTransient => false;
+
+  @override
+  String toString() => '$runtimeType(technicalMessage: $technicalMessage)';
 }
 
 final class ApiError extends AppError {
-  const ApiError(super.userMessage, {this.statusCode, super.technicalMessage, super.stackTrace});
-  const ApiError.technical({super.technicalMessage, super.stackTrace, this.statusCode}) : super.technical();
-  final int? statusCode;
+  const ApiError({super.technicalMessage, super.stackTrace});
 }
 
 final class NetworkError extends AppError {
-  const NetworkError(super.userMessage, {super.technicalMessage, super.stackTrace});
-  const NetworkError.technical({super.technicalMessage, super.stackTrace}) : super.technical();
+  const NetworkError({super.technicalMessage, super.stackTrace});
 
   @override
   bool get isNetworkRelated => true;
+
+  @override
+  bool get isTransient => true;
 }
 
 final class ServerUnreachableError extends AppError {
-  const ServerUnreachableError(super.userMessage, {super.technicalMessage, super.stackTrace});
-  const ServerUnreachableError.technical({super.technicalMessage, super.stackTrace}) : super.technical();
+  const ServerUnreachableError({super.technicalMessage, super.stackTrace});
 
   @override
   bool get isNetworkRelated => true;
+
+  @override
+  bool get isTransient => true;
+}
+
+final class TimeoutError extends AppError {
+  const TimeoutError({super.technicalMessage, super.stackTrace});
+
+  @override
+  bool get isTransient => true;
 }
 
 final class UnexpectedError extends AppError {
-  const UnexpectedError(super.userMessage, {super.technicalMessage, super.stackTrace});
-  const UnexpectedError.technical({super.technicalMessage, super.stackTrace}) : super.technical();
+  const UnexpectedError({super.technicalMessage, super.stackTrace});
 }
 
 final class DeviceSecurityError extends AppError {
-  const DeviceSecurityError(super.userMessage, {super.technicalMessage, super.stackTrace});
-  const DeviceSecurityError.technical({super.technicalMessage, super.stackTrace}) : super.technical();
+  const DeviceSecurityError({super.technicalMessage, super.stackTrace});
 }
 
 final class ValidationError extends AppError {
-  const ValidationError(super.userMessage, {this.field, super.technicalMessage, super.stackTrace});
-  const ValidationError.technical({super.technicalMessage, super.stackTrace, this.field}) : super.technical();
+  const ValidationError({super.technicalMessage, super.stackTrace, this.field});
   final String? field;
 }

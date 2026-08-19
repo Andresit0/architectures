@@ -1,4 +1,10 @@
-part of '_widgets.lib.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import 'package:clean_architecture_sdd_harness/design_system/theme/app_colors.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/password.dart';
+import 'package:clean_architecture_sdd_harness/l10n/app_localizations.dart';
 
 class PasswordFormField extends StatefulWidget {
   final TextEditingController? controller;
@@ -31,7 +37,7 @@ class _PasswordFormFieldState extends State<PasswordFormField> {
 
   String? _validate(String? value, AppLocalizations l10n) {
     if (value == null || value.isEmpty) return l10n.errorEmptyPassword;
-    if (value.length < 6) return l10n.errorPasswordTooShort;
+    if (!Password.result(value).isSuccess) return l10n.errorPasswordTooShort;
     return null;
   }
 
@@ -72,10 +78,7 @@ class _PasswordFormFieldState extends State<PasswordFormField> {
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.red,
-                width: 1.5,
-              ),
+              borderSide: BorderSide(color: AppColors.red, width: 1.5),
             ),
           ),
         );

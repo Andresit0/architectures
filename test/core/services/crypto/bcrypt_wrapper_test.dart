@@ -20,17 +20,5 @@ void main() {
       final result2 = await hasher.hash('myPassword123!');
       expect(result1, isNot(result2));
     });
-
-    test('verify returns true for correct password', () async {
-      final hash = await hasher.hash('myPassword123!');
-      final valid = await hasher.verify('myPassword123!', hash);
-      expect(valid, isTrue);
-    });
-
-    test('verify returns false for incorrect password', () async {
-      final hash = await hasher.hash('myPassword123!');
-      final valid = await hasher.verify('wrongPassword', hash);
-      expect(valid, isFalse);
-    });
   });
 }

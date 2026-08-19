@@ -11,7 +11,7 @@ sealed class Result<T> {
   bool get isSuccess;
 }
 
-class Success<T> extends Result<T> {
+final class Success<T> extends Result<T> {
   const Success(this.data);
   final T data;
 
@@ -19,8 +19,7 @@ class Success<T> extends Result<T> {
   R fold<R>({
     required R Function(T data) onSuccess,
     required R Function(AppError error) onFailure,
-  }) =>
-      onSuccess(data);
+  }) => onSuccess(data);
 
   @override
   bool get isSuccess => true;
@@ -34,8 +33,7 @@ final class Failure<T> extends Result<T> {
   R fold<R>({
     required R Function(T data) onSuccess,
     required R Function(AppError error) onFailure,
-  }) =>
-      onFailure(error);
+  }) => onFailure(error);
 
   @override
   bool get isSuccess => false;

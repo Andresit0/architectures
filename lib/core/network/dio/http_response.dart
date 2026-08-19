@@ -7,8 +7,3 @@ class HttpResponse<T> {
 class HttpSuccess<T> extends HttpResponse<T> {
   const HttpSuccess({super.data, super.statusCode});
 }
-
-class HttpFailure extends HttpResponse<Map<String, dynamic>> {
-  final String? message;
-  const HttpFailure({required super.statusCode, super.data, this.message});
-}

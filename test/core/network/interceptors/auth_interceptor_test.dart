@@ -22,6 +22,23 @@ class _CapturingHandler extends ErrorInterceptorHandler {
   }
 }
 
+class _CapturingRequestHandler extends RequestInterceptorHandler {
+  _CapturingRequestHandler(this.onHandled);
+
+  final void Function(RequestOptions options) onHandled;
+
+  @override
+  void next(RequestOptions options) {
+    onHandled(options);
+  }
+
+  @override
+  void resolve(Response<dynamic> response, [bool? syncCall]) {}
+
+  @override
+  void reject(DioException error, [bool? syncCall]) {}
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(Uri());
@@ -49,12 +66,84 @@ void main() {
     forceLogoutCalled = false;
     retryResult = null;
 
-
     interceptor = AuthInterceptor(
       onRetry: onRetry,
       internalDio: internalDio,
       onForceLogout: () => forceLogoutCalled = true,
+      getToken: () async => null,
     );
+  });
+
+  group('onRequest - Authorization header', () {
+    test('attaches Bearer token when none is present', () async {
+      RequestOptions? capturedOptions;
+      var nextCalled = false;
+      final handler = _CapturingRequestHandler((options) {
+        capturedOptions = options;
+        nextCalled = true;
+      });
+
+      interceptor = AuthInterceptor(
+        onRetry: onRetry,
+        internalDio: internalDio,
+        onForceLogout: () => forceLogoutCalled = true,
+        getToken: () async => 'jwt_token_123',
+      );
+
+      await interceptor.onRequest(
+        RequestOptions(path: '/clinical-history'),
+        handler,
+      );
+
+      expect(nextCalled, isTrue);
+      expect(capturedOptions!.headers['Authorization'], 'Bearer jwt_token_123');
+    });
+
+    test('does not override an existing Authorization header', () async {
+      RequestOptions? capturedOptions;
+      var nextCalled = false;
+      final handler = _CapturingRequestHandler((options) {
+        capturedOptions = options;
+        nextCalled = true;
+      });
+
+      interceptor = AuthInterceptor(
+        onRetry: onRetry,
+        internalDio: internalDio,
+        onForceLogout: () => forceLogoutCalled = true,
+        getToken: () async => 'jwt_token_123',
+      );
+
+      await interceptor.onRequest(
+        RequestOptions(
+          path: '/clinical-history',
+          headers: <String, dynamic>{'Authorization': 'Bearer custom'},
+        ),
+        handler,
+      );
+
+      expect(nextCalled, isTrue);
+      expect(capturedOptions!.headers['Authorization'], 'Bearer custom');
+    });
+
+    test('passes through when no token is available', () async {
+      var nextCalled = false;
+      final handler = _CapturingRequestHandler((_) => nextCalled = true);
+
+      interceptor = AuthInterceptor(
+        onRetry: onRetry,
+        internalDio: internalDio,
+        onForceLogout: () => forceLogoutCalled = true,
+        getToken: () async => null,
+      );
+
+      await interceptor.onRequest(
+        RequestOptions(path: '/clinical-history'),
+        handler,
+      );
+
+      expect(nextCalled, isTrue);
+    });
   });
 
   group('onError - 401 with successful retry', () {
@@ -66,7 +155,9 @@ void main() {
         statusCode: 200,
         data: {'ok': true},
       );
-      when(() => internalDio.fetch<dynamic>(any())).thenAnswer((_) async => retryResponse);
+      when(
+        () => internalDio.fetch<dynamic>(any()),
+      ).thenAnswer((_) async => retryResponse);
 
       final err = DioException(
         requestOptions: RequestOptions(path: '/original'),
@@ -101,31 +192,35 @@ void main() {
   });
 
   group('onError - 401 without connection', () {
-    test('passes through without calling onForceLogout after max retries', () async {
-      retryResult = const RetryNoConnection();
+    test(
+      'passes through WITHOUT calling onForceLogout after max retries',
+      () async {
+        retryResult = const RetryNoConnection();
 
-      interceptor = AuthInterceptor(
-        onRetry: onRetry,
-        internalDio: internalDio,
-        onForceLogout: () => forceLogoutCalled = true,
-        retryPolicy: const ExponentialBackoff(
-          baseDelay: Duration.zero,
-          maxRetries: 1,
-        ),
-      );
+        interceptor = AuthInterceptor(
+          onRetry: onRetry,
+          internalDio: internalDio,
+          onForceLogout: () => forceLogoutCalled = true,
+          getToken: () async => null,
+          retryPolicy: const ExponentialBackoff(
+            baseDelay: Duration.zero,
+            maxRetries: 1,
+          ),
+        );
 
-      final err = DioException(
-        requestOptions: RequestOptions(path: '/original'),
-        response: Response(
+        final err = DioException(
           requestOptions: RequestOptions(path: '/original'),
-          statusCode: 401,
-        ),
-      );
+          response: Response(
+            requestOptions: RequestOptions(path: '/original'),
+            statusCode: 401,
+          ),
+        );
 
-      await runOnError(err);
+        await runOnError(err);
 
-      expect(forceLogoutCalled, isTrue);
-    });
+        expect(forceLogoutCalled, isFalse);
+      },
+    );
   });
 
   group('onError - non-401 errors', () {
@@ -157,6 +252,7 @@ void main() {
         },
         internalDio: internalDio,
         onForceLogout: () => forceLogoutCalled = true,
+        getToken: () async => null,
         retryPolicy: const ExponentialBackoff(maxRetries: 1),
       );
 
@@ -253,6 +349,7 @@ void main() {
         onRetry: () async => const RetryFailed(),
         internalDio: Dio(),
         onForceLogout: () {},
+        getToken: () async => null,
       );
       expect(factoryInterceptor, isA<AuthInterceptor>());
     });
@@ -262,6 +359,7 @@ void main() {
         onRetry: () async => const RetryFailed(),
         internalDio: Dio(),
         onForceLogout: () {},
+        getToken: () async => null,
         retryPolicy: const ExponentialBackoff(maxRetries: 5),
       );
       expect(factoryInterceptor, isA<AuthInterceptor>());

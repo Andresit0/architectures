@@ -1,10 +1,2 @@
-export 'clinical_history_attachment_dto.dart';
-export 'clinical_history_diagnosis_dto.dart';
-export 'clinical_history_dto.dart';
-export 'clinical_history_facility_dto.dart';
-export 'clinical_history_professional_dto.dart';
-export 'clinical_history_service_dto.dart';
-export 'clinical_history_state_dto.dart';
 export 'login_response_dto.dart';
-export 'patient_dto.dart';
 export 'token_dto.dart';

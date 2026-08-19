@@ -16,13 +16,19 @@ void main() {
 
     test('replaces multiple params', () {
       final uri = Uri.parse('/:org/:repo/issues');
-      final result = UriUtils.replacePathParams(uri, {'org': 'flutter', 'repo': 'flutter'});
+      final result = UriUtils.replacePathParams(uri, {
+        'org': 'flutter',
+        'repo': 'flutter',
+      });
       expect(result.path, '/flutter/flutter/issues');
     });
 
     test('ignores extra pathParams keys not present in path', () {
       final uri = Uri.parse('/patient/42');
-      final result = UriUtils.replacePathParams(uri, {'id': '1', 'extra': 'ignored'});
+      final result = UriUtils.replacePathParams(uri, {
+        'id': '1',
+        'extra': 'ignored',
+      });
       expect(result.path, '/patient/42');
     });
 

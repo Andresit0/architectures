@@ -1,8 +1,10 @@
 ---
 description: |
-  Review open GitHub PRs against 6 quality gates. Supports filtering by
-  label, branch, or author. Fetches and tests each PR locally before
-  approval. Generates structured review report per PR.
+  Review open GitHub PRs against 6 quality gates. Introspects the repository's
+  branch protection (strict, required checks, approval count) and governance docs
+  before evaluating. Fetches and tests each PR locally (analyzer, tests, dart
+  format matching CI). Gates merges on the required-check matrix and never relies
+  on self-approval (GitHub blocks it). Generates structured review report per PR.
 ---
 
 # Super Pull-Request Reviewer
@@ -25,12 +27,12 @@ Load:
 
 Ask the user:
 
-> "¿Quieres filtrar los PRs a revisar? Puedes especificar (opcional):
-> - `--label <label>`: solo PRs con cierto label
-> - `--branch <pattern>`: solo PRs cuya rama coincida con el patrón (glob)
-> - `--author <username>`: solo PRs de un autor específico
+> "Do you want to filter the PRs to review? You can specify (optional):
+> - `--label <label>`: only PRs with a certain label
+> - `--branch <pattern>`: only PRs whose branch matches the pattern (glob)
+> - `--author <username>`: only PRs by a specific author
 >
-> Deja vacío para revisar **todos** los PRs abiertos."
+> Leave empty to review **all** open PRs."
 
 Collect `$FILTER_LABEL`, `$FILTER_BRANCH`, `$FILTER_AUTHOR` from the user response.
 
@@ -95,6 +97,43 @@ Save per-PR data for evaluation.
 
 ---
 
+## Step 3.5 — Detect repository configuration (mandatory preflight)
+
+Before evaluating the gates, introspect the repository so NOTHING is hardcoded:
+
+```bash
+# 1. Who am I? (determines whether --approve is even possible)
+gh api user --jq .login
+
+# 2. Branch protection for the base branch (develop)
+gh api repos/{owner}/{repo}/branches/{base}/protection \
+  --jq '{strict: .required_status_checks.strict, contexts: .required_status_checks.contexts, approvals: .required_approving_review_count}'
+
+# 3. Repository settings that shape the merge flow
+gh api repos/{owner}/{repo} \
+  --jq '{allow_update_branch: .allow_update_branch, delete_branch_on_merge: .delete_branch_on_merge, allow_auto_merge: .allow_auto_merge, squash_title: .squash_merge_commit_title, squash_body: .squash_merge_commit_message}'
+```
+
+Then read the local governance docs:
+
+- `.github/REQUIRED_CHECKS.md` — source of truth for the required-check matrix.
+- `.github/REPOSITORY_GOVERNANCE.md` — personal-account exception (this repo:
+  0 approvals on develop; the gate is the required-check matrix + an explicit
+  human merge after CI is green; GitHub blocks self-approval).
+
+**Drift check (REQUIRED_CHECKS.md vs branch protection):** compare the contexts
+listed in the doc against the introspected `required_status_checks.contexts`. If
+they differ, report the drift in the final report and evaluate Gate 6 using the
+INTROSPECTED contexts (the actual GitHub gate), flagging the doc as stale. Example
+seen in this repo: `codecov/patch` is described in the doc's coverage section but
+is NOT in branch protection — it never blocks a merge.
+
+Record for later steps: `$MY_LOGIN`, `$REQUIRED_CONTEXTS`, `$STRICT`,
+`$APPROVALS_REQUIRED`, `$ALLOW_UPDATE_BRANCH`, `$ALLOW_AUTO_MERGE`,
+`$DELETE_BRANCH_ON_MERGE`.
+
+---
+
 ## Step 4 — Evaluate the 6 quality gates
 
 For each PR, evaluate all 6 gates:
@@ -125,13 +164,22 @@ Result: `PASS` / `FAIL`
 
 ### Gate 3 — ✓ Architecture remains consistent
 
-Validate clean architecture rules:
+Validate clean architecture rules (matrix per MD/APP_ARCHITECTURE.md, Rules 1-28):
 
-- `lib/**/domain/` must NOT import from `infrastructure/` or `presentation/`
-- `lib/**/infrastructure/` may import from `domain/` only
-- `lib/**/presentation/` may import from `domain/` and `infrastructure/`
-- `lib/features/{f1}/` must NOT import from `lib/features/{f2}/` (feature isolation)
-- `lib/shared/` should not import from `lib/features/`
+```
+shared              -> solo shared / Dart puro
+core                -> shared y core; nunca features ni app
+features/domain     -> shared y anotaciones permitidas
+features/infra      -> own domain + shared + core
+features/presentation -> own di + domain + shared + design_system + l10n
+app                 -> composition root
+```
+
+- `lib/features/{f}/presentation/` must NOT import `infrastructure/` directly (it goes through `di/` and the shared seam)
+- `lib/features/{f}/domain/` must NOT import `infrastructure/` or `presentation/`
+- `lib/features/{f1}/` must NOT import from `lib/features/{f2}/` (feature isolation; auth/clinical_history coupling only via Shared Kernel contracts)
+- `lib/shared/` must be pure Dart (no Flutter, no third-party types)
+- `lib/core/` must NEVER import `features/` or `app/` (avoids `core <-> auth` cycles)
 
 Analyze imports in the diff to detect violations.
 
@@ -164,15 +212,24 @@ This is performed in Step 5 as a separate operation. For now, mark as `PENDING`.
 
 ### Gate 6 — ✓ Ready to merge
 
-Check:
+Check against the INTROSPECTED configuration (Step 3.5):
 
 | Condition | Pass criteria |
 |-----------|---------------|
 | Mergeable | `mergeable == "MERGEABLE"` |
 | No merge conflicts | `mergeable != "CONFLICTING"` |
-| CI status | All `statusCheckRollup[].conclusion == "SUCCESS"` |
+| Required CI checks | Every context in `$REQUIRED_CONTEXTS` (branch protection) is green; a stacked PR pointed at an intermediate branch shows checks only after retarget → **WARN** |
+| `statusCheckRollup` empty | **WARN** (no CI configured) |
 
-If `statusCheckRollup` is empty → **WARN** (no CI configured).
+**Evaluate ONLY the required contexts.** Jobs that appear as `skipping`
+(`Branch Source Gate` on develop, `Integration` gated by `RUN_DEVICE_INTEGRATION`)
+are OK. Non-required checks that fail (e.g. `codecov/patch` — not in branch
+protection, upload is tolerant) are INFORMATIVE, never a FAIL.
+
+> A stacked PR pointed at an intermediate branch shows no checks until retargeted;
+> **`gh pr checks --required` printing "no checks reported" (exit 0) is NOT green** —
+> it means CI hasn't registered yet. Do not treat it as success. The merge gate is
+> delegated to GitHub auto-merge (Step 10.1).
 
 Result: `PASS` / `WARN` / `FAIL`
 
@@ -198,6 +255,7 @@ flutter pub get
 ### 5.3 — Run tests
 
 ```bash
+dart format --output=none --set-exit-if-changed lib test integration_test
 flutter test
 ```
 
@@ -358,7 +416,7 @@ Based on review depth (heuristic):
 
 Output this note after each blocked/needs-review PR:
 
-> *Este PR requiere revisión manual. Enfócate en: <specific areas>*
+> *This PR requires manual review. Focus on: <specific areas>*
 
 ---
 
@@ -379,15 +437,15 @@ If stacked, determine the merge order by analyzing the dependency chain. The fir
 
 Show the summary table from Step 7.1 to the user and ask:
 
-> "Los siguientes PRs pasaron todos los gates y están listos para aprobar y mergear:
+> "The following PRs passed all gates and are ready to approve and merge:
 > - #<N1> — <title>
 > - #<N2> — <title>
 >
-> ¿Quieres que ejecute `gh pr review --approve` y luego los mergee en orden?"
+> Do you want me to run `gh pr review --approve` and then merge them in order?"
 
 If stacked PRs were detected, also add:
 
-> "⚠️ Se detectó un stack de PRs. Se mergearán secuencialmente: se aprobarán todos, luego se mergeará el PR base, se retargeteará el siguiente a develop, se mergeará, y así sucesivamente hasta el último."
+> "⚠️ A stack of PRs was detected. They will be merged sequentially: all will be approved, then the base PR will be merged, the next one will be retargeted to develop, merged, and so on until the last one."
 
 Valid affirmative answers: `yes`, `approve`, `approve all`, `execute`, `merge`, `merge all`, `si`, `sí`, `adelante`
 
@@ -399,13 +457,32 @@ If the user says nothing affirmative → STOP. Do not approve or merge any PR.
 
 ## Step 9 — Execute approvals
 
-For each PR the user confirmed:
+Approval policy is driven by the introspected `$APPROVALS_REQUIRED` and `$MY_LOGIN`
+(Step 3.5):
+
+- `$APPROVALS_REQUIRED == 0` (this repo, personal-account exception) → approvals
+  are unnecessary. Do NOT call `--approve`. The gate is the required-check matrix +
+  the explicit human merge below. Optionally record the verification without
+  approval:
+  `gh pr review <N> --comment --body "Verified locally: analyzer, tests, dart format, required CI checks green."`
+- `$APPROVALS_REQUIRED > 0` and `$MY_LOGIN != PR author` → `gh pr review <N> --approve`.
+- `$APPROVALS_REQUIRED > 0` and `$MY_LOGIN == PR author` → **BLOCKED**: GitHub
+  rejects self-approval (HTTP 422 "Can not approve your own pull request"). Notify
+  the user that a second reviewer account is required; do NOT attempt `--approve`.
+
+When approval IS applicable:
 
 ```bash
 for N in <PR_NUMBER_1> <PR_NUMBER_2> ...; do
-  gh pr review $N --approve && echo "✅ PR #$N: Approved via CLI" || echo "❌ PR #$N: approval failed"
+  gh pr review $N --approve && echo "✅ PR #$N: Approved via CLI" || {
+    echo "❌ PR #$N: approval failed" >&2
+    exit 1
+  }
 done
 ```
+
+NEVER ignore a failed approval: capture stderr and STOP. A PR that was not
+approved must not be merged as if it were.
 
 ---
 
@@ -415,43 +492,118 @@ done
 
 In a stacked chain, each PR's branch is based on the previous PR's branch. Merging out of order or in parallel will cause "Base branch was modified" errors and potential conflicts.
 
+**Policy**: this repository squash-merges with `squash_merge_commit_title: PR_TITLE` (see README.md → Git Flow). ALWAYS use `--squash`. NEVER use `--merge`, which would leave merge commits and contradict the documented branch protection policy.
+
 **NEVER** use parallel tool calls (`bash` invocations in the same message) for merge operations. Always use a **single sequential `for` loop** in one `bash` call.
 
-### 10.1 — Independent PRs (all target develop)
+### 10.0 — Preconditions (driven by Step 3.5 introspection)
+
+- `develop` is protected with `strict: true` → every PR must be **up-to-date** with its base before merge. `gh pr update-branch` is available because `$ALLOW_UPDATE_BRANCH == true`. If it is NOT available, merge locally instead (fetch the PR head, merge the base, push) — but first check the repo settings, they may have changed.
+- The repo auto-deletes merged branches (`$DELETE_BRANCH_ON_MERGE == true`) → do NOT pass `--delete-branch=false`; never depend on a merged branch still existing.
+- A draft PR blocks the merge → always `gh pr ready <N>` first, WITHOUT `2>/dev/null` (show errors).
+- The merge gate is delegated to GitHub **auto-merge** (`gh pr merge --auto --squash`), which merges
+  atomically once the required-check matrix is green — this requires `$ALLOW_AUTO_MERGE == true`
+  (introspected). If `--auto` is unavailable/rejected, fall back to the explicit path (Step 10.1):
+  wait for `gh pr checks --required` to be **reported** and green (never treat "no checks reported" as
+  green), then `gh pr merge --squash`.
+
+### 10.1 — Single merge procedure (independent AND stacked)
+
+This flow is idempotent/resumable: it skips PRs already MERGED, so it can be
+re-run safely after a partial failure.
 
 ```bash
 for N in <PR_NUMBER_1> <PR_NUMBER_2> ...; do
-  echo "🔀 Merging PR #$N..."
-  gh pr ready $N 2>/dev/null
-  gh pr merge $N --merge && echo "✅ PR #$N merged" || echo "❌ PR #$N failed"
+  if [ "$(gh pr view $N --json state -q .state)" = "MERGED" ]; then
+    echo "✅ PR #$N already merged. Skipping."
+    continue
+  fi
+
+  echo "🔀 Processing PR #$N..."
+  # A draft PR blocks (auto-)merge → mark ready first; show errors (no 2>/dev/null).
+  gh pr ready $N || { echo "❌ PR #$N: failed to make ready" >&2; exit 1; }
+
+  # Retarget stacked PRs to develop once the previous PR is merged.
+  BASE=$(gh pr view $N --json baseRefName -q .baseRefName)
+  if [ "$BASE" != "develop" ]; then
+    gh pr edit $N --base develop || { echo "❌ PR #$N: retarget failed" >&2; exit 1; }
+  fi
+
+  # strict: true → bring the branch up to date BEFORE enabling auto-merge.
+  gh pr update-branch $N || { echo "❌ PR #$N: update-branch failed" >&2; exit 1; }
+
+  # Sanity: after retarget the diff must still contain this PR's own changes.
+  if [ -z "$(gh pr diff $N 2>/dev/null)" ]; then
+    echo "❌ PR #$N: empty diff after retarget — changes already on develop" >&2
+    exit 1
+  fi
+
+  # Enable GitHub auto-merge: it merges ATOMICALLY once the required-check
+  # matrix is green (LEARN.md → Merge strategy). No manual check parsing, no
+  # "no checks reported" race. Ignores non-required failures (codecov/patch →
+  # UNSTABLE, never blocks). Requires $ALLOW_AUTO_MERGE == true (Step 10.0
+  # fallback applies otherwise).
+  gh pr merge $N --auto --squash || { echo "❌ PR #$N: auto-merge enable failed" >&2; exit 1; }
+
+  # Wait for the merge to complete by polling the authoritative state.
+  attempts=0
+  while [ "$(gh pr view $N --json state -q .state)" != "MERGED" ]; do
+    MS=$(gh pr view $N --json mergeStateStatus -q .mergeStateStatus)
+    case "$MS" in
+      BLOCKED|DIRTY|CONFLICTING)
+        echo "❌ PR #$N: auto-merge blocked ($MS):" >&2
+        gh pr checks $N --required >&2 || true
+        exit 1 ;;
+      BEHIND) gh pr update-branch $N ;;
+    esac
+    attempts=$((attempts + 1))
+    if [ $attempts -gt 120 ]; then
+      echo "❌ PR #$N: auto-merge did not complete in ~30 min" >&2
+      exit 1
+    fi
+    sleep 15
+  done
+  echo "✅ PR #$N merged"
 done
+
+# Optional post-merge verification (enterprise safety net): the last develop
+# CI run must be green.
+gh run list --branch develop --limit 1 --json status,conclusion \
+  --jq '.[0] | "post-merge CI: \(.status) / \(.conclusion)"'
 ```
 
-### 10.2 — Stacked PRs (each targets the previous PR's branch)
+**Why retarget + update-branch works:** After the previous PR is merged into develop, its commits are already part of develop. Retargeting (`--base develop`) makes GitHub recalculate the merge-base, so the diff shrinks to only the PR's own commits. With `strict: true` the merge ALSO requires the branch to be up-to-date — `gh pr update-branch` satisfies that, so no `git rebase` or manual merge is needed in the normal case.
 
-Merge in dependency order (base PR first, then each subsequent PR):
+**Post-merge CI (why a post-merge run may look cancelled):** `ci.yml` also
+triggers on `push` to `develop`/`main`, so every squash merge starts a fresh full
+run on the new develop commit — in addition to the PR-head gate above. Because
+`concurrency: cancel-in-progress: true` groups runs by ref (`ci-${{ github.ref }}`),
+the next merge in a rapid stack CANCELS the previous post-merge run (e.g. a
+`Build Android: cancelled` on an earlier squash commit is expected and benign).
+The AUTHORITATIVE merge gate is the PR-head required checks, which GitHub
+auto-merge enforces before merging (Step 10.1 waits for state == MERGED, which
+only happens once the required matrix is green); the post-merge run is a safety
+net, not a gate.
+
+**Recovering from an `add/add` conflict in update-branch** (e.g. a formatting fix
+was pushed to an upstream PR but not propagated downstream): GitHub cannot
+auto-update. Resolve locally taking develop's version of the conflicting file:
 
 ```bash
-# 1. Merge the base PR (it already targets develop/main)
-BASE_N=<BASE_PR_NUMBER>
-gh pr ready $BASE_N 2>/dev/null
-gh pr merge $BASE_N --merge || { echo "❌ PR #$BASE_N failed. STOP."; exit 1; }
-
-# 2. For each remaining PR in the stack:
-for N in <NEXT_N1> <NEXT_N2> ...; do
-  echo "🔀 Processing PR #$N..."
-  gh pr ready $N 2>/dev/null
-  gh pr edit $N --base develop
-  gh pr merge $N --merge && echo "✅ PR #$N merged" || {
-    echo "❌ PR #$N merge failed. STOP. Do not continue with downstream PRs."
-    exit 1
-  }
-done
+git fetch origin pull/<N>/head:review/pr-<N>
+git checkout review/pr-<N>
+git merge origin/develop        # conflict expected on the shared file
+git checkout origin/develop -- <conflicted-file>   # take develop's version
+dart format --output=none --set-exit-if-changed lib test integration_test
+flutter analyze
+git commit -m "fix(scope): resolve update-branch conflict from develop"
+git push origin review/pr-<N>:refs/heads/<pr-branch>
 ```
 
-**Why retarget works:** After the previous PR is merged into develop, its commits are already part of develop. Retargeting (`--base develop`) makes GitHub recalculate the merge-base, so the diff shrinks to only the PR's own commits. No `git rebase` or manual merge is needed.
+STOP only if the conflict is a REAL semantic conflict (not formatting/no-op);
+notify the user otherwise.
 
-**No `--squash`**: Use `--merge` to keep individual commits. Squash merges collapse the PR into a single commit, losing granularity and complicating stacked chains.
+**Squash policy**: Always `--squash`. The internal atomic commits remain mandatory for review and rollback before the merge; the squash commit preserves reviewability on develop (README.md → Git Flow). Do NOT use `--merge`.
 
 ---
 
@@ -481,11 +633,19 @@ done
 | Single PR matching filters | Process normally — still run through all 6 gates. |
 | Only docs/MD PRs | Skip heavy `flutter test` if no Dart files changed. Gate 5 → PASS automatically. |
 | PR modifies generated files without source | Flag as suspicious (Gate 2 → FAIL). |
-| Parallel merge attempt | NEVER use parallel bash calls for merges in a stacked chain. Always use a single sequential `for` loop per Step 10.2. |
-| Stacked PRs detected (base != develop) | Report stacking info to user. Merge sequentially per Step 10.2. |
+| Parallel merge attempt | NEVER use parallel bash calls for merges in a stacked chain. Always use a single sequential `for` loop per Step 10.1. |
+| Stacked PRs detected (base != develop) | Report stacking info to user. Merge sequentially per Step 10.1. |
 | Retarget conflict (`gh pr edit` fails) | STOP. The previous PR was not fully merged. Notify user. |
 | Diff after retarget seems too large | Before merging, verify: `gh pr diff <N> | wc -l` should show only the PR's own changes. |
 | Merge conflict after retarget | STOP. PR has conflicts with develop after retarget. Do NOT continue with downstream PRs. |
 | Mixed stack (some PRs target develop, others target a PR branch) | Process the independent PRs first (those targeting develop/main), then the stacked chain. |
 | User confirms a subset of PRs in a stack | If they skip a PR in the middle of a stack, the downstream PRs cannot be merged. Inform the user. |
-| User says "approve only" without merge | Only run `gh pr review <N> --approve`. Do NOT merge any PR. |
+| User says "approve only" without merge | Only run `gh pr review <N> --approve` (if applicable per Step 9). Do NOT merge any PR. |
+| Self-approval would be required (`$MY_LOGIN` == author and `$APPROVALS_REQUIRED > 0`) | GitHub rejects self-approval (HTTP 422). Never call `--approve`; gate on the required-check matrix + human merge. Notify the user a second reviewer account is needed. |
+| `codecov/patch` fails but is not required | Informative only (not in branch protection; upload tolerant). NOT a Gate 6 failure. |
+| PR is a draft at merge time | Run `gh pr ready <N>` before enabling auto-merge (Step 10.1). |
+| `gh pr checks --required` prints "no checks reported" right after retarget/update-branch | NOT green — CI hasn't registered yet. Do NOT treat as success; Step 10.1 delegates the gate to GitHub auto-merge. |
+| `gh pr update-branch` conflicts (`add/add`) | Resolve locally taking develop's version (Step 10.1 recovery). STOP only on real semantic conflicts. |
+| `mergeStateStatus` stays `BEHIND` after auto-merge enabled | Re-run `gh pr update-branch <N>`; auto-merge completes once up-to-date and checks pass (wait for state == MERGED). |
+| PR already MERGED when re-running the merge loop | Skip it (idempotent/resumable loop). |
+| REQUIRED_CHECKS.md drifts from branch-protection contexts | Report the drift in the final report; evaluate Gate 6 with the introspected contexts (the real gate). |

@@ -4,6 +4,5 @@ class ApiException implements Exception {
   const ApiException(this.statusCode);
 
   @override
-  String toString() =>
-      'ApiException($statusCode): The server returned an error. Please try again later.';
+  String toString() => 'ApiException: HTTP $statusCode';
 }

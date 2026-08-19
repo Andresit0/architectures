@@ -1,5 +1,5 @@
 import 'package:clean_architecture_sdd_harness/core/network/_network.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_connectivity_checker.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

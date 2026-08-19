@@ -3,7 +3,7 @@ import 'package:clean_architecture_sdd_harness/core/network/retry/retry_policy.d
 enum EndpointSla {
   urgent(Duration(seconds: 5), RetryPolicy.standard),
   standard(Duration(seconds: 15), RetryPolicy.standard),
-  login(Duration(seconds: 30), RetryPolicy.idempotent),
+  login(Duration(seconds: 30), RetryPolicy.standard),
   upload(Duration(seconds: 120), RetryPolicy.idempotent),
   unknown(Duration(seconds: 10), RetryPolicy.standard);
 

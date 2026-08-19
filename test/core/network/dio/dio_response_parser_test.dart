@@ -48,23 +48,31 @@ void main() {
       expect(result.data, isNull);
     });
 
-    test('bytes type with non-List<int> data throws UnexpectedResponseException',
-        () {
-      final response = Response(
-        requestOptions: RequestOptions(path: ''),
-        data: 'not bytes',
-        statusCode: 200,
-      );
+    test(
+      'bytes type with non-List<int> data throws UnexpectedResponseException',
+      () {
+        final response = Response(
+          requestOptions: RequestOptions(path: ''),
+          data: 'not bytes',
+          statusCode: 200,
+        );
 
-      expect(
-        () => parser.parse(
-          response: response,
-          type: 'bytes',
-          returnDioResponse: false,
-        ),
-        throwsA(isA<UnexpectedResponseException>()),
-      );
-    });
+        expect(
+          () => parser.parse(
+            response: response,
+            type: 'bytes',
+            returnDioResponse: false,
+          ),
+          throwsA(
+            isA<UnexpectedResponseException>().having(
+              (e) => e.details,
+              'details',
+              allOf(isNot(contains('Respuesta')), contains('String')),
+            ),
+          ),
+        );
+      },
+    );
 
     test('image type returns HttpSuccess', () {
       final response = Response(
@@ -84,11 +92,11 @@ void main() {
       expect(result.data, isNull);
     });
 
-    test('404 status code returns HttpFailure with status code', () {
+    test('already-decoded Map data returns HttpSuccess with data', () {
       final response = Response(
         requestOptions: RequestOptions(path: ''),
-        data: 'not found',
-        statusCode: 404,
+        data: <String, dynamic>{'key': 'value'},
+        statusCode: 200,
       );
 
       final result = parser.parse(
@@ -97,9 +105,64 @@ void main() {
         returnDioResponse: false,
       );
 
-      expect(result, isA<HttpFailure>());
-      expect(result.statusCode, 404);
+      expect(result, isA<HttpSuccess>());
+      expect(result.statusCode, 200);
+      expect((result as HttpSuccess).data, {'key': 'value'});
+    });
+
+    test('already-decoded List data returns HttpSuccess without data', () {
+      final response = Response(
+        requestOptions: RequestOptions(path: ''),
+        data: <dynamic>['a', 'b'],
+        statusCode: 200,
+      );
+
+      final result = parser.parse(
+        response: response,
+        type: null,
+        returnDioResponse: false,
+      );
+
+      expect(result, isA<HttpSuccess>());
+      expect(result.statusCode, 200);
       expect(result.data, isNull);
+    });
+
+    test(
+      'non-2xx status throws UnexpectedResponseException (handled upstream)',
+      () {
+        final response = Response(
+          requestOptions: RequestOptions(path: ''),
+          data: {'message': 'Unauthorized'},
+          statusCode: 401,
+        );
+
+        expect(
+          () => parser.parse(
+            response: response,
+            type: null,
+            returnDioResponse: false,
+          ),
+          throwsA(isA<UnexpectedResponseException>()),
+        );
+      },
+    );
+
+    test('unexpected body type throws UnexpectedResponseException', () {
+      final response = Response(
+        requestOptions: RequestOptions(path: ''),
+        data: 42,
+        statusCode: 200,
+      );
+
+      expect(
+        () => parser.parse(
+          response: response,
+          type: null,
+          returnDioResponse: false,
+        ),
+        throwsA(isA<UnexpectedResponseException>()),
+      );
     });
 
     test('JSON response decodes correctly into Map', () {
@@ -107,7 +170,21 @@ void main() {
         requestOptions: RequestOptions(path: ''),
         statusCode: 200,
         data: <int>[
-          123, 34, 107, 101, 121, 34, 58, 32, 34, 118, 97, 108, 117, 101, 34,
+          123,
+          34,
+          107,
+          101,
+          121,
+          34,
+          58,
+          32,
+          34,
+          118,
+          97,
+          108,
+          117,
+          101,
+          34,
           125,
         ],
       );
@@ -127,9 +204,7 @@ void main() {
       final response = Response(
         requestOptions: RequestOptions(path: ''),
         statusCode: 200,
-        data: <int>[
-          91, 34, 97, 34, 44, 32, 34, 98, 34, 93,
-        ],
+        data: <int>[91, 34, 97, 34, 44, 32, 34, 98, 34, 93],
       );
 
       final result = parser.parse(
@@ -173,56 +248,6 @@ void main() {
       expect(result, isA<HttpSuccess>());
       expect(result.statusCode, equals(201));
       expect((result as HttpSuccess).data, equals({'id': 1}));
-    });
-
-    test('statusCode 401 con JSON body → HttpFailure', () {
-      final response = Response(
-        statusCode: 401,
-        requestOptions: RequestOptions(path: '/test'),
-        data: {'message': 'Unauthorized'},
-      );
-      final result = parser.parse(
-        response: response,
-        type: null,
-        returnDioResponse: false,
-      );
-      expect(result, isA<HttpFailure>());
-      expect(result.statusCode, equals(401));
-      if (result is HttpFailure) {
-        expect(result.message, equals('Unauthorized'));
-      }
-    });
-
-    test('statusCode 500 con body vacío → HttpFailure', () {
-      final response = Response(
-        statusCode: 500,
-        requestOptions: RequestOptions(path: '/test'),
-      );
-      final result = parser.parse(
-        response: response,
-        type: null,
-        returnDioResponse: false,
-      );
-      expect(result, isA<HttpFailure>());
-      expect(result.statusCode, equals(500));
-      if (result is HttpFailure) {
-        expect(result.message, isNull);
-      }
-    });
-
-    test('statusCode 403 → HttpFailure', () {
-      final response = Response(
-        statusCode: 403,
-        requestOptions: RequestOptions(path: '/test'),
-        data: {'message': 'Forbidden'},
-      );
-      final result = parser.parse(
-        response: response,
-        type: null,
-        returnDioResponse: false,
-      );
-      expect(result, isA<HttpFailure>());
-      expect(result.statusCode, equals(403));
     });
   });
 }

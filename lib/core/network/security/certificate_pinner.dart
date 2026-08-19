@@ -21,7 +21,8 @@ class CertificatePinner implements ICertificatePinner {
     if (isReleaseMode && pinnedCertificates.isEmpty) {
       throw StateError(
         'Certificate pinning requires pinned certificates. '
-        'Add SHA-256 hashes to AppEnvironment.current.pinnedCertificates before deploying to production.',
+        'Add SHA-256 hashes to the active environment pinnedCertificates '
+        'before deploying to production.',
       );
     }
     try {
@@ -34,8 +35,6 @@ class CertificatePinner implements ICertificatePinner {
           return pinnedCertificates.contains(sha.toString());
         };
       }
-    } catch (_) {
-      // Non-IO platform (web), skip pinning
-    }
+    } catch (_) {}
   }
 }

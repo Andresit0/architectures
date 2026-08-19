@@ -1,37 +1,92 @@
-import 'package:clean_architecture_sdd_harness/app/di/network/dio_provider.dart';
 import 'package:clean_architecture_sdd_harness/core/network/_network.lib.dart';
-import 'package:clean_architecture_sdd_harness/shared/interfaces/i_credential_store.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/handle_401_usecase.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/refresh_token_usecase.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/di/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import '../../helpers/mocks.dart';
 
 class MockInternetService extends Mock implements InternetService {}
 
-class MockCredentialStore extends Mock implements ICredentialStore {}
+class _FakeAuthInterceptor implements IAuthInterceptorProvider {
+  int setupCalls = 0;
+  IDioWrapper? lastDio;
+
+  @override
+  void setupAuthInterceptor(IDioWrapper dioWrapper) {
+    setupCalls++;
+    lastDio = dioWrapper;
+  }
+}
 
 void main() {
   group('DioProvider auth interceptor wiring', () {
-    test('httpServiceProvider correctly wires setupAuthInterceptor through provider chain', () {
-      final container = ProviderContainer(overrides: [
-        internetServiceProvider.overrideWithValue(MockInternetService()),
-        handle401UseCaseProvider.overrideWith((ref) => Handle401UseCase(
-          tokenStore: MockTokenStore(),
-          connectivityChecker: MockConnectivityChecker(),
-          credentialStore: MockCredentialStore(),
-          repository: MockAuthRepository(),
-          refreshTokenUseCase: RefreshTokenUseCase(repository: MockAuthRepository()),
-        )),
-      ]);
+    test(
+      'httpServiceProvider wires authInterceptorProvider.setupAuthInterceptor',
+      () {
+        final fake = _FakeAuthInterceptor();
+        final container = ProviderContainer(
+          overrides: [
+            internetServiceProvider.overrideWithValue(MockInternetService()),
+            authInterceptorProvider.overrideWithValue(fake),
+          ],
+        );
 
-      final dioWrapper = container.read(httpServiceProvider);
+        final dioWrapper = container.read(httpServiceProvider);
 
-      expect(dioWrapper, isA<DioWrapper>());
+        expect(dioWrapper, isA<DioWrapper>());
+        expect(
+          fake.setupCalls,
+          1,
+          reason: 'httpServiceProvider MUST apply the auth interceptor once',
+        );
+        expect(identical(fake.lastDio, dioWrapper), isTrue);
+
+        container.dispose();
+      },
+    );
+
+    test('authDioProvider does NOT apply the auth interceptor', () {
+      final fake = _FakeAuthInterceptor();
+      final container = ProviderContainer(
+        overrides: [
+          internetServiceProvider.overrideWithValue(MockInternetService()),
+          authInterceptorProvider.overrideWithValue(fake),
+        ],
+      );
+
+      final dio = container.read(authDioProvider);
+
+      expect(dio, isA<IDioWrapper>());
+      expect(
+        fake.setupCalls,
+        0,
+        reason:
+            'authDioProvider MUST NOT apply the auth interceptor '
+            '(no token exists yet during login/refresh)',
+      );
 
       container.dispose();
     });
+  });
+
+  group('authInterceptorProvider seam', () {
+    test(
+      'throws SeamNotBoundException when not overridden (fail-fast seam)',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        expect(
+          () => container.read(authInterceptorProvider),
+          throwsA(
+            predicate(
+              (e) =>
+                  e.toString().contains(
+                    'authInterceptorProvider must be overridden',
+                  ) &&
+                  !e.toString().contains('UnimplementedError'),
+            ),
+          ),
+        );
+      },
+    );
   });
 }

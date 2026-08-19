@@ -13,8 +13,6 @@ import 'package:mocktail/mocktail.dart';
 
 class MockInternetService extends Mock implements IInternetService {}
 
-/// Mirrors the certificate validation logic from _configurePinning.
-/// Tests the pinning logic without requiring X509Certificate mocking.
 bool validateCert(Uint8List der, List<String> pinned) {
   final sha = sha256.convert(der);
   return pinned.contains(sha.toString());
@@ -39,7 +37,10 @@ void main() {
 
     test('validator returns false when no pinned certificates', () {
       final der = Uint8List.fromList([0x30, 0x31, 0x32]);
-      expect(validateCert(der, AppEnvironment.current.pinnedCertificates), isFalse);
+      expect(
+        validateCert(der, const DevEnvironment().pinnedCertificates),
+        isFalse,
+      );
     });
 
     test('validator returns true when hash matches pinned certificate', () {
@@ -50,7 +51,12 @@ void main() {
 
     test('validator returns false when hash does not match', () {
       final der = Uint8List.fromList([0x30, 0x31, 0x32]);
-      expect(validateCert(der, ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']), isFalse);
+      expect(
+        validateCert(der, [
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ]),
+        isFalse,
+      );
     });
 
     test('sha256 of DER bytes produces a 64-char hex string', () {
@@ -79,55 +85,149 @@ void main() {
   });
 
   group('DioWrapper _request connectivity exception handling', () {
-    test('TimeoutException from _checkConnectivity is caught and converted to AppTimeoutException', () async {
-      final dio = Dio();
-      final wrapper = DioWrapper(mockInternetService, dio);
+    test(
+      'TimeoutException from _checkConnectivity is caught and converted to AppTimeoutException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenThrow(TimeoutException('Simulated timeout'));
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenThrow(TimeoutException('Simulated timeout'));
+
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<AppTimeoutException>()),
+        );
+      },
+    );
+
+    test(
+      'no internet pre-check throws NoConnectionException (preserves NetworkError mapping)',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
+
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => false);
+
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<NoConnectionException>()),
+        );
+      },
+    );
+  });
+
+  group('DioWrapper _request parser exception handling', () {
+    test('unexpected parser error is sanitized (no raw error leak)', () async {
+      final dio = Dio();
+      final wrapper = DioWrapper(
+        mockInternetService,
+        dio,
+        null,
+        null,
+        _ThrowingParser(Exception('SECRET internal detail')),
+      );
+
+      when(
+        () => mockInternetService.isConnected(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isServerReachable(),
+      ).thenAnswer((_) async => true);
+      dio.interceptors.add(_SuccessInterceptor());
 
       expect(
         () => wrapper.get(Uri.parse('https://example.com')),
-        throwsA(isA<AppTimeoutException>()),
+        throwsA(
+          isA<UnexpectedResponseException>().having(
+            (e) => e.details,
+            'details',
+            allOf(
+              isNot(contains('SECRET')),
+              contains('Unexpected internal error'),
+            ),
+          ),
+        ),
       );
     });
+
+    test(
+      'parser UnexpectedResponseException is rethrown without double wrapping',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(
+          mockInternetService,
+          dio,
+          null,
+          null,
+          const _ThrowingParser(
+            UnexpectedResponseException('original details'),
+          ),
+        );
+
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
+        dio.interceptors.add(_SuccessInterceptor());
+
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(
+            isA<UnexpectedResponseException>().having(
+              (e) => e.details,
+              'details',
+              'original details',
+            ),
+          ),
+        );
+      },
+    );
   });
 
   group('DioException timeout type handling', () {
-    test('DioExceptionType.connectionTimeout throws AppTimeoutException', () async {
-      final dio = Dio();
-      final wrapper = DioWrapper(mockInternetService, dio);
+    test(
+      'DioExceptionType.connectionTimeout throws AppTimeoutException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
 
-      dio.interceptors.add(
-        _DioThrowInterceptor(
-          timeoutType: DioExceptionType.connectionTimeout,
-        ),
-      );
+        dio.interceptors.add(
+          _DioThrowInterceptor(timeoutType: DioExceptionType.connectionTimeout),
+        );
 
-      expect(
-        () => wrapper.get(Uri.parse('https://example.com')),
-        throwsA(isA<AppTimeoutException>()),
-      );
-    });
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<AppTimeoutException>()),
+        );
+      },
+    );
 
     test('DioExceptionType.sendTimeout throws AppTimeoutException', () async {
       final dio = Dio();
       final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isConnected(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isServerReachable(),
+      ).thenAnswer((_) async => true);
 
       dio.interceptors.add(
-        _DioThrowInterceptor(
-          timeoutType: DioExceptionType.sendTimeout,
-        ),
+        _DioThrowInterceptor(timeoutType: DioExceptionType.sendTimeout),
       );
 
       expect(
@@ -136,77 +236,159 @@ void main() {
       );
     });
 
-    test('DioExceptionType.receiveTimeout throws AppTimeoutException', () async {
-      final dio = Dio();
-      final wrapper = DioWrapper(mockInternetService, dio);
+    test(
+      'DioExceptionType.receiveTimeout throws AppTimeoutException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
 
-      dio.interceptors.add(
-        _DioThrowInterceptor(
-          timeoutType: DioExceptionType.receiveTimeout,
-        ),
-      );
+        dio.interceptors.add(
+          _DioThrowInterceptor(timeoutType: DioExceptionType.receiveTimeout),
+        );
 
-      expect(
-        () => wrapper.get(Uri.parse('https://example.com')),
-        throwsA(isA<AppTimeoutException>()),
-      );
-    });
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<AppTimeoutException>()),
+        );
+      },
+    );
 
-    test('DioException with response status code throws ApiException', () async {
-      final dio = Dio();
-      final wrapper = DioWrapper(mockInternetService, dio);
+    test(
+      'DioException with response status code throws ApiException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
 
-      dio.interceptors.add(
-        _DioThrowInterceptor(statusCode: 500),
-      );
+        dio.interceptors.add(_DioThrowInterceptor(statusCode: 500));
 
-      expect(
-        () => wrapper.get(Uri.parse('https://example.com')),
-        throwsA(isA<ApiException>()),
-      );
-    });
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<ApiException>()),
+        );
+      },
+    );
 
-    test('DioException without response and not timeout throws NoConnectionException', () async {
-      final dio = Dio();
-      final wrapper = DioWrapper(mockInternetService, dio);
+    test(
+      'DioExceptionType.connectionError without response throws NoConnectionException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
 
-      dio.interceptors.add(
-        _DioThrowInterceptor(
-          timeoutType: DioExceptionType.unknown,
-        ),
-      );
+        dio.interceptors.add(
+          _DioThrowInterceptor(timeoutType: DioExceptionType.connectionError),
+        );
 
-      expect(
-        () => wrapper.get(Uri.parse('https://example.com')),
-        throwsA(isA<NoConnectionException>()),
-      );
-    });
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<NoConnectionException>()),
+        );
+      },
+    );
+
+    test(
+      'DioException without response and not timeout throws UnexpectedResponseException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
+
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
+
+        dio.interceptors.add(
+          _DioThrowInterceptor(timeoutType: DioExceptionType.unknown),
+        );
+
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<UnexpectedResponseException>()),
+        );
+      },
+    );
+
+    test(
+      'DioExceptionType.badCertificate without response throws UnexpectedResponseException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
+
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
+
+        dio.interceptors.add(
+          _DioThrowInterceptor(timeoutType: DioExceptionType.badCertificate),
+        );
+
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<UnexpectedResponseException>()),
+        );
+      },
+    );
+
+    test(
+      'DioExceptionType.cancel without response throws UnexpectedResponseException',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
+
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
+
+        dio.interceptors.add(
+          _DioThrowInterceptor(timeoutType: DioExceptionType.cancel),
+        );
+
+        expect(
+          () => wrapper.get(Uri.parse('https://example.com')),
+          throwsA(isA<UnexpectedResponseException>()),
+        );
+      },
+    );
   });
 
   group('DioWrapper ConnectionProfile', () {
-    test('default profile sets connectTimeout to 10s and receiveTimeout to 15s', () {
-      final dio = Dio();
-      DioWrapper(mockInternetService, dio);
-      expect(dio.options.connectTimeout, const Duration(seconds: 10));
-      expect(dio.options.receiveTimeout, const Duration(seconds: 15));
-    });
-
-
+    test(
+      'default profile sets connectTimeout to 10s and receiveTimeout to 15s',
+      () {
+        final dio = Dio();
+        DioWrapper(mockInternetService, dio);
+        expect(dio.options.connectTimeout, const Duration(seconds: 10));
+        expect(dio.options.receiveTimeout, const Duration(seconds: 15));
+      },
+    );
   });
 
   group('DioWrapper EndpointSla', () {
@@ -214,10 +396,12 @@ void main() {
       final dio = Dio();
       final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isConnected(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isServerReachable(),
+      ).thenAnswer((_) async => true);
 
       dio.interceptors.add(_SuccessInterceptor());
 
@@ -232,16 +416,16 @@ void main() {
       final dio = Dio();
       final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isConnected(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isServerReachable(),
+      ).thenAnswer((_) async => true);
 
       dio.interceptors.add(_SuccessInterceptor());
 
-      final result = await wrapper.get(
-        Uri.parse('https://example.com'),
-      );
+      final result = await wrapper.get(Uri.parse('https://example.com'));
       expect(result, isA<HttpResponse<Map<String, dynamic>>>());
     });
   });
@@ -251,10 +435,12 @@ void main() {
       final dio = Dio();
       final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isConnected(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isServerReachable(),
+      ).thenAnswer((_) async => true);
 
       dio.interceptors.add(
         _RetryThenSuccessInterceptor(failuresBeforeSuccess: 1),
@@ -262,42 +448,81 @@ void main() {
 
       final result = await wrapper.get(
         Uri.parse('https://example.com'),
-        sla: EndpointSla.login,
+        sla: EndpointSla.upload,
       );
       expect(result, isA<HttpResponse<Map<String, dynamic>>>());
     });
 
-    test('retry with idempotent sla exhausts all attempts then throws',
-        () async {
-      final dio = Dio();
-      final wrapper = DioWrapper(mockInternetService, dio);
+    test(
+      'retry with idempotent sla exhausts all attempts then throws',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
 
-      dio.interceptors.add(
-        _RetryThenSuccessInterceptor(failuresBeforeSuccess: 3),
-      );
+        dio.interceptors.add(
+          _RetryThenSuccessInterceptor(failuresBeforeSuccess: 3),
+        );
 
-      expect(
-        () => wrapper.get(
-          Uri.parse('https://example.com'),
-          sla: EndpointSla.login,
-        ),
-        throwsA(isA<AppTimeoutException>()),
-      );
-    });
+        expect(
+          () => wrapper.get(
+            Uri.parse('https://example.com'),
+            sla: EndpointSla.upload,
+          ),
+          throwsA(
+            isA<AppTimeoutException>().having(
+              (e) => e.message,
+              'message',
+              contains('example.com'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'login sla does NOT retry on timeout (login is not idempotent)',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
+
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
+
+        dio.interceptors.add(
+          _RetryThenSuccessInterceptor(failuresBeforeSuccess: 1),
+        );
+
+        expect(
+          () => wrapper.get(
+            Uri.parse('https://example.com'),
+            sla: EndpointSla.login,
+          ),
+          throwsA(isA<AppTimeoutException>()),
+        );
+      },
+    );
 
     test('no retry when sla has standard retry policy', () async {
       final dio = Dio();
       final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isConnected(),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockInternetService.isServerReachable(),
+      ).thenAnswer((_) async => true);
 
       dio.interceptors.add(
         _RetryThenSuccessInterceptor(failuresBeforeSuccess: 1),
@@ -312,27 +537,30 @@ void main() {
       );
     });
 
-    test('TimeoutException from interceptor is wrapped as NoConnectionException (no retry for unknown type)', () async {
-      final dio = Dio();
-      final wrapper = DioWrapper(mockInternetService, dio);
+    test(
+      'interceptor unknown error is wrapped as UnexpectedResponseException (no retry)',
+      () async {
+        final dio = Dio();
+        final wrapper = DioWrapper(mockInternetService, dio);
 
-      when(() => mockInternetService.isConnected())
-          .thenAnswer((_) async => true);
-      when(() => mockInternetService.isServerReachable())
-          .thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isConnected(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockInternetService.isServerReachable(),
+        ).thenAnswer((_) async => true);
 
-      dio.interceptors.add(
-        _TimeoutErrorInterceptor(failBeforeSuccess: 1),
-      );
+        dio.interceptors.add(_TimeoutErrorInterceptor(failBeforeSuccess: 1));
 
-      expect(
-        () => wrapper.get(
-          Uri.parse('https://example.com'),
-          sla: EndpointSla.login,
-        ),
-        throwsA(isA<NoConnectionException>()),
-      );
-    });
+        expect(
+          () => wrapper.get(
+            Uri.parse('https://example.com'),
+            sla: EndpointSla.login,
+          ),
+          throwsA(isA<UnexpectedResponseException>()),
+        );
+      },
+    );
   });
 }
 
@@ -368,9 +596,7 @@ class _DioThrowInterceptor extends Interceptor {
 }
 
 class _RetryThenSuccessInterceptor extends Interceptor {
-  _RetryThenSuccessInterceptor({
-    required this.failuresBeforeSuccess,
-  });
+  _RetryThenSuccessInterceptor({required this.failuresBeforeSuccess});
 
   final int failuresBeforeSuccess;
   int _callCount = 0;
@@ -413,5 +639,20 @@ class _TimeoutErrorInterceptor extends Interceptor {
         data: <String, dynamic>{'success': true},
       ),
     );
+  }
+}
+
+class _ThrowingParser implements IDioResponseParser {
+  const _ThrowingParser(this.error);
+
+  final Object error;
+
+  @override
+  HttpResponse<Map<String, dynamic>> parse({
+    required Response<dynamic> response,
+    required String? type,
+    required bool returnDioResponse,
+  }) {
+    throw error;
   }
 }

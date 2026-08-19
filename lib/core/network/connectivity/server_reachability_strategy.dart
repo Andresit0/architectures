@@ -5,14 +5,10 @@ import 'package:dio/dio.dart';
 abstract class IServerReachabilityStrategy {
   const IServerReachabilityStrategy();
 
-  /// Returns `true` if the server is reachable (any HTTP response received).
-  /// Returns `false` on network error, timeout, or DNS failure.
-  /// Does NOT indicate backend health (DB, Redis, etc.).
   Future<bool> check();
 }
 
 class NativeSocketReachability extends IServerReachabilityStrategy {
-
   const NativeSocketReachability({
     required this.host,
     required this.port,
@@ -35,11 +31,7 @@ class NativeSocketReachability extends IServerReachabilityStrategy {
 }
 
 class HttpReachability extends IServerReachabilityStrategy {
-
-  const HttpReachability({
-    required this._dio,
-    required this._baseUri,
-  });
+  const HttpReachability({required this._dio, required this._baseUri});
   final Dio _dio;
   final Uri _baseUri;
 

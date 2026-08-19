@@ -10,4 +10,6 @@ abstract interface class ILocalAuthDatasource {
   Future<void> clearSession();
 
   Future<LoginResponseEntity?> restoreSession();
+
+  Future<void> resetAccount();
 }

@@ -1,0 +1,20 @@
+# Repository code owners (enterprise governance)
+#
+# Bootstrap mapping for the repository. Replace the default owner below with
+# the real platform/architecture/domain/quality teams before enforcing
+# `require_code_owner_reviews`. A personal account without those teams uses
+# this file as a documented baseline and keeps human approval as the gate.
+#
+# @Andresit0  ← fallback owner for every path not matched below
+
+*                                       @Andresit0
+
+/lib/core/                              @Andresit0
+/lib/app/                               @Andresit0
+/lib/shared/                            @Andresit0
+/lib/features/clinical_history/         @Andresit0
+/lib/features/auth/                     @Andresit0
+/test/                                  @Andresit0
+/integration_test/                      @Andresit0
+/.github/                               @Andresit0
+/.ai/                                   @Andresit0

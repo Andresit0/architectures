@@ -5,6 +5,8 @@ import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/log
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/token_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/infrastructure/datasources/auth_datasource_impl.dart';
 import 'package:clean_architecture_sdd_harness/shared/exceptions/_exceptions.lib.dart';
+import 'package:clean_architecture_sdd_harness/core/config/app_environment.dart';
+import 'package:clean_architecture_sdd_harness/core/network/api_endpoints.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/dio_wrapper.dart';
 import 'package:clean_architecture_sdd_harness/core/network/dio/http_response.dart';
 import 'package:clean_architecture_sdd_harness/core/network/timeouts/_timeouts.lib.dart';
@@ -22,17 +24,17 @@ void main() {
 
   setUp(() {
     mockDio = _MockDio();
-    datasource = AuthRemoteDatasourceImpl(dio: mockDio);
+    datasource = AuthRemoteDatasourceImpl(
+      dio: mockDio,
+      appUries: const AppUris(env: DevEnvironment()),
+    );
   });
 
   group('AuthRemoteDatasourceImpl', () {
     test('login_success_returns_LoginResponseEntity', () async {
       final responseJson = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[
           <String, dynamic>{
             'id': 'ch1',
@@ -87,10 +89,7 @@ void main() {
     test('login_calls_dio', () async {
       final responseJson = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[],
       };
       when(
@@ -102,10 +101,7 @@ void main() {
         ),
       ).thenAnswer((_) async => HttpResponse(data: responseJson));
 
-      await datasource.login(
-        email: 'test@example.com',
-        passwordHash: 'hash',
-      );
+      await datasource.login(email: 'test@example.com', passwordHash: 'hash');
 
       verify(
         () => mockDio.post(
@@ -128,20 +124,14 @@ void main() {
       ).thenThrow(const ApiException(401));
 
       expect(
-        () => datasource.login(
-          email: 'test@example.com',
-          passwordHash: 'hash',
-        ),
+        () => datasource.login(email: 'test@example.com', passwordHash: 'hash'),
         throwsA(isA<ApiException>()),
       );
     });
 
     test('refreshToken_success_returns_TokenEntity', () async {
       final responseJson = <String, dynamic>{
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'new_jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'new_jwt_token'},
       };
       when(
         () => mockDio.post(
@@ -182,10 +172,7 @@ void main() {
     test('login_passes_EndpointSla_login', () async {
       final responseJson = <String, dynamic>{
         'patient': <String, dynamic>{'id': '1', 'name': 'John Doe'},
-        'token': <String, dynamic>{
-          'type': 'Bearer',
-          'key': 'jwt_token',
-        },
+        'token': <String, dynamic>{'type': 'Bearer', 'key': 'jwt_token'},
         'clinical_history': <Map<String, dynamic>>[],
       };
       when(
@@ -197,15 +184,113 @@ void main() {
         ),
       ).thenAnswer((_) async => HttpResponse(data: responseJson));
 
-      await datasource.login(
-        email: 'test@example.com',
-        passwordHash: 'hash',
-      );
+      await datasource.login(email: 'test@example.com', passwordHash: 'hash');
 
       verify(
         () => mockDio.post(
           any(),
           body: any(named: 'body'),
+          headers: any(named: 'headers'),
+          sla: EndpointSla.login,
+        ),
+      ).called(1);
+    });
+
+    test(
+      'login_throws_UnexpectedResponseException_when_response_is_not_a_json_object',
+      () async {
+        when(
+          () => mockDio.post(
+            any(),
+            body: any(named: 'body'),
+            headers: any(named: 'headers'),
+            sla: any(named: 'sla'),
+          ),
+        ).thenAnswer(
+          (_) async => HttpResponse<Map<String, dynamic>>(data: null),
+        );
+
+        expect(
+          () =>
+              datasource.login(email: 'test@example.com', passwordHash: 'hash'),
+          throwsA(
+            isA<UnexpectedResponseException>().having(
+              (e) => e.details,
+              'details',
+              'login response must be a JSON object',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'refreshToken_throws_UnexpectedResponseException_when_response_is_not_a_json_object',
+      () async {
+        when(
+          () => mockDio.post(
+            any(),
+            headers: any(named: 'headers'),
+            sla: any(named: 'sla'),
+          ),
+        ).thenAnswer(
+          (_) async => HttpResponse<Map<String, dynamic>>(data: null),
+        );
+
+        expect(
+          () => datasource.refreshToken(token: 'old_token'),
+          throwsA(
+            isA<UnexpectedResponseException>().having(
+              (e) => e.details,
+              'details',
+              'refreshToken response must be a JSON object',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'refreshToken_throws_UnexpectedResponseException_when_token_is_not_a_json_object',
+      () async {
+        when(
+          () => mockDio.post(
+            any(),
+            headers: any(named: 'headers'),
+            sla: any(named: 'sla'),
+          ),
+        ).thenAnswer((_) async => HttpResponse(data: {'token': 'not-a-map'}));
+
+        expect(
+          () => datasource.refreshToken(token: 'old_token'),
+          throwsA(
+            isA<UnexpectedResponseException>().having(
+              (e) => e.details,
+              'details',
+              'refreshToken response must contain a token object',
+            ),
+          ),
+        );
+      },
+    );
+
+    test('refreshToken_passes_EndpointSla_login', () async {
+      final responseJson = <String, dynamic>{
+        'token': <String, dynamic>{'key': 'new_jwt_token'},
+      };
+      when(
+        () => mockDio.post(
+          any(),
+          headers: any(named: 'headers'),
+          sla: any(named: 'sla'),
+        ),
+      ).thenAnswer((_) async => HttpResponse(data: responseJson));
+
+      await datasource.refreshToken(token: 'old_token');
+
+      verify(
+        () => mockDio.post(
+          any(),
           headers: any(named: 'headers'),
           sla: EndpointSla.login,
         ),

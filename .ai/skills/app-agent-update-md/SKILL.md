@@ -104,7 +104,7 @@ For each changed file in Bucket B, determine which documentation files are affec
 | Type of changed file | Likely MD files to update |
 |---------------------|--------------------------|
 | `lib/features/<name>/**` | `MD/APP_TREE.md`, `AGENTS.md` (feature list)|
-| `lib/shared/functions/**` | `MD/APP_PACKAGE_WRAPPER.md`, `MD/APP_TREE.md` |
+| `lib/shared/functions/**` | `MD/APP_PACKAGE_WRAPPER.md`, `MD/APP_TREE.md`, `MD/APP_ARCHITECTURE.md`, `MD/APP_DARTZ.md` |
 | `lib/core/services/**` | `MD/APP_PACKAGE_WRAPPER.md`, `MD/APP_TREE.md` |
 | `lib/app/di/**` | `MD/APP_PROVIDERS.md`, `MD/APP_TREE.md` |
 | `lib/core/services/**` | `MD/APP_TREE.md` |
@@ -193,7 +193,7 @@ After all phases are complete, output **only** this table (no prose before or af
 
 | Modified file | Changes made |
 |---------------|-------------|
-| `MD/APP_TREE.md` | Updated feature list to include `appointments` feature folder |
+| `MD/APP_TREE.md` | Updated feature list to include `clinical_history` feature folder |
 | `AGENTS.md` | Added `app_changes` skill entry in available skills table |
 | `MD/APP_SKILLS.md` | Added `app_changes` to minimum skills list |
 | `.ai/skills/new_skill/SKILL.md` | Skipped by user |

@@ -1,18 +1,15 @@
 import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
+import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import '../entities/token_entity.dart';
 import '../repositories/i_auth_repository.dart';
+import 'refresh_token_input.dart';
 
-class RefreshTokenUseCase {
-  const RefreshTokenUseCase({
-    required this._repository,
-  });
+class RefreshTokenUseCase implements IUseCase<RefreshTokenInput, TokenEntity> {
+  const RefreshTokenUseCase({required this._repository});
 
   final IAuthRepository _repository;
 
-  Future<Result<TokenEntity>> call({
-    required String token,
-  }) async {
-    final result = await _repository.refreshToken(token: token);
-    return result;
-  }
+  @override
+  Future<Result<TokenEntity>> call(RefreshTokenInput input) =>
+      _repository.refreshToken(token: input.token);
 }

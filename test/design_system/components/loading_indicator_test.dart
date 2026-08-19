@@ -33,9 +33,7 @@ void main() {
       const widget = LoadingIndicator();
       expect(widget, isA<LoadingIndicator>());
 
-      await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: widget)),
-      );
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: widget)));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });

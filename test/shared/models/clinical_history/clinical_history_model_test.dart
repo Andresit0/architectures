@@ -18,11 +18,13 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const ClinicalHistoryServiceEntity(
-          code: 'GEN',
-          name: 'General Medicine',
-          category: 'consultation',
-        )),
+        equals(
+          const ClinicalHistoryServiceEntity(
+            code: 'GEN',
+            name: 'General Medicine',
+            category: 'consultation',
+          ),
+        ),
       );
     });
 
@@ -31,7 +33,6 @@ void main() {
       expect(copy.name, 'Cardiology');
       expect(copy.code, 'GEN');
     });
-
   });
 
   group('ClinicalHistoryFacilityEntity', () {
@@ -44,11 +45,13 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const ClinicalHistoryFacilityEntity(
-          id: 'FAC-001',
-          name: 'Central Medical Center',
-          city: 'Quito',
-        )),
+        equals(
+          const ClinicalHistoryFacilityEntity(
+            id: 'FAC-001',
+            name: 'Central Medical Center',
+            city: 'Quito',
+          ),
+        ),
       );
     });
 
@@ -57,7 +60,6 @@ void main() {
       expect(copy.name, 'North Side Clinic');
       expect(copy.id, 'FAC-001');
     });
-
   });
 
   group('ClinicalHistoryProfessionalEntity', () {
@@ -70,14 +72,15 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const ClinicalHistoryProfessionalEntity(
-          id: 'DOC-1001',
-          fullname: 'Dr. Sarah Johnson',
-          specialty: 'Internal Medicine',
-        )),
+        equals(
+          const ClinicalHistoryProfessionalEntity(
+            id: 'DOC-1001',
+            fullname: 'Dr. Sarah Johnson',
+            specialty: 'Internal Medicine',
+          ),
+        ),
       );
     });
-
 
     test('copyWith creates modified copy', () {
       final copy = entity.copyWith(fullname: 'Dr. Jane Smith');
@@ -95,10 +98,12 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const ClinicalHistoryDiagnosisEntity(
-          code: 'Z00.00',
-          name: 'General adult medical examination',
-        )),
+        equals(
+          const ClinicalHistoryDiagnosisEntity(
+            code: 'Z00.00',
+            name: 'General adult medical examination',
+          ),
+        ),
       );
     });
 
@@ -107,7 +112,6 @@ void main() {
       expect(copy.name, 'Follow-up examination');
       expect(copy.code, 'Z00.00');
     });
-
   });
 
   group('ClinicalHistoryAttachmentEntity', () {
@@ -122,16 +126,17 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const ClinicalHistoryAttachmentEntity(
-          id: 'FILE-001',
-          type: 'pdf',
-          name: 'medical-report.pdf',
-          sizeBytes: 248530,
-          url: 'https://example.com/report-001.pdf',
-        )),
+        equals(
+          const ClinicalHistoryAttachmentEntity(
+            id: 'FILE-001',
+            type: 'pdf',
+            name: 'medical-report.pdf',
+            sizeBytes: 248530,
+            url: 'https://example.com/report-001.pdf',
+          ),
+        ),
       );
     });
-
 
     test('copyWith creates modified copy', () {
       final copy = entity.copyWith(name: 'lab-results.pdf');
@@ -149,10 +154,9 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const ClinicalHistoryStateEntity(
-          code: 'ready',
-          label: 'Available',
-        )),
+        equals(
+          const ClinicalHistoryStateEntity(code: 'ready', label: 'Available'),
+        ),
       );
     });
 
@@ -161,7 +165,6 @@ void main() {
       expect(copy.label, 'Completed');
       expect(copy.code, 'ready');
     });
-
   });
 
   group('ClinicalHistoryEntity', () {
@@ -216,26 +219,27 @@ void main() {
     test('equality works correctly', () {
       expect(
         entity,
-        equals(const ClinicalHistoryEntity(
-          id: 'ch1',
-          encounterNumber: 'ENC-001',
-          service: service,
-          facility: facility,
-          professional: professional,
-          encounterDate: '2026-01-15',
-          createdAt: null,
-          updatedAt: null,
-          publishedAt: null,
-          summary: 'Routine checkup',
-          description: null,
-          diagnosis: diagnosis,
-          observations: [],
-          attachments: attachments,
-          state: null,
-        )),
+        equals(
+          const ClinicalHistoryEntity(
+            id: 'ch1',
+            encounterNumber: 'ENC-001',
+            service: service,
+            facility: facility,
+            professional: professional,
+            encounterDate: '2026-01-15',
+            createdAt: null,
+            updatedAt: null,
+            publishedAt: null,
+            summary: 'Routine checkup',
+            description: null,
+            diagnosis: diagnosis,
+            observations: [],
+            attachments: attachments,
+            state: null,
+          ),
+        ),
       );
     });
-
 
     test('professional can be null', () {
       const entityWithoutProfessional = ClinicalHistoryEntity(

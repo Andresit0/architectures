@@ -58,10 +58,7 @@ class DioMultipartBuilder implements IDioMultipartBuilder {
 
   Future<MultipartFile?> _resolveFile(Object? item) async {
     if (item is IMultipartFile) {
-      return MultipartFile.fromFile(
-        item.filePath,
-        filename: item.fieldName,
-      );
+      return MultipartFile.fromFile(item.filePath, filename: item.fieldName);
     }
     if (item is MultipartFile) {
       return item;
