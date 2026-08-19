@@ -14,7 +14,7 @@ class AppDatabase implements IAppDatabase {
   final DatabaseFactory? _databaseFactory;
   final IDatabaseKeyService? _keyService;
 
-  Future<ISembastDb>? _databaseFuture;
+  Future<IDatabaseHandle>? _databaseFuture;
   Database? _rawDatabase;
 
   IDatabaseKeyService get _effectiveKeyService =>
@@ -24,7 +24,7 @@ class AppDatabase implements IAppDatabase {
       _databaseFactory ?? (kIsWeb ? databaseFactoryWeb : databaseFactoryIo);
 
   @override
-  Future<ISembastDb> get database {
+  Future<IDatabaseHandle> get database {
     _databaseFuture ??= _openDatabase();
     return _databaseFuture!;
   }
@@ -35,7 +35,7 @@ class AppDatabase implements IAppDatabase {
     return '${dir.path}/app_database.db';
   }
 
-  Future<ISembastDb> _openDatabase() async {
+  Future<IDatabaseHandle> _openDatabase() async {
     final password = await _resolveKey();
     final codec = getEncryptSembastCodec(password: password);
     final name = await _dbName();
@@ -51,7 +51,10 @@ class AppDatabase implements IAppDatabase {
     }
   }
 
-  Future<ISembastDb> _recoverDatabase(String name, SembastCodec codec) async {
+  Future<IDatabaseHandle> _recoverDatabase(
+    String name,
+    SembastCodec codec,
+  ) async {
     await _factory.deleteDatabase(name);
     final db = await _factory.openDatabase(name, codec: codec);
     _rawDatabase = db;

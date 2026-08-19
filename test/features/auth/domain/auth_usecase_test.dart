@@ -5,28 +5,26 @@ import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/log
 import 'package:clean_architecture_sdd_harness/shared/models/patient/patient_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/token_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/repositories/i_auth_repository.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/domain/repositories/i_local_auth_repository.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/login_input.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/login_usecase.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/refresh_token_input.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/refresh_token_usecase.dart';
+import 'package:clean_architecture_sdd_harness/features/auth/domain/usecases/save_session_input.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/email.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/password_hash.dart';
 import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 
 class _MockAuthRepository extends Mock implements IAuthRepository {}
 
-class _MockSessionRepository extends Mock implements ILocalAuthRepository {}
-
 class _MockPasswordHasher extends Mock implements IPasswordHasher {}
 
-class _MockTokenStore extends Mock implements ITokenStore {}
+class _MockSaveSessionUseCase extends Mock
+    implements IUseCase<SaveSessionInput, void> {}
 
 void main() {
   late _MockAuthRepository mockRepo;
-  late _MockSessionRepository mockSessionRepo;
   late _MockPasswordHasher mockPasswordHasher;
-  late _MockTokenStore mockTokenStore;
+  late _MockSaveSessionUseCase mockSaveSessionUseCase;
   late LoginUseCase loginUseCase;
   late RefreshTokenUseCase refreshTokenUseCase;
 
@@ -35,36 +33,42 @@ void main() {
     registerFallbackValue(PasswordHash.raw('somehash'));
     registerFallbackValue('');
     registerFallbackValue(
-      LoginResponseEntity(
-        patient: PatientEntity(id: '', name: ''),
-        token: TokenEntity(key: ''),
-        clinicalHistory: [],
+      SaveSessionInput(
+        data: const LoginResponseEntity(
+          patient: PatientEntity(id: '', name: ''),
+          token: TokenEntity(key: ''),
+          clinicalHistory: [],
+        ),
+        email: Email.raw('test@test.com'),
+        passwordHash: PasswordHash.raw('somehash'),
+        rememberMe: false,
       ),
     );
   });
 
   setUp(() {
     mockRepo = _MockAuthRepository();
-    mockSessionRepo = _MockSessionRepository();
     mockPasswordHasher = _MockPasswordHasher();
-    mockTokenStore = _MockTokenStore();
-    when(() => mockTokenStore.save(any())).thenAnswer((_) async {});
+    mockSaveSessionUseCase = _MockSaveSessionUseCase();
+    when(
+      () => mockSaveSessionUseCase(any()),
+    ).thenAnswer((_) async => const Success(null));
     loginUseCase = LoginUseCase(
       repository: mockRepo,
-      sessionRepository: mockSessionRepo,
       passwordHasher: mockPasswordHasher,
-      tokenStore: mockTokenStore,
+      saveSessionUseCase: mockSaveSessionUseCase,
     );
     refreshTokenUseCase = RefreshTokenUseCase(repository: mockRepo);
   });
 
   group('LoginUseCase', () {
-    test('login_calls_repository_and_returns_data_on_success', () async {
-      const response = LoginResponseEntity(
-        patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(key: 'token123'),
-        clinicalHistory: [],
-      );
+    const response = LoginResponseEntity(
+      patient: PatientEntity(id: '1', name: 'John Doe'),
+      token: TokenEntity(key: 'token123'),
+      clinicalHistory: [],
+    );
+
+    void stubLoginSuccess() {
       when(
         () => mockPasswordHasher.hash(any()),
       ).thenAnswer((_) async => 'hashed_password');
@@ -74,6 +78,10 @@ void main() {
           passwordHash: any(named: 'passwordHash'),
         ),
       ).thenAnswer((_) async => const Success(response));
+    }
+
+    test('login_calls_repository_and_returns_data_on_success', () async {
+      stubLoginSuccess();
 
       final result = await loginUseCase(
         LoginInput(email: 'test@example.com', password: 'password123'),
@@ -108,133 +116,68 @@ void main() {
       );
     });
 
-    test('login_rememberMe_calls_saveSession_on_success', () async {
-      const response = LoginResponseEntity(
-        patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(key: 'token123'),
-        clinicalHistory: [],
-      );
-      when(
-        () => mockPasswordHasher.hash(any()),
-      ).thenAnswer((_) async => 'hashed_password');
-      when(
-        () => mockRepo.login(
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(response));
-      when(
-        () => mockSessionRepo.saveSession(
-          data: any(named: 'data'),
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(null));
+    test(
+      'login_rememberMe_delegates_persistence_with_rememberMe_true',
+      () async {
+        stubLoginSuccess();
 
-      final result = await loginUseCase(
-        LoginInput(
-          email: 'test@example.com',
-          password: 'password123',
-          rememberMe: true,
-        ),
-      );
+        await loginUseCase(
+          LoginInput(
+            email: 'test@example.com',
+            password: 'password123',
+            rememberMe: true,
+          ),
+        );
 
-      expect(result.isSuccess, isTrue);
-      verify(
-        () => mockSessionRepo.saveSession(
-          data: any(named: 'data'),
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).called(1);
-    });
+        verify(
+          () => mockSaveSessionUseCase(
+            any(
+              that: isA<SaveSessionInput>().having(
+                (s) => s.rememberMe,
+                'rememberMe',
+                isTrue,
+              ),
+            ),
+          ),
+        ).called(1);
+      },
+    );
 
-    test('login_rememberMe_does_not_save_token_directly', () async {
-      const response = LoginResponseEntity(
-        patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(key: 'token123'),
-        clinicalHistory: [],
-      );
-      when(
-        () => mockPasswordHasher.hash(any()),
-      ).thenAnswer((_) async => 'hashed_password');
-      when(
-        () => mockRepo.login(
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(response));
-      when(
-        () => mockSessionRepo.saveSession(
-          data: any(named: 'data'),
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(null));
-
-      final result = await loginUseCase(
-        LoginInput(
-          email: 'test@example.com',
-          password: 'password123',
-          rememberMe: true,
-        ),
-      );
-
-      expect(result.isSuccess, isTrue);
-      verifyNever(() => mockTokenStore.save(any()));
-    });
-
-    test('login_saves_token_on_success', () async {
-      const response = LoginResponseEntity(
-        patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(key: 'token123'),
-        clinicalHistory: [],
-      );
-      when(
-        () => mockPasswordHasher.hash(any()),
-      ).thenAnswer((_) async => 'hashed_password');
-      when(
-        () => mockRepo.login(
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(response));
-      when(() => mockTokenStore.save(any())).thenAnswer((_) async {});
+    test('login_without_rememberMe_delegates_with_rememberMe_false', () async {
+      stubLoginSuccess();
 
       await loginUseCase(
         LoginInput(email: 'test@example.com', password: 'password123'),
       );
 
-      verify(() => mockTokenStore.save('token123')).called(1);
+      verify(
+        () => mockSaveSessionUseCase(
+          any(
+            that: isA<SaveSessionInput>().having(
+              (s) => s.rememberMe,
+              'rememberMe',
+              isFalse,
+            ),
+          ),
+        ),
+      ).called(1);
     });
 
-    test('login_saves_token_without_rememberMe', () async {
-      const response = LoginResponseEntity(
-        patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(key: 'token123'),
-        clinicalHistory: [],
-      );
+    test('login_returns_failure_when_save_session_fails', () async {
+      stubLoginSuccess();
       when(
-        () => mockPasswordHasher.hash(any()),
-      ).thenAnswer((_) async => 'hashed_password');
-      when(
-        () => mockRepo.login(
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(response));
-      when(() => mockTokenStore.save(any())).thenAnswer((_) async {});
+        () => mockSaveSessionUseCase(any()),
+      ).thenAnswer((_) async => const Failure(NetworkError()));
 
       final result = await loginUseCase(
-        LoginInput(
-          email: 'test@example.com',
-          password: 'password123',
-          rememberMe: false,
-        ),
+        LoginInput(email: 'test@example.com', password: 'password123'),
       );
 
-      expect(result.isSuccess, isTrue);
-      verify(() => mockTokenStore.save('token123')).called(1);
+      expect(result.isSuccess, isFalse);
+      result.fold(
+        onSuccess: (_) => fail('should be Failure'),
+        onFailure: (error) => expect(error, isA<NetworkError>()),
+      );
     });
 
     test('login_returns_failure_when_hasher_throws', () async {
@@ -260,56 +203,13 @@ void main() {
     });
 
     test('login_hashes_the_validated_password_value', () async {
-      const response = LoginResponseEntity(
-        patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(key: 'token123'),
-        clinicalHistory: [],
-      );
-      when(
-        () => mockPasswordHasher.hash(any()),
-      ).thenAnswer((_) async => 'hashed_password');
-      when(
-        () => mockRepo.login(
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(response));
+      stubLoginSuccess();
 
       await loginUseCase(
         LoginInput(email: 'test@example.com', password: 'password123'),
       );
 
       verify(() => mockPasswordHasher.hash('password123')).called(1);
-    });
-
-    test('login_returns_failure_when_token_save_throws', () async {
-      const response = LoginResponseEntity(
-        patient: PatientEntity(id: '1', name: 'John Doe'),
-        token: TokenEntity(key: 'token123'),
-        clinicalHistory: [],
-      );
-      when(
-        () => mockPasswordHasher.hash(any()),
-      ).thenAnswer((_) async => 'hashed_password');
-      when(
-        () => mockRepo.login(
-          email: any(named: 'email'),
-          passwordHash: any(named: 'passwordHash'),
-        ),
-      ).thenAnswer((_) async => const Success(response));
-      when(
-        () => mockTokenStore.save(any()),
-      ).thenThrow(Exception('storage down'));
-
-      final result = await loginUseCase(
-        LoginInput(email: 'test@example.com', password: 'password123'),
-      );
-
-      expect(result.isSuccess, isFalse);
-      result.fold(
-        onSuccess: (_) => fail('should be Failure'),
-        onFailure: (error) => expect(error, isA<UnexpectedError>()),
-      );
     });
   });
 

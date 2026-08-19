@@ -2,24 +2,22 @@ import 'package:clean_architecture_sdd_harness/shared/error/_error.lib.dart';
 import 'package:clean_architecture_sdd_harness/shared/interfaces/_interfaces.lib.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/entities/login_response_entity.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/repositories/i_auth_repository.dart';
-import 'package:clean_architecture_sdd_harness/features/auth/domain/repositories/i_local_auth_repository.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/email.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/password.dart';
 import 'package:clean_architecture_sdd_harness/features/auth/domain/value_objects/password_hash.dart';
 import 'login_input.dart';
+import 'save_session_input.dart';
 
 class LoginUseCase implements IUseCase<LoginInput, LoginResponseEntity> {
   const LoginUseCase({
     required this._repository,
-    required this._sessionRepository,
     required this._passwordHasher,
-    required this._tokenStore,
+    required this._saveSessionUseCase,
   });
 
   final IAuthRepository _repository;
-  final ILocalAuthRepository _sessionRepository;
   final IPasswordHasher _passwordHasher;
-  final ITokenStore _tokenStore;
+  final IUseCase<SaveSessionInput, void> _saveSessionUseCase;
 
   @override
   Future<Result<LoginResponseEntity>> call(LoginInput input) async {
@@ -52,22 +50,16 @@ class LoginUseCase implements IUseCase<LoginInput, LoginResponseEntity> {
     );
     switch (loginResult) {
       case Success(:final data):
-        if (input.rememberMe) {
-          final saveResult = await _sessionRepository.saveSession(
+        final saveResult = await _saveSessionUseCase(
+          SaveSessionInput(
             data: data,
             email: validatedEmail,
             passwordHash: validatedPasswordHash,
-          );
-          if (saveResult is Failure) {
-            return Failure(saveResult.error);
-          }
-        } else {
-          final saveTokenResult = await guard(
-            () => _tokenStore.save(data.token.key),
-          );
-          if (saveTokenResult is Failure) {
-            return Failure(saveTokenResult.error);
-          }
+            rememberMe: input.rememberMe,
+          ),
+        );
+        if (saveResult is Failure) {
+          return Failure(saveResult.error);
         }
         return Success(data);
       case Failure():

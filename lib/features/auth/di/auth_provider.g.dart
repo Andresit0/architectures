@@ -107,6 +107,144 @@ final class LocalAuthDatasourceProvider
 String _$localAuthDatasourceHash() =>
     r'09c3d3e9e11eaf53eb4d300b58caf28e0c8bcd63';
 
+@ProviderFor(authRepository)
+final authRepositoryProvider = AuthRepositoryProvider._();
+
+final class AuthRepositoryProvider
+    extends
+        $FunctionalProvider<IAuthRepository, IAuthRepository, IAuthRepository>
+    with $Provider<IAuthRepository> {
+  AuthRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'authRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$authRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<IAuthRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  IAuthRepository create(Ref ref) {
+    return authRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(IAuthRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<IAuthRepository>(value),
+    );
+  }
+}
+
+String _$authRepositoryHash() => r'd7c79f393058dee3299baa54e1a8b3af28f2404c';
+
+@ProviderFor(localAuthRepository)
+final localAuthRepositoryProvider = LocalAuthRepositoryProvider._();
+
+final class LocalAuthRepositoryProvider
+    extends
+        $FunctionalProvider<
+          ILocalAuthRepository,
+          ILocalAuthRepository,
+          ILocalAuthRepository
+        >
+    with $Provider<ILocalAuthRepository> {
+  LocalAuthRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'localAuthRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$localAuthRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<ILocalAuthRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ILocalAuthRepository create(Ref ref) {
+    return localAuthRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ILocalAuthRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ILocalAuthRepository>(value),
+    );
+  }
+}
+
+String _$localAuthRepositoryHash() =>
+    r'9b915e661d09542ff2cf7e8dd7c478c2f944f20c';
+
+@ProviderFor(_saveSessionUseCase)
+final _saveSessionUseCaseProvider = _SaveSessionUseCaseProvider._();
+
+final class _SaveSessionUseCaseProvider
+    extends
+        $FunctionalProvider<
+          SaveSessionUseCase,
+          SaveSessionUseCase,
+          SaveSessionUseCase
+        >
+    with $Provider<SaveSessionUseCase> {
+  _SaveSessionUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'_saveSessionUseCaseProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$_saveSessionUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<SaveSessionUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SaveSessionUseCase create(Ref ref) {
+    return _saveSessionUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SaveSessionUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SaveSessionUseCase>(value),
+    );
+  }
+}
+
+String _$_saveSessionUseCaseHash() =>
+    r'f389f612ba181e5d03bc90e851dd6569d08a9cff';
+
 @ProviderFor(loginUseCase)
 final loginUseCaseProvider = LoginUseCaseProvider._();
 
@@ -146,7 +284,7 @@ final class LoginUseCaseProvider
   }
 }
 
-String _$loginUseCaseHash() => r'ed965985a9e0ec5d1f096680fc6d45dff472e834';
+String _$loginUseCaseHash() => r'80952ba6ab41ef70791be5e62e55656a24bf3b06';
 
 @ProviderFor(clearSessionUseCase)
 final clearSessionUseCaseProvider = ClearSessionUseCaseProvider._();

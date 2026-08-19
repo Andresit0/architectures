@@ -41,21 +41,26 @@ class _FakeClinicalHistoryRepository implements IClinicalHistoryRepository {
 
 void main() {
   group('appNavigatorProvider seam', () {
-    test('throws UnimplementedError when not overridden (fail-fast seam)', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test(
+      'throws SeamNotBoundException when not overridden (fail-fast seam)',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
 
-      expect(
-        () => container.read(appNavigatorProvider),
-        throwsA(
-          predicate(
-            (e) => e.toString().contains(
-              'appNavigatorProvider must be overridden',
+        expect(
+          () => container.read(appNavigatorProvider),
+          throwsA(
+            predicate(
+              (e) =>
+                  e.toString().contains(
+                    'appNavigatorProvider must be overridden',
+                  ) &&
+                  !e.toString().contains('UnimplementedError'),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     test('routerOverrides binds the seam to GoRouterNavigator', () {
       final container = ProviderContainer(
