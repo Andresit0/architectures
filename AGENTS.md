@@ -38,6 +38,7 @@ MD/APP_EXCEPTION.md         ← Contains info about create and update code that 
 MD/APP_IMPORTANT_INFO.md    ← Basic info that should knows when is working with app
 MD/APP_PACKAGE_WRAPPER.md   ← How to wrap external packages: <pkg>_wrapper.dart pattern (interface+impl), when to create Riverpod bridge, goRouterProvider pattern (main.dart must NOT import go_router directly)
 MD/APP_PROVIDERS.md         ← Shared providers inventory (dio, token, connectivity, goRouter), ref.watch/read/listen per context
+MD/APP_RELEASE.md           ← Release procedure (runbook): release/* → main → tag → back-merge
 MD/APP_SKILLS.md            ← Complete reference of all app_* skills and agents
 MD/APP_STATE_MANAGMENT.md   ← State management overview (Riverpod v3 code-gen) + quick ref to APP_PROVIDERS.md
 MD/APP_TREE.md              ← Show the file tree of the app. Use it always before write code
@@ -263,6 +264,24 @@ The flow is complete when:
 8. ✅ sdd-verify-adapted verdict: PASS or PASS WITH WARNINGS
 9. ✅ MD/* updated
 10. ✅ Engram has session summary
+
+---
+
+## Web deployment (GitHub Pages)
+
+- `main` is published to GitHub Pages automatically by
+  `.github/workflows/deploy-web.yml` (Pages Artifact model) on every push to
+  `main` → `https://andresit0.github.io/flutter-clean-architecture-sdd/`. No `gh-pages` branch.
+- The web build forces HTTPS on the non-443 API port via
+  `--dart-define=API_USE_HTTPS=true` (`AppEnvironment.useHttps` /
+  `resolveUseHttps`); the demo targets the public fake API at
+  `https://tudesarrollador.com:5111` and accepts any credentials.
+- `web/404.html` lets GoRouter deep links survive a browser refresh on Pages.
+- The `Build Web` job in `ci.yml` is the compile gate (required check) and
+  mirrors the `deploy-web.yml` build command. After the first release that
+  promotes the `build-web` job, ensure `Build Web` is in the branch-protection
+  `required_status_checks.contexts` for `develop`/`main` (D7) and that
+  Settings → Pages → Source is "GitHub Actions".
 
 ---
 

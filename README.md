@@ -1,9 +1,23 @@
 # Clean Architecture SDD Harness
 
-[![CI](https://github.com/Andresit0/architectures/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Andresit0/architectures/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Andresit0/architectures/branch/develop/graph/badge.svg)](https://codecov.io/gh/Andresit0/architectures)
+[![CI](https://github.com/Andresit0/flutter-clean-architecture-sdd/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Andresit0/flutter-clean-architecture-sdd/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Andresit0/flutter-clean-architecture-sdd/branch/develop/graph/badge.svg)](https://codecov.io/gh/Andresit0/flutter-clean-architecture-sdd)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Dart](https://img.shields.io/badge/Dart-3.12-blue.svg)](https://dart.dev)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-blue.svg)](https://andresit0.github.io/flutter-clean-architecture-sdd/)
+
+## Live Demo
+
+**https://andresit0.github.io/flutter-clean-architecture-sdd/**
+
+A Flutter Web build of `main`, published automatically by
+[`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml) on every
+push to `main` (i.e. after each release).
+
+> The demo runs **without a backend**: it talks to the public fake API at
+> `https://tudesarrollador.com:5111` (clinical history + lab results) and
+> **accepts any email/password** for login. Just open the link and walk the
+> flow **Login → Clinical History → Lab Results → Chart**.
 
 Feature-first Flutter clean architecture template with Riverpod 3 codegen, a Result-based domain layer, and an AI-assisted SDD/TDD/BDD harness backed by enterprise CI/CD.
 
@@ -118,6 +132,7 @@ Cross-platform behavior (verified in CI):
 | macOS (local dev) | ✅ | ✅ (deterministic) | — |
 | Linux (CI) | ✅ | ✅ (deterministic) | `Test` / `Test Goldens` |
 | Windows (local dev) | ✅ | ✅ (deterministic) | — |
+| Web (GitHub Pages) | ✅ | — | `Build Web` (compile gate) + `deploy-web.yml` (publish) |
 
 Plain `flutter test` runs everything locally, including goldens (deterministic, embedded fonts). Use `--exclude-tags golden` for a unit/widget-only run — this is what the CI `Test` job does; `Test Goldens` runs `--tags golden`.
 
@@ -134,6 +149,7 @@ Every PR runs `.github/workflows/ci.yml` on `develop` and `main`; the same workf
 | Test Goldens | golden tests, cross-platform deterministic |
 | Build iOS | `flutter build ios --no-codesign` (macOS runner, CocoaPods cache) |
 | Build Android | `flutter build apk --debug` |
+| Build Web | `flutter build web --release --base-href /flutter-clean-architecture-sdd/` (demo defines, mirrors `deploy-web.yml`) |
 | Gitleaks | secret scan gate (fail on leaked credentials) |
 | Branch Source Gate | only on PRs to `main` — rejects heads not matching `release/*` or `hotfix/*` |
 
@@ -143,16 +159,17 @@ Dependabot updates are grouped and auto-merged (patch/minor) via [auto-merge.yml
 
 ```
 main ────── TAG vX.Y.Z            production (default branch)
-  ▲  PR release/* | hotfix/*  (gate + 7 checks + 2 approvals in config; personal-account exception documented in .github/REPOSITORY_GOVERNANCE.md)
+  ▲  PR release/* | hotfix/*  (gate + 8 checks + 2 approvals in config; personal-account exception documented in .github/REPOSITORY_GOVERNANCE.md)
 develop ──●──●──●                integration (all changes land here)
   ▲
 feature/* | dependabot PRs
 ```
 
-- `develop` — protected: PR required, 6 checks, 0 approvals (personal-account exception: single maintainer cannot self-approve; the gate is the required-check matrix plus an explicit human merge after CI is green — see `.github/REPOSITORY_GOVERNANCE.md`). Dependabot auto-merges patch/minor after checks pass.
-- `main` — protected: PR required, 7 checks (incl. Branch Source Gate), 2 approvals in config; only `release/*` and `hotfix/*` may merge. The same personal-account exception applies until an org/second reviewer exists.
-- Feature branches are auto-deleted after merge; releases are tagged (`v1.0.0`).
+- `develop` — protected: PR required, 7 checks, 0 approvals (personal-account exception: single maintainer cannot self-approve; the gate is the required-check matrix plus an explicit human merge after CI is green — see `.github/REPOSITORY_GOVERNANCE.md`). Dependabot auto-merges patch/minor after checks pass.
+- `main` — protected: PR required, 8 checks (incl. Branch Source Gate + Build Web), 2 approvals in config; only `release/*` and `hotfix/*` may merge. The same personal-account exception applies until an org/second reviewer exists.
+- Feature branches are auto-deleted after merge; releases are tagged (annotated `vX.Y.Z`, e.g. `v1.1.0`).
 - Releases and hotfixes are back-merged to `develop`.
+- **Release procedure** — full runbook: `MD/APP_RELEASE.md` (preflight, cut point, release branch, CHANGELOG, squash merge to `main`, annotated tag, back-merge, GitHub Release).
 
 ## AI Harness
 

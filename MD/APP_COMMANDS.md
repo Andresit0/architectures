@@ -28,6 +28,12 @@ flutter test --tags golden --update-goldens
 
 # 7. Run on macOS
 flutter run -d mac --dart-define-from-file=.env
+
+# 8. Build the web demo (GitHub Pages). Mirrors ci.yml `build-web` and deploy-web.yml.
+flutter build web --release --base-href /flutter-clean-architecture-sdd/ \
+  --dart-define=ENVIRONMENT=dev \
+  --dart-define=API_HOST=tudesarrollador.com \
+  --dart-define=API_USE_HTTPS=true
 ```
 
 ### Dependency upgrade procedure
@@ -59,7 +65,7 @@ Caveats:
   `android/app/build.gradle.kts` (e.g. `flutter_secure_storage 11` →
   `compileSdk 37`).
 - Dependabot reads `.github/dependabot.yml` from the **default branch (`main`)**;
-  its ignore rules activate after the next release (issue #63).
+  its ignore rules (intl/test/freezed) are active since release v1.1.0 (issue #63 resolved).
 - Regenerated `.g.dart`/`.freezed.dart` files must be committed with their
   source (Rule 29).
 
@@ -81,4 +87,5 @@ All variables are passed via `--dart-define` (or `--dart-define-from-file=.env`)
 |---|---|---|
 | `ENVIRONMENT` | `dev` | Selects `AppEnvironment` variant: `dev` / `staging` / `production` |
 | `API_HOST` | `localhost` | Overrides the API host (used by `DevEnvironment`). Android emulator: `10.0.2.2` |
+| `API_USE_HTTPS` | `false` | Force HTTPS for the API base URI even on a non-443 port (e.g. the web demo at `https://tudesarrollador.com:5111`). Used by `AppEnvironment.useHttps` → `AppUris` and `connectivity_providers` |
 | `PINNED_CERT_1`, `PINNED_CERT_2` | — (unset) | SHA-256 hashes for certificate pinning (staging/production) |
