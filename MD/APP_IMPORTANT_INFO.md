@@ -14,6 +14,15 @@ flutter run --dart-define=ENVIRONMENT=dev
 Use `--dart-define=API_HOST=10.0.2.2` when running on Android emulator.
 API endpoints are defined in `lib/core/network/api_endpoints.dart`.
 
+### Web demo (GitHub Pages)
+
+The Flutter Web build (`deploy-web.yml`) is served under `/flutter-clean-architecture-sdd/` and
+talks to the public fake API at `https://tudesarrollador.com:5111`. Because the
+API is served over TLS on a **non-443 port**, the build forces HTTPS with
+`--dart-define=API_USE_HTTPS=true` (see `AppEnvironment.useHttps` /
+`resolveUseHttps`). Web builds also ship `web/404.html` so GoRouter deep links
+(clinical-history, lab results) survive a browser refresh on GitHub Pages.
+
 ### Generated files
 
 `*.g.dart` and `*.freezed.dart` files are generated — do not edit by hand.

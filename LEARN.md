@@ -3081,9 +3081,9 @@ updates require review.
 
 ### Branch protection (`develop`)
 
-`develop` is protected and requires all 6 checks to pass before merging (`strict: true`, so PRs must be up to date with `develop`):
+`develop` is protected and requires all 7 checks to pass before merging (`strict: true`, so PRs must be up to date with `develop`):
 
-`Analyze`, `Test`, `Test Goldens`, `Build iOS`, `Build Android`, `Gitleaks`
+`Analyze`, `Test`, `Test Goldens`, `Build iOS`, `Build Android`, `Build Web`, `Gitleaks`
 
 No required reviewers are configured (single-account repo — GitHub blocks self-approval, so PRs are gated on the required-check matrix plus an explicit human merge after CI is green; see `.github/REPOSITORY_GOVERNANCE.md`).
 

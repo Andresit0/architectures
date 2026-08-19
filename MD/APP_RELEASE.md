@@ -75,8 +75,8 @@ restore — and record it in the PR thread.
    `squash_merge_commit_message: PR_BODY`). The `Branch Source Gate` passes
    (head matches `release/*`).
 
-7. **Wait for the 7 checks**: Analyze, Test, Test Goldens, Build iOS,
-   Build Android, Gitleaks, Branch Source Gate. The `Integration` job is
+7. **Wait for the 8 checks**: Analyze, Test, Test Goldens, Build iOS,
+   Build Android, Build Web, Gitleaks, Branch Source Gate. The `Integration` job is
    gated by the repository variable `RUN_DEVICE_INTEGRATION` (documented D6
    exception) and is NOT a required check — do not treat it as missing.
 
@@ -119,6 +119,13 @@ restore — and record it in the PR thread.
 14. **Post-release** — documentation updates (`MD/APP_RELEASE.md`, README,
     AGENTS.md) travel on a `docs/*` branch to `develop`; they reach `main` on
     the NEXT release. Unfreeze `develop` after the back-merge is merged.
+
+15. **Web deployment (automatic)** — pushing `main` triggers
+    `.github/workflows/deploy-web.yml`, which builds the Flutter Web demo and
+    publishes it to GitHub Pages (`https://andresit0.github.io/flutter-clean-architecture-sdd/`).
+    No manual step: the workflow runs on `push` to `main` and represents the
+    last officially released version. Verify the demo after each release
+    (login with any credentials → Clinical History → Lab Results → Chart).
 
 ## Rollback
 
