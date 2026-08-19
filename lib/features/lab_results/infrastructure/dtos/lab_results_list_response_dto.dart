@@ -1,18 +1,16 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'lab_result_dto.dart';
 
-class LabResultsListResponseDto {
-  const LabResultsListResponseDto({required this.labResults});
+part 'lab_results_list_response_dto.freezed.dart';
+part 'lab_results_list_response_dto.g.dart';
+
+@freezed
+abstract class LabResultsListResponseDto with _$LabResultsListResponseDto {
+  const factory LabResultsListResponseDto({
+    @JsonKey(name: 'lab_results') required List<LabResultDto> labResults,
+  }) = _LabResultsListResponseDto;
 
   factory LabResultsListResponseDto.fromJson(Map<String, dynamic> json) =>
-      LabResultsListResponseDto(
-        labResults: (json['lab_results'] as List<dynamic>)
-            .map((e) => LabResultDto.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
-
-  final List<LabResultDto> labResults;
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'lab_results': labResults.map((e) => e.toJson()).toList(),
-  };
+      _$LabResultsListResponseDtoFromJson(json);
 }
