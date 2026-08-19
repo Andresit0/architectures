@@ -267,6 +267,24 @@ The flow is complete when:
 
 ---
 
+## Web deployment (GitHub Pages)
+
+- `main` is published to GitHub Pages automatically by
+  `.github/workflows/deploy-web.yml` (Pages Artifact model) on every push to
+  `main` → `https://andresit0.github.io/flutter-clean-architecture-sdd/`. No `gh-pages` branch.
+- The web build forces HTTPS on the non-443 API port via
+  `--dart-define=API_USE_HTTPS=true` (`AppEnvironment.useHttps` /
+  `resolveUseHttps`); the demo targets the public fake API at
+  `https://tudesarrollador.com:5111` and accepts any credentials.
+- `web/404.html` lets GoRouter deep links survive a browser refresh on Pages.
+- The `Build Web` job in `ci.yml` is the compile gate (required check) and
+  mirrors the `deploy-web.yml` build command. After the first release that
+  promotes the `build-web` job, ensure `Build Web` is in the branch-protection
+  `required_status_checks.contexts` for `develop`/`main` (D7) and that
+  Settings → Pages → Source is "GitHub Actions".
+
+---
+
 ## Commands
 | Path | Description |
 |---|---|

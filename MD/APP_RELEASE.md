@@ -120,6 +120,13 @@ restore — and record it in the PR thread.
     AGENTS.md) travel on a `docs/*` branch to `develop`; they reach `main` on
     the NEXT release. Unfreeze `develop` after the back-merge is merged.
 
+15. **Web deployment (automatic)** — pushing `main` triggers
+    `.github/workflows/deploy-web.yml`, which builds the Flutter Web demo and
+    publishes it to GitHub Pages (`https://andresit0.github.io/flutter-clean-architecture-sdd/`).
+    No manual step: the workflow runs on `push` to `main` and represents the
+    last officially released version. Verify the demo after each release
+    (login with any credentials → Clinical History → Lab Results → Chart).
+
 ## Rollback
 
 If the release breaks on `main`: a revert is not enough (the tag is immutable);
