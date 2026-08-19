@@ -9,6 +9,27 @@ Versions prior to 1.1.0 predate this changelog and are tracked in the git histor
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-08-19
+
+### Added
+
+- Flutter Web demo published to GitHub Pages: `AppEnvironment.useHttps` is now
+  configurable via `--dart-define=API_USE_HTTPS=true` (forces HTTPS on a
+  non-443 API port, e.g. `https://tudesarrollador.com:5111`).
+- `web/404.html` so GoRouter deep links survive a browser refresh on Pages.
+
+### Changed
+
+- `Build Web` CI gate (compile) and automatic web deployment to GitHub Pages
+  via `.github/workflows/deploy-web.yml` (Pages Artifact model).
+
+### Docs and Tooling
+
+- README Live Demo section, check-count alignment, repo rename references and
+  web demo documentation.
+
+[1.1.1]: https://github.com/Andresit0/flutter-clean-architecture-sdd/compare/v1.1.0...v1.1.1
+
 ## [1.1.0] - 2026-08-19
 
 ### Added

@@ -1,7 +1,7 @@
 name: clean_architecture_sdd_harness
 description: "Feature-first Flutter clean architecture template with Riverpod 3 codegen, Result-based domain layer, package wrappers, and an AI-assisted SDD/TDD/BDD harness with enterprise CI/CD."
 publish_to: 'none' 
-version: 1.1.0+1
+version: 1.1.1+2
 
 environment:
   sdk: ^3.12.0
