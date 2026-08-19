@@ -13,6 +13,7 @@ the "protected PR" guarantee.
 | `Test` | `test` | Unit/widget/architecture/BDD no-golden (`flutter test --coverage --exclude-tags golden`) + Codecov upload. |
 | `Test Goldens` | `test-goldens` | Goldens on Linux with `--tags golden` (deterministic). |
 | `Build Android` | `build-android` | `flutter build apk --debug` (compilation gate). |
+| `Build Web` | `build-web` | `flutter build web --release --base-href /flutter-clean-architecture-sdd/` with the demo dart-defines (mirrors `deploy-web.yml`) — compilation gate for the GitHub Pages artifact. |
 | `Build iOS` | `build-ios` | `flutter build ios --no-codesign` (compilation gate). |
 | `Gitleaks` | `gitleaks` | Full-history secret scan (`fetch-depth: 0`), zero secrets. |
 
