@@ -10,15 +10,17 @@ abstract interface class ICertificatePinner {
 class CertificatePinner implements ICertificatePinner {
   final List<String> pinnedCertificates;
   final bool isReleaseMode;
+  final bool enforcePinning;
 
   const CertificatePinner({
     this.pinnedCertificates = const [],
     this.isReleaseMode = kReleaseMode,
+    this.enforcePinning = false,
   });
 
   @override
   void apply(Dio dio) {
-    if (isReleaseMode && pinnedCertificates.isEmpty) {
+    if (isReleaseMode && enforcePinning && pinnedCertificates.isEmpty) {
       throw StateError(
         'Certificate pinning requires pinned certificates. '
         'Add SHA-256 hashes to the active environment pinnedCertificates '
