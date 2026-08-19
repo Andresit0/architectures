@@ -16,7 +16,8 @@ push to `main` (i.e. after each release).
 
 > The demo runs **without a backend**: it talks to the public fake API at
 > `https://tudesarrollador.com:5111` (clinical history + lab results) and
-> **accepts any email/password** for login. Just open the link and walk the
+> **accepts any email/password** for login. It runs without certificate pinning
+> (the `dev` environment does not enforce it). Just open the link and walk the
 > flow **Login → Clinical History → Lab Results → Chart**.
 
 Feature-first Flutter clean architecture template with Riverpod 3 codegen, a Result-based domain layer, and an AI-assisted SDD/TDD/BDD harness backed by enterprise CI/CD.

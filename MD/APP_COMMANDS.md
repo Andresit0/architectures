@@ -88,4 +88,4 @@ All variables are passed via `--dart-define` (or `--dart-define-from-file=.env`)
 | `ENVIRONMENT` | `dev` | Selects `AppEnvironment` variant: `dev` / `staging` / `production` |
 | `API_HOST` | `localhost` | Overrides the API host (used by `DevEnvironment`). Android emulator: `10.0.2.2` |
 | `API_USE_HTTPS` | `false` | Force HTTPS for the API base URI even on a non-443 port (e.g. the web demo at `https://tudesarrollador.com:5111`). Used by `AppEnvironment.useHttps` → `AppUris` and `connectivity_providers` |
-| `PINNED_CERT_1`, `PINNED_CERT_2` | — (unset) | SHA-256 hashes for certificate pinning (staging/production) |
+| `PINNED_CERT_1`, `PINNED_CERT_2` | — (unset) | SHA-256 hashes for certificate pinning. Enforced (`requirePinnedCertificates`) only in `staging`/`production`; `dev` (and the web demo) do NOT enforce pinning. |

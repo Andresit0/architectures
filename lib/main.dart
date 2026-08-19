@@ -75,7 +75,17 @@ class _TudesarrolladorAppState extends ConsumerState<TudesarrolladorApp> {
       );
       if (_securityBlocked) return;
     }
-    await ref.read(authProvider.notifier).restoreSession();
+    try {
+      await ref.read(authProvider.notifier).restoreSession();
+    } catch (e, stackTrace) {
+      ref
+          .read(loggerProvider)
+          .error(
+            '[app] boot failed',
+            technicalMessage: e.toString(),
+            stackTrace: stackTrace,
+          );
+    }
     if (mounted) setState(() => _initialized = true);
   }
 

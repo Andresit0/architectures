@@ -275,7 +275,10 @@ The flow is complete when:
 - The web build forces HTTPS on the non-443 API port via
   `--dart-define=API_USE_HTTPS=true` (`AppEnvironment.useHttps` /
   `resolveUseHttps`); the demo targets the public fake API at
-  `https://tudesarrollador.com:5111` and accepts any credentials.
+  `https://tudesarrollador.com:5111` and accepts any credentials. The `dev`
+  environment does not enforce certificate pinning
+  (`requirePinnedCertificates=false`); pinning (`CertificatePinner
+  enforcePinning`) is enforced only for `staging`/`production`.
 - `web/404.html` lets GoRouter deep links survive a browser refresh on Pages.
 - The `Build Web` job in `ci.yml` is the compile gate (required check) and
   mirrors the `deploy-web.yml` build command. After the first release that

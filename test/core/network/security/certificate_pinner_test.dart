@@ -6,13 +6,25 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('CertificatePinner', () {
     group('empty pinnedCertificates', () {
-      test('throws StateError in release mode', () {
+      test('throws StateError in release mode when pinning is enforced', () {
         expect(
           () => const CertificatePinner(
             pinnedCertificates: [],
             isReleaseMode: true,
+            enforcePinning: true,
           ).apply(Dio()),
           throwsA(isA<StateError>()),
+        );
+      });
+
+      test('does not throw in release mode when pinning is not enforced', () {
+        expect(
+          () => const CertificatePinner(
+            pinnedCertificates: [],
+            isReleaseMode: true,
+            enforcePinning: false,
+          ).apply(Dio()),
+          returnsNormally,
         );
       });
 
