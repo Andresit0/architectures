@@ -59,7 +59,7 @@ Caveats:
   `android/app/build.gradle.kts` (e.g. `flutter_secure_storage 11` →
   `compileSdk 37`).
 - Dependabot reads `.github/dependabot.yml` from the **default branch (`main`)**;
-  its ignore rules activate after the next release (issue #63).
+  its ignore rules (intl/test/freezed) are active since release v1.1.0 (issue #63 resolved).
 - Regenerated `.g.dart`/`.freezed.dart` files must be committed with their
   source (Rule 29).
 

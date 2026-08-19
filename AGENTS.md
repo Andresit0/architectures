@@ -38,6 +38,7 @@ MD/APP_EXCEPTION.md         ← Contains info about create and update code that 
 MD/APP_IMPORTANT_INFO.md    ← Basic info that should knows when is working with app
 MD/APP_PACKAGE_WRAPPER.md   ← How to wrap external packages: <pkg>_wrapper.dart pattern (interface+impl), when to create Riverpod bridge, goRouterProvider pattern (main.dart must NOT import go_router directly)
 MD/APP_PROVIDERS.md         ← Shared providers inventory (dio, token, connectivity, goRouter), ref.watch/read/listen per context
+MD/APP_RELEASE.md           ← Release procedure (runbook): release/* → main → tag → back-merge
 MD/APP_SKILLS.md            ← Complete reference of all app_* skills and agents
 MD/APP_STATE_MANAGMENT.md   ← State management overview (Riverpod v3 code-gen) + quick ref to APP_PROVIDERS.md
 MD/APP_TREE.md              ← Show the file tree of the app. Use it always before write code
