@@ -31,6 +31,15 @@ The folder `lib/shared/exceptions/` has a barrel (`_exceptions.lib.dart`).
 - **User-facing strings are never taken from exception messages.** `core/` and `shared/` cannot import `l10n/`. The UI maps `AppError` → localized text via `localizeError()` in `lib/l10n/error_localizer.dart` (add a case there if a new error type reaches the UI). Technical messages only ever surface in debug builds (`app_error_screen.dart` gates `error.toString()` behind `kDebugMode`).
 - **`AppError` carries no `userMessage`.** The error type is the single source of truth for localization (`localizeError()` switches by type / `field` tag). `technicalMessage` and `stackTrace` are diagnostic-only and are consumed by the observability seam `ILogger` (`shared/interfaces/`, accessed via `loggerProvider`, re-exported by each feature `di/`) — notifiers log the failure before setting state. Guard-mapping coverage is enforced by `test/architecture/error_mapping_consistency_test.dart`.
 
+### DI seams — `SeamNotBoundException` (Error, fail-fast)
+
+`SeamNotBoundException` (`lib/shared/exceptions/seam_not_bound_exception.dart`) is thrown by the DI seam providers (`appNavigatorProvider` in `core/router/`, `authInterceptorProvider` in `core/network/dio/`) when read without a composition-root binding.
+
+- **It extends `Error`, NOT `Exception`** — deliberate and enforced by CI: `guard()` in `result_guard.dart` catches every `Exception` (including unlisted ones → `Failure(UnexpectedError)`), so an `Exception` would swallow a missing binding as a normal `Failure` and defeat the boot fail-fast. A missing DI binding is a programming error: it must crash immediately (mirrors "Error → RETHROWN" in MD/APP_DARTZ.md).
+- **It is NOT mapped in `guard()` nor in `localizeError()`.** The consistency guard `test/architecture/error_mapping_consistency_test.dart` has a dedicated `_programmingErrors` set for it (asserts the class extends `Error` and stays out of `_canonicalMapping`).
+- `toString()` returns the message verbatim, so the boot/seed tests (`seams_boot_test.dart`, `dio_provider_auth_interceptor_wiring_test.dart`, `router_overrides_test.dart`) keep asserting the `'...must be overridden'` substring unchanged.
+- `main.dart` `_assertDiSeamsBound()` reads both seams at boot → the app aborts fast if `dioOverrides()`/`routerOverrides()` are not merged.
+
 ### Startup security check (guard/fold)
 
 The jailbreak/root detection at boot follows the same **"guard crea, fold decide"** rule as every boundary:
