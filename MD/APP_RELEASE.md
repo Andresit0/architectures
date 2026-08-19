@@ -75,8 +75,8 @@ restore — and record it in the PR thread.
    `squash_merge_commit_message: PR_BODY`). The `Branch Source Gate` passes
    (head matches `release/*`).
 
-7. **Wait for the 7 checks**: Analyze, Test, Test Goldens, Build iOS,
-   Build Android, Gitleaks, Branch Source Gate. The `Integration` job is
+7. **Wait for the 8 checks**: Analyze, Test, Test Goldens, Build iOS,
+   Build Android, Build Web, Gitleaks, Branch Source Gate. The `Integration` job is
    gated by the repository variable `RUN_DEVICE_INTEGRATION` (documented D6
    exception) and is NOT a required check — do not treat it as missing.
 

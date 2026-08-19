@@ -159,14 +159,14 @@ Dependabot updates are grouped and auto-merged (patch/minor) via [auto-merge.yml
 
 ```
 main ────── TAG vX.Y.Z            production (default branch)
-  ▲  PR release/* | hotfix/*  (gate + 7 checks + 2 approvals in config; personal-account exception documented in .github/REPOSITORY_GOVERNANCE.md)
+  ▲  PR release/* | hotfix/*  (gate + 8 checks + 2 approvals in config; personal-account exception documented in .github/REPOSITORY_GOVERNANCE.md)
 develop ──●──●──●                integration (all changes land here)
   ▲
 feature/* | dependabot PRs
 ```
 
-- `develop` — protected: PR required, 6 checks, 0 approvals (personal-account exception: single maintainer cannot self-approve; the gate is the required-check matrix plus an explicit human merge after CI is green — see `.github/REPOSITORY_GOVERNANCE.md`). Dependabot auto-merges patch/minor after checks pass.
-- `main` — protected: PR required, 7 checks (incl. Branch Source Gate), 2 approvals in config; only `release/*` and `hotfix/*` may merge. The same personal-account exception applies until an org/second reviewer exists.
+- `develop` — protected: PR required, 7 checks, 0 approvals (personal-account exception: single maintainer cannot self-approve; the gate is the required-check matrix plus an explicit human merge after CI is green — see `.github/REPOSITORY_GOVERNANCE.md`). Dependabot auto-merges patch/minor after checks pass.
+- `main` — protected: PR required, 8 checks (incl. Branch Source Gate + Build Web), 2 approvals in config; only `release/*` and `hotfix/*` may merge. The same personal-account exception applies until an org/second reviewer exists.
 - Feature branches are auto-deleted after merge; releases are tagged (annotated `vX.Y.Z`, e.g. `v1.1.0`).
 - Releases and hotfixes are back-merged to `develop`.
 - **Release procedure** — full runbook: `MD/APP_RELEASE.md` (preflight, cut point, release branch, CHANGELOG, squash merge to `main`, annotated tag, back-merge, GitHub Release).
