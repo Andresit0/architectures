@@ -9,6 +9,17 @@ Versions prior to 1.1.0 predate this changelog and are tracked in the git histor
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-08-19
+
+### Fixed
+
+- Certificate pinning is now enforced only in environments that require it
+  (`staging`/`production` via `requirePinnedCertificates`). Fixes the web demo
+  (release build with the `dev` environment) staying stuck on the loading
+  screen because `CertificatePinner` threw a `StateError` for empty pins.
+- Startup no longer hangs if session restore fails: boot errors are logged and
+  the app proceeds to the login screen.
+
 ## [1.1.1] - 2026-08-19
 
 ### Added
@@ -28,6 +39,7 @@ Versions prior to 1.1.0 predate this changelog and are tracked in the git histor
 - README Live Demo section, check-count alignment, repo rename references and
   web demo documentation.
 
+[1.1.2]: https://github.com/Andresit0/flutter-clean-architecture-sdd/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Andresit0/flutter-clean-architecture-sdd/compare/v1.1.0...v1.1.1
 
 ## [1.1.0] - 2026-08-19

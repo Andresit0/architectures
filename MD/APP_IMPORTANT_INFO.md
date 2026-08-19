@@ -22,6 +22,14 @@ API is served over TLS on a **non-443 port**, the build forces HTTPS with
 `--dart-define=API_USE_HTTPS=true` (see `AppEnvironment.useHttps` /
 `resolveUseHttps`). Web builds also ship `web/404.html` so GoRouter deep links
 (clinical-history, lab results) survive a browser refresh on GitHub Pages.
+The `dev` environment does **not** enforce certificate pinning
+(`requirePinnedCertificates = false`); pinning is only enforced in
+`staging`/`production` (`CertificatePinner.enforcePinning`).
+
+> **Boot resilience:** `guard()` (in `shared/error/`) catches `Exception`, not
+> `Error`. `main.dart` wraps the startup `restoreSession()` in a try/catch so
+> an unexpected `Error` never leaves the app stuck on the loading screen — it
+> is logged via `loggerProvider` and the app proceeds to the login screen.
 
 ### Generated files
 
