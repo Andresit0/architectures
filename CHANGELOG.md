@@ -67,3 +67,5 @@ Versions prior to 1.1.0 predate this changelog and are tracked in the git histor
 ### Docs and Tooling
 
 - Documentation updates, AI tooling alignment (shared wire contracts, Rule 29) and CI/governance hardening (enterprise merge gates, dependabot policy).
+
+[1.1.0]: https://github.com/Andresit0/flutter-clean-architecture-sdd/compare/v1.0.0...v1.1.0
