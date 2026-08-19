@@ -273,7 +273,7 @@ The flow is complete when:
 | `.ai/commands/super-md-update.md` | Script to sync MD/* and AGENTS.md from git changes |
 | `.ai/commands/spec-local.md` | Entry point for the Spec-Local TDD-First workflow — invoke as `/spec-local <feature name>` |
 | `.ai/commands/super-pull-request.md` | Smart PR Split pipeline: classify changes, plan stacked PRs (English Conventional Commit titles + type-prefixed git-flow branches), execute and validate each PR (analyzer, tests, dart format matching CI), publish stacked PRs |
-| `.ai/commands/super-pull-request-reviewer.md` | Review open GitHub PRs against 6 quality gates (introspects branch protection; local analyzer/tests/dart format; CI-gated sequential squash merge; no self-approval) |
+| `.ai/commands/super-pull-request-reviewer.md` | Review open GitHub PRs against 6 quality gates (introspects branch protection; local analyzer/tests/dart format; sequential squash merge gated by GitHub auto-merge + required-check matrix; no self-approval) |
 
 ---
 
