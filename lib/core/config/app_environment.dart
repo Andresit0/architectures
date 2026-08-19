@@ -5,7 +5,10 @@ sealed class AppEnvironment {
 
   String get host;
   int get port;
-  bool get useHttps => port == 443;
+  bool get useHttps => resolveUseHttps(
+    port,
+    const bool.fromEnvironment('API_USE_HTTPS', defaultValue: false),
+  );
   List<String> get pinnedCertificates;
   Locale get defaultLocale;
 
@@ -26,6 +29,8 @@ sealed class AppEnvironment {
     };
   }
 }
+
+bool resolveUseHttps(int port, bool forcedHttps) => port == 443 || forcedHttps;
 
 class DevEnvironment extends AppEnvironment {
   const DevEnvironment();
