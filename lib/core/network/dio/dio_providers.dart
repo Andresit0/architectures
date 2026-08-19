@@ -14,7 +14,10 @@ IDioWrapper _createDioWrapper(Ref ref) {
   return DioWrapper(
     internetService,
     null,
-    CertificatePinner(pinnedCertificates: env.pinnedCertificates),
+    CertificatePinner(
+      pinnedCertificates: env.pinnedCertificates,
+      enforcePinning: env.requirePinnedCertificates,
+    ),
     null,
     null,
     ConnectionProfile.standard,

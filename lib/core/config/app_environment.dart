@@ -10,6 +10,7 @@ sealed class AppEnvironment {
     const bool.fromEnvironment('API_USE_HTTPS', defaultValue: false),
   );
   List<String> get pinnedCertificates;
+  bool get requirePinnedCertificates;
   Locale get defaultLocale;
 
   static List<String> _readPinnedCertificates() {
@@ -42,6 +43,8 @@ class DevEnvironment extends AppEnvironment {
   @override
   List<String> get pinnedCertificates => const [];
   @override
+  bool get requirePinnedCertificates => false;
+  @override
   Locale get defaultLocale => const Locale('es');
 }
 
@@ -55,6 +58,8 @@ class StagingEnvironment extends AppEnvironment {
   List<String> get pinnedCertificates =>
       AppEnvironment._readPinnedCertificates();
   @override
+  bool get requirePinnedCertificates => true;
+  @override
   Locale get defaultLocale => const Locale('es');
 }
 
@@ -67,6 +72,8 @@ class ProductionEnvironment extends AppEnvironment {
   @override
   List<String> get pinnedCertificates =>
       AppEnvironment._readPinnedCertificates();
+  @override
+  bool get requirePinnedCertificates => true;
   @override
   Locale get defaultLocale => const Locale('es');
 }

@@ -21,6 +21,15 @@ void main() {
       const env = DevEnvironment();
       expect(env.port, 5111);
       expect(env.host, isNotEmpty);
+      expect(env.requirePinnedCertificates, isFalse);
+    });
+
+    test('StagingEnvironment requires pinned certificates', () {
+      expect(const StagingEnvironment().requirePinnedCertificates, isTrue);
+    });
+
+    test('ProductionEnvironment requires pinned certificates', () {
+      expect(const ProductionEnvironment().requirePinnedCertificates, isTrue);
     });
   });
 }
